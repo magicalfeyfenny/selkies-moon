@@ -1,0 +1,1 @@
+//This object acts as a parent object for bullets that enemies fire.

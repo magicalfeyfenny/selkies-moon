@@ -1,0 +1,1 @@
+//This object handles pausing the game and displaying a menu that allows the player to resume or quit.
