@@ -6,7 +6,8 @@ script_dir=$(cd -- "$(dirname "$0")" && pwd)
 repo_root=$(cd -- "$script_dir/.." && pwd)
 project_dir="$repo_root/Selkie's Moon ~ until we meet again ~"
 project_file="$project_dir/Selkie's Moon ~ until we meet again ~.yyp"
-marker_file="$project_dir/.run-gmtl-tests.txt"
+output_dir="$repo_root/output/Selkie's Moon ~ until we meet again ~"
+marker_file="$output_dir/.run-gmtl-tests.txt"
 results_dir="$repo_root/test-results"
 run_log="$results_dir/gmtl-run.log"
 remote_install_dir="$HOME/gamemakerstudio2/GM_MAC/Selkie_s_Moon_~_until_we_meet_again_~"
@@ -44,6 +45,7 @@ if [[ ! -x "$igor_bin" ]]; then
 fi
 
 mkdir -p "$results_dir"
+mkdir -p "$output_dir"
 mkdir -p "$remote_install_dir"
 : > "$marker_file"
 

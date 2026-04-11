@@ -1,3 +1,17 @@
+function GameDirectoryPathNormalize(_path) {
+    _path = string_replace_all(_path, "\\", "/");
+
+    if (_path == "") {
+        return "";
+    }
+
+    if (string_char_at(_path, string_length(_path)) != "/") {
+        _path += "/";
+    }
+
+    return _path;
+}
+
 function GameProjectDirectoryGet() {
     var _project_path = string_replace_all(GM_project_filename, "\\", "/");
     var _separator_index = string_last_pos("/", _project_path);
@@ -9,8 +23,12 @@ function GameProjectDirectoryGet() {
     return string_copy(_project_path, 1, _separator_index);
 }
 
+function GameWorkingDirectoryGet() {
+    return GameDirectoryPathNormalize(working_directory);
+}
+
 function GameTestsMarkerPathGet() {
-    return GameProjectDirectoryGet() + ".run-gmtl-tests.txt";
+    return GameWorkingDirectoryGet() + ".run-gmtl-tests.txt";
 }
 
 function GameCommandLineHasFlag(_flag) {
@@ -26,17 +44,12 @@ function GameCommandLineHasFlag(_flag) {
 }
 
 function GameShouldQuitAfterTests() {
-    if (GameCommandLineHasFlag("--run-test")) {
-        return true;
-    }
+    var _has_marker = file_exists(GameTestsMarkerPathGet());
+    var _has_test_flag = GameCommandLineHasFlag("--run-test") || GameCommandLineHasFlag("-runTest");
 
-    return GameCommandLineHasFlag("-runTest");
+    return _has_marker && _has_test_flag;
 }
 
 function GameShouldRunTests() {
-    if (GameShouldQuitAfterTests()) {
-        return true;
-    }
-
     return file_exists(GameTestsMarkerPathGet());
 }
