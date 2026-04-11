@@ -1,9 +1,9 @@
 {
   "$GMScript":"v1",
-  "%Name":"test_bootstrap",
+  "%Name":"scr_test_helpers",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"test_bootstrap",
+  "name":"scr_test_helpers",
   "parent":{
     "name":"Selkie's Moon ~ until we meet again ~",
     "path":"Selkie's Moon ~ until we meet again ~.yyp",

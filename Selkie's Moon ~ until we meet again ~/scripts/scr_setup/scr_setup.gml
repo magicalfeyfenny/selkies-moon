@@ -1,48 +1,10 @@
-function GameProjectDirectoryGet() {
-    var _project_path = string_replace_all(GM_project_filename, "\\", "/");
-    var _separator_index = string_last_pos("/", _project_path);
-
-    if (_separator_index <= 0) {
-        return "";
-    }
-
-    return string_copy(_project_path, 1, _separator_index);
-}
-
-function GameTestsMarkerPathGet() {
-    return GameProjectDirectoryGet() + ".run-gmtl-tests.txt";
-}
-
-function GameCommandLineHasFlag(_flag) {
-    var _parameter_total = parameter_count();
-
-    for (var i = 1; i <= _parameter_total; i++) {
-        if (parameter_string(i) == _flag) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function GameShouldQuitAfterTests() {
-    if (GameCommandLineHasFlag("--run-test")) {
-        return true;
-    }
-
-    return GameCommandLineHasFlag("-runTest");
-}
-
-function GameShouldRunTests() {
-    if (GameShouldQuitAfterTests()) {
-        return true;
-    }
-
-    return file_exists(GameTestsMarkerPathGet());
-}
+//increment config and save versions when needed
+#macro CONFIG_VERSION 1
+#macro SAVE_VERSION 1
 
 function GameConfigCreateDefault() {
     return {
+        version: CONFIG_VERSION,
         room_width: 640,
         room_height: 360,
         view_width: 640,
@@ -50,13 +12,12 @@ function GameConfigCreateDefault() {
         target_fps: 60,
         display_scale: 2,
         fullscreen: false,
-        scroll_speed: 2,
-        player_move_speed: 4
     };
 }
 
 function GameSaveDataCreateDefault() {
     return {
+        version: SAVE_VERSION,
         high_score: 0,
         runs_started: 0,
         runs_finished: 0,
@@ -68,9 +29,76 @@ function GameSaveDataCreateDefault() {
     };
 }
 
+function GameSavePathGet() {
+    return "game.sav";
+}
+
+function GameConfigPathGet() {
+    return "config.sav";
+}
+
+function LoadGameSave() {
+    var _did_load = false;
+    var _path = GameSavePathGet();
+
+    if (file_exists(_path)) {
+        var _file = file_text_open_read(_path);
+        var _json_string = file_text_read_string(_file);
+        file_text_close(_file);
+
+        var _json = json_parse(_json_string);
+        if (_json.version == SAVE_VERSION) {
+            global.game_save = _json;
+            _did_load = true;
+        } else {
+            show_debug_message("Warning: Old save data detected. Expected version " + string(SAVE_VERSION)
+                + ", got version " + string(_json.version));
+        }
+    }
+
+    return _did_load;
+}
+
+function LoadGameConfig() {
+    var _did_load = false;
+    var _path = GameConfigPathGet();
+
+    if (file_exists(_path)) {
+        var _file = file_text_open_read(_path);
+        var _json_string = file_text_read_string(_file);
+        file_text_close(_file);
+
+        var _json = json_parse(_json_string);
+        if (_json.version == CONFIG_VERSION) {
+            global.game_config = _json;
+            _did_load = true;
+        } else {
+            show_debug_message("Warning: Old config data detected. Expected version " + string(CONFIG_VERSION)
+                + ", got version " + string(_json.version));
+        }
+    }
+
+    return _did_load;
+}
+
 function GameInitialize() {
     global.game_config = GameConfigCreateDefault();
     global.game_save = GameSaveDataCreateDefault();
+    var _save = LoadGameSave();
+    if (_save == false) {
+        //if we didn't load the save file, then we need to create or overwrite it
+        var _save_file = file_text_open_write(GameSavePathGet());
+        file_text_write_string(_save_file, json_stringify(global.game_save));
+        file_text_close(_save_file);
+    }
+    var _config = LoadGameConfig();
+    if (_config == false) {
+        //if we didn't load the config file, then we need to create or overwrite it
+        var _config_file = file_text_open_write(GameConfigPathGet());
+        file_text_write_string(_config_file, json_stringify(global.game_config));
+        file_text_close(_config_file);
+    }
+
     global.game_runtime = {
         is_initialized: true,
         state: "boot",
