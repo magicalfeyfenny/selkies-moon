@@ -329,5 +329,11 @@ suite(function() {
             expect(_frames[0].name).toBe("Selkie");
             expect(array_length(_frames[0].portraits)).toBe(2);
         });
+
+        test("Opening story completion transitions into rm_game", function() {
+            expect(GameStoryTransitionRoomGet(rm_opening, true, false)).toBe(rm_game);
+            expect(GameStoryTransitionRoomGet(rm_opening, true, true)).toBe(-1);
+            expect(GameStoryTransitionRoomGet(rm_game, true, false)).toBe(-1);
+        });
     });
 });

@@ -229,6 +229,27 @@ function GameStoryDefaultFileGet(_room_id) {
     return "";
 }
 
+/// @func GameStoryNextRoomGet(room_id)
+/// Returns the room that should load after a room's story segment completes.
+function GameStoryNextRoomGet(_room_id) {
+    switch (_room_id) {
+        case rm_opening:
+            return rm_game;
+    }
+
+    return -1;
+}
+
+/// @func GameStoryTransitionRoomGet(room_id, was_dialogue_active, is_dialogue_active)
+/// Returns a pending room transition when a room's story segment has just finished.
+function GameStoryTransitionRoomGet(_room_id, _was_dialogue_active, _is_dialogue_active) {
+    if (!_was_dialogue_active || _is_dialogue_active) {
+        return -1;
+    }
+
+    return GameStoryNextRoomGet(_room_id);
+}
+
 /// @func GameStoryBegin(state, filename)
 /// Starts a story queue from the requested file and shows the first frame.
 function GameStoryBegin(_state, _filename) {
