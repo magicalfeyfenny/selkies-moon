@@ -101,9 +101,15 @@ function LoadGameConfig() {
     return _did_load;
 }
 
+function SaveGameConfig() {
+    var _file = file_text_open_write(GameConfigPathGet());
+    file_text_write_string(_file, json_stringify(global.game_config));
+    file_text_close(_file);
+}
+
 function GameConfigApply() {
     window_set_fullscreen(global.game_config.fullscreen);
-    if (!global.game_config.fullscreen == false) {
+    if (!global.game_config.fullscreen) {
         window_set_size(global.game_config.view_width * global.game_config.display_scale,
             global.game_config.view_height * global.game_config.display_scale);
     }

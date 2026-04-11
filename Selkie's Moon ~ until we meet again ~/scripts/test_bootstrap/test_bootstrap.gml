@@ -126,6 +126,21 @@ suite(function() {
     });
 
     section("Title menu", function() {
+        beforeEach(function() {
+            global.game_config = GameConfigCreateDefault();
+            global.game_save = GameSaveDataCreateDefault();
+
+            if (file_exists(GameConfigPathGet())) {
+                file_delete(GameConfigPathGet());
+            }
+        });
+
+        afterEach(function() {
+            if (file_exists(GameConfigPathGet())) {
+                file_delete(GameConfigPathGet());
+            }
+        });
+
         test("Title state starts on the press start screen", function() {
             var _state = GameTitleStateCreate();
 
@@ -133,6 +148,7 @@ suite(function() {
             expect(_state.page).toBe("main");
             expect(array_length(_state.main_items)).toBe(4);
             expect(array_length(_state.characters)).toBe(1);
+            expect(_state.options_index).toBe(0);
         });
 
         test("Fire moves the title screen into the main menu", function() {
@@ -172,6 +188,66 @@ suite(function() {
             GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, false, true));
 
             expect(_state.page).toBe("main");
+        });
+
+        test("Options menu only exposes fullscreen and display scale", function() {
+            var _entries = GameTitleConfigEntriesCreate();
+
+            expect(array_length(_entries)).toBe(2);
+            expect(_entries[0].id).toBe("fullscreen");
+            expect(_entries[1].id).toBe("display_scale");
+        });
+
+        test("Options menu changes the active setting with up and down", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "options";
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, true, false, false, false, false));
+
+            expect(_state.options_index).toBe(1);
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(true, false, false, false, false, false));
+
+            expect(_state.options_index).toBe(0);
+        });
+
+        test("Options menu toggles fullscreen and saves the config", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "options";
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
+
+            expect(global.game_config.fullscreen).toBeTruthy();
+            expect(file_exists(GameConfigPathGet())).toBeTruthy();
+
+            var _file = file_text_open_read(GameConfigPathGet());
+            var _json_string = file_text_read_string(_file);
+            file_text_close(_file);
+
+            var _config = json_parse(_json_string);
+            expect(_config.fullscreen).toBeTruthy();
+        });
+
+        test("Options menu wraps display scale between 1 and 6", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "options";
+            _state.options_index = 1;
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
+
+            expect(global.game_config.display_scale).toBe(3);
+
+            global.game_config.display_scale = 6;
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
+
+            expect(global.game_config.display_scale).toBe(1);
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, true, false, false, false));
+
+            expect(global.game_config.display_scale).toBe(6);
         });
 
         test("Character select returns rm_opening with ship A", function() {

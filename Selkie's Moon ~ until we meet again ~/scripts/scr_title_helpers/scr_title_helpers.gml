@@ -30,6 +30,7 @@ function GameTitleStateCreate() {
         page: "main",
         flash_timer: 0,
         main_index: 0,
+        options_index: 0,
         score_character_index: 0,
         select_character_index: 0,
         characters: GameTitleCharactersCreate(),
@@ -77,10 +78,8 @@ function GameTitleWrapIndex(_index, _delta, _count) {
 
 function GameTitleConfigEntriesCreate() {
     return [
-        { label: "Input Device", value: string(global.game_config.input_device) },
-        { label: "Display Scale", value: string(global.game_config.display_scale) },
-        { label: "Fullscreen", value: string(global.game_config.fullscreen) },
-        { label: "Target FPS", value: string(global.game_config.target_fps) }
+        { id: "fullscreen", label: "Fullscreen", value: string(global.game_config.fullscreen) },
+        { id: "display_scale", label: "Display Scale", value: string(global.game_config.display_scale) }
     ];
 }
 
@@ -94,6 +93,44 @@ function GameTitleScoresGet(_character_id) {
     }
 
     return global.game_save.high_score[$ _character_id];
+}
+
+function GameTitleConfigValueWrap(_value, _delta, _min, _max) {
+    _value += _delta;
+
+    if (_value < _min) {
+        _value = _max;
+    } else if (_value > _max) {
+        _value = _min;
+    }
+
+    return _value;
+}
+
+function GameTitleConfigEntryAdjust(_entry_id, _delta) {
+    var _did_change = false;
+
+    switch (_entry_id) {
+        case "fullscreen":
+            global.game_config.fullscreen = !global.game_config.fullscreen;
+            _did_change = true;
+            break;
+
+        case "display_scale":
+            var _next_scale = GameTitleConfigValueWrap(global.game_config.display_scale, _delta, 1, 6);
+            if (_next_scale != global.game_config.display_scale) {
+                global.game_config.display_scale = _next_scale;
+                _did_change = true;
+            }
+            break;
+    }
+
+    if (_did_change) {
+        SaveGameConfig();
+        GameConfigApply();
+    }
+
+    return _did_change;
 }
 
 function GameTitleStateStep(_state, _input) {
@@ -136,6 +173,7 @@ function GameTitleStateStep(_state, _input) {
 
                     case "options":
                         _state.page = "options";
+                        _state.options_index = 0;
                         break;
 
                     case "scores":
@@ -164,6 +202,27 @@ function GameTitleStateStep(_state, _input) {
             break;
 
         case "options":
+            var _entries = GameTitleConfigEntriesCreate();
+            var _entry_count = array_length(_entries);
+
+            if (_input.up) {
+                _state.options_index = GameTitleWrapIndex(_state.options_index, -1, _entry_count);
+            }
+
+            if (_input.down) {
+                _state.options_index = GameTitleWrapIndex(_state.options_index, 1, _entry_count);
+            }
+
+            if (_entry_count > 0) {
+                if (_input.left) {
+                    GameTitleConfigEntryAdjust(_entries[_state.options_index].id, -1);
+                }
+
+                if (_input.right) {
+                    GameTitleConfigEntryAdjust(_entries[_state.options_index].id, 1);
+                }
+            }
+
             if (_input.bomb) {
                 _state.page = "main";
             }
@@ -224,8 +283,10 @@ function GameTitleDrawLogo(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(c_black);
-    draw_text(320, 90, "SELKIE'S MOON");
-    draw_text(320, 116, "until we meet again");
+    draw_set_font(fn_title);
+    draw_text(320, 90, "Selkie's Moon");
+    draw_set_font(fn_subtitle);
+    draw_text(320, 116, "~ until we meet again ~");
 }
 
 function GameTitleDrawPrompt(_state) {
@@ -233,12 +294,14 @@ function GameTitleDrawPrompt(_state) {
         draw_set_halign(fa_center);
         draw_set_valign(fa_middle);
         draw_set_color(c_white);
+        draw_set_font(fn_menu);
         draw_text(320, 260, "Press [FIRE] to start");
     }
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(make_color_rgb(140, 210, 255));
+    draw_set_font(fn_menu);
     draw_text(320, 310, "Arrow Keys move  Z fire  X back/bomb");
 }
 
@@ -257,6 +320,7 @@ function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
     draw_set_halign(fa_left);
     draw_set_valign(fa_middle);
     draw_set_color(_text_color);
+    draw_set_font(fn_menu);
     draw_text(_x + 12, _y + 15, _label);
 }
 
@@ -264,6 +328,7 @@ function GameTitleDrawMainMenu(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(c_white);
+    draw_set_font(fn_menu);
     draw_text(320, 44, "Main Menu");
 
     var _item_count = array_length(_state.main_items);
@@ -272,10 +337,11 @@ function GameTitleDrawMainMenu(_state) {
     }
 }
 
-function GameTitleDrawOptionsPage() {
+function GameTitleDrawOptionsPage(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(c_white);
+    draw_set_font(fn_menu);
     draw_text(320, 44, "Options");
 
     var _entries = GameTitleConfigEntriesCreate();
@@ -283,17 +349,32 @@ function GameTitleDrawOptionsPage() {
 
     for (var i = 0; i < _entry_count; i++) {
         var _entry = _entries[i];
-        GameTitleDrawFrame(136, 96 + (i * 36), 368, 28, make_color_rgb(96, 124, 180), make_color_rgb(20, 24, 40));
+        var _fill_color = make_color_rgb(20, 24, 40);
+        var _border_color = make_color_rgb(96, 124, 180);
+        var _text_color = c_white;
+        var _value_color = c_white;
+
+        if (i == _state.options_index) {
+            _fill_color = make_color_rgb(36, 74, 124);
+            _border_color = make_color_rgb(144, 236, 255);
+            _text_color = make_color_rgb(255, 255, 160);
+            _value_color = make_color_rgb(255, 255, 160);
+        }
+
+        GameTitleDrawFrame(136, 96 + (i * 36), 368, 28, _border_color, _fill_color);
         draw_set_halign(fa_left);
-        draw_set_color(c_white);
+        draw_set_color(_text_color);
+        draw_set_font(fn_menu);
         draw_text(148, 111 + (i * 36), _entry.label);
         draw_set_halign(fa_right);
+        draw_set_color(_value_color);
         draw_text(492, 111 + (i * 36), _entry.value);
     }
 
     draw_set_halign(fa_center);
     draw_set_color(make_color_rgb(160, 188, 220));
-    draw_text(320, 322, "Press [BOMB] to go back");
+    draw_set_font(fn_menu);
+    draw_text(320, 322, "Up/Down select  Left/Right change  X back");
 }
 
 function GameTitleDrawScoresPage(_state) {
@@ -304,6 +385,7 @@ function GameTitleDrawScoresPage(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(c_white);
+    draw_set_font(fn_menu);
     draw_text(320, 36, "Scores");
     draw_set_color(_character.accent_color);
     draw_text(320, 60, _character.name);
@@ -313,6 +395,7 @@ function GameTitleDrawScoresPage(_state) {
 
         draw_set_halign(fa_left);
         draw_set_color(c_white);
+        draw_set_font(fn_menu);
         draw_text(194, 102 + (i * 22), string(i + 1) + ".");
 
         draw_set_halign(fa_right);
@@ -321,6 +404,7 @@ function GameTitleDrawScoresPage(_state) {
 
     draw_set_halign(fa_center);
     draw_set_color(make_color_rgb(160, 188, 220));
+    draw_set_font(fn_menu);
     draw_text(320, 322, "Press [LEFT]/[RIGHT] to change ship, [BOMB] to go back");
 }
 
@@ -331,6 +415,7 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(c_white);
+    draw_set_font(fn_menu);
     draw_text(320, 36, "Character Select");
     draw_set_color(_character.accent_color);
     draw_text(320, 62, _character.name);
@@ -341,6 +426,7 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_set_color(_character.accent_color);
     draw_rectangle(118, 138, 198, 226, false);
     draw_set_color(c_white);
+    draw_set_font(fn_menu);
     draw_text(158, 242, "Portrait");
 
     GameTitleDrawFrame(252, 112, 292, 140, c_white, make_color_rgb(18, 22, 34));
@@ -354,12 +440,14 @@ function GameTitleDrawCharacterSelectPage(_state) {
 
     draw_set_halign(fa_left);
     draw_set_color(c_white);
+    draw_set_font(fn_menu);
     for (var i = 0; i < _line_count; i++) {
         draw_text(266, 214 + (i * 18), _character.description_lines[i]);
     }
 
     draw_set_halign(fa_center);
     draw_set_color(make_color_rgb(160, 188, 220));
+    draw_set_font(fn_menu);
     draw_text(320, 322, "Press [FIRE] to begin, [LEFT]/[RIGHT] to switch, [BOMB] to go back");
 }
 
@@ -378,7 +466,7 @@ function GameTitleDraw(_state) {
             break;
 
         case "options":
-            GameTitleDrawOptionsPage();
+            GameTitleDrawOptionsPage(_state);
             break;
 
         case "scores":
