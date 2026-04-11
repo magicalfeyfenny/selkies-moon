@@ -1,12 +1,11 @@
 //increment config and save versions when needed
-#macro CONFIG_VERSION 1
+#macro CONFIG_VERSION 2
 #macro SAVE_VERSION 1
+#macro LIVES_VERSION 
 
 function GameConfigCreateDefault() {
     return {
         version: CONFIG_VERSION,
-        room_width: 640,
-        room_height: 360,
         view_width: 640,
         view_height: 360,
         target_fps: 60,
@@ -26,6 +25,16 @@ function GameSaveDataCreateDefault() {
             display_scale: 2,
             fullscreen: false
         }
+    };
+}
+
+function GameRuntimeDataCreateDefault() {
+    return {
+        is_initialized: true,
+        state: "boot",
+        score: 0,
+        lives: DEFAULT_LIVES,
+        bombs: DEFAULT_BOMBS
     };
 }
 
@@ -81,6 +90,10 @@ function LoadGameConfig() {
     return _did_load;
 }
 
+function GameConfigApply() {
+    room_w
+}
+
 function GameInitialize() {
     global.game_config = GameConfigCreateDefault();
     global.game_save = GameSaveDataCreateDefault();
@@ -99,13 +112,5 @@ function GameInitialize() {
         file_text_close(_config_file);
     }
 
-    global.game_runtime = {
-        is_initialized: true,
-        state: "boot",
-        score: 0,
-        lives: 3,
-        bombs: 2
-    };
-
-    game_set_speed(global.game_config.target_fps, gamespeed_fps);
+    GameConfigApply();
 }
