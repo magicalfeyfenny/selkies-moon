@@ -27,26 +27,28 @@ suite(function() {
             var _config = GameConfigCreateDefault();
 
             expect(_config.version).toBe(CONFIG_VERSION);
-            expect(_config.room_width).toBe(640);
-            expect(_config.room_height).toBe(360);
+            expect(_config.view_width).toBe(640);
+            expect(_config.view_height).toBe(360);
             expect(_config.target_fps).toBe(60);
+            expect(_config.input_device).toBe("keyboard");
         });
 
         test("Default save data starts clean", function() {
             var _save = GameSaveDataCreateDefault();
 
             expect(_save.version).toBe(SAVE_VERSION);
-            expect(_save.high_score).toBe(0);
-            expect(_save.runs_started).toBe(0);
-            expect(_save.options.display_scale).toBe(2);
-            expect(_save.options.fullscreen).toBeFalsy();
+            expect(array_length(_save.high_score.ship_A)).toBe(10);
+            expect(_save.high_score.ship_A[0]).toBe(0);
+            expect(_save.runs_started.ship_A[0]).toBe(0);
+            expect(_save.runs_finished.ship_A[0]).toBe(0);
+            expect(_save.continues_used.ship_A[0]).toBe(0);
         });
 
         test("LoadGameSave loads a matching save file", function() {
             var _save = GameSaveDataCreateDefault();
-            _save.high_score = 777;
-            _save.runs_started = 4;
-            _save.options.fullscreen = true;
+            _save.high_score.ship_A[0] = 777;
+            _save.runs_started.ship_A[0] = 4;
+            _save.continues_used.ship_A[0] = 1;
 
             var _file = file_text_open_write(GameSavePathGet());
             file_text_write_string(_file, json_stringify(_save));
@@ -55,15 +57,15 @@ suite(function() {
             global.game_save = GameSaveDataCreateDefault();
 
             expect(LoadGameSave()).toBeTruthy();
-            expect(global.game_save.high_score).toBe(777);
-            expect(global.game_save.runs_started).toBe(4);
-            expect(global.game_save.options.fullscreen).toBeTruthy();
+            expect(global.game_save.high_score.ship_A[0]).toBe(777);
+            expect(global.game_save.runs_started.ship_A[0]).toBe(4);
+            expect(global.game_save.continues_used.ship_A[0]).toBe(1);
         });
 
         test("LoadGameSave rejects an old save version", function() {
             var _save = GameSaveDataCreateDefault();
             _save.version = SAVE_VERSION + 1;
-            _save.high_score = 999;
+            _save.high_score.ship_A[0] = 999;
 
             var _file = file_text_open_write(GameSavePathGet());
             file_text_write_string(_file, json_stringify(_save));
@@ -72,7 +74,7 @@ suite(function() {
             global.game_save = GameSaveDataCreateDefault();
 
             expect(LoadGameSave()).toBeFalsy();
-            expect(global.game_save.high_score).toBe(0);
+            expect(global.game_save.high_score.ship_A[0]).toBe(0);
             expect(global.game_save.version).toBe(SAVE_VERSION);
         });
 
@@ -116,8 +118,73 @@ suite(function() {
             expect(file_exists(GameSavePathGet())).toBeTruthy();
             expect(file_exists(GameConfigPathGet())).toBeTruthy();
             expect(global.game_runtime.is_initialized).toBeTruthy();
+            expect(global.game_runtime.lives).toBe(DEFAULT_LIVES);
+            expect(global.game_runtime.bombs).toBe(DEFAULT_BOMBS);
             expect(global.game_config.version).toBe(CONFIG_VERSION);
             expect(global.game_save.version).toBe(SAVE_VERSION);
+        });
+    });
+
+    section("Title menu", function() {
+        test("Title state starts on the press start screen", function() {
+            var _state = GameTitleStateCreate();
+
+            expect(_state.phase).toBe("press_start");
+            expect(_state.page).toBe("main");
+            expect(array_length(_state.main_items)).toBe(4);
+            expect(array_length(_state.characters)).toBe(1);
+        });
+
+        test("Fire moves the title screen into the main menu", function() {
+            var _state = GameTitleStateCreate();
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+
+            expect(_state.phase).toBe("menu");
+            expect(_state.page).toBe("main");
+            expect(_state.main_index).toBe(0);
+        });
+
+        test("Main menu wraps upward to Quit", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(true, false, false, false, false, false));
+
+            expect(_state.main_index).toBe(3);
+            expect(_state.main_items[_state.main_index].id).toBe("quit");
+        });
+
+        test("Start Game opens the character select submenu", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+
+            expect(_state.page).toBe("character_select");
+        });
+
+        test("Scores submenu returns to main on bomb", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "scores";
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, false, true));
+
+            expect(_state.page).toBe("main");
+        });
+
+        test("Character select returns rm_opening with ship A", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "character_select";
+
+            var _result = GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+
+            expect(_result.action).toBe("goto_room");
+            expect(_result.room_name).toBe("rm_opening");
+            expect(_result.character_id).toBe("ship_A");
+            expect(_result.character_index).toBe(0);
         });
     });
 });

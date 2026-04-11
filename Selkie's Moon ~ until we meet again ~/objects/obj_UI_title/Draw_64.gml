@@ -1,0 +1,1 @@
+GameTitleDraw(title_state);
