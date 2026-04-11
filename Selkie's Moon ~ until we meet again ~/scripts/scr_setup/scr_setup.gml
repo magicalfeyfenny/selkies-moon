@@ -6,6 +6,8 @@
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
 
+/// @func GameConfigCreateDefault()
+/// Creates the default configuration struct for a fresh boot.
 function GameConfigCreateDefault() {
     return {
         version: CONFIG_VERSION,
@@ -18,6 +20,8 @@ function GameConfigCreateDefault() {
     };
 }
 
+/// @func GameSaveDataCreateDefault()
+/// Creates the default persistent save data structure.
 function GameSaveDataCreateDefault() {
     return {
         version: SAVE_VERSION,
@@ -36,6 +40,8 @@ function GameSaveDataCreateDefault() {
     };
 }
 
+/// @func GameRuntimeDataCreateDefault()
+/// Creates the runtime-only state used for the current run.
 function GameRuntimeDataCreateDefault() {
     return {
         version: RUNTIME_VERSION,
@@ -49,14 +55,20 @@ function GameRuntimeDataCreateDefault() {
     };
 }
 
+/// @func GameSavePathGet()
+/// Returns the relative path used for the save file.
 function GameSavePathGet() {
     return "game.sav";
 }
 
+/// @func GameConfigPathGet()
+/// Returns the relative path used for the config file.
 function GameConfigPathGet() {
     return "config.sav";
 }
 
+/// @func LoadGameSave()
+/// Loads save data when the on-disk version matches the current format.
 function LoadGameSave() {
     var _did_load = false;
     var _path = GameSavePathGet();
@@ -79,6 +91,8 @@ function LoadGameSave() {
     return _did_load;
 }
 
+/// @func LoadGameConfig()
+/// Loads config data when the on-disk version matches the current format.
 function LoadGameConfig() {
     var _did_load = false;
     var _path = GameConfigPathGet();
@@ -101,12 +115,16 @@ function LoadGameConfig() {
     return _did_load;
 }
 
+/// @func SaveGameConfig()
+/// Writes the current config struct back to disk.
 function SaveGameConfig() {
     var _file = file_text_open_write(GameConfigPathGet());
     file_text_write_string(_file, json_stringify(global.game_config));
     file_text_close(_file);
 }
 
+/// @func GameConfigApply()
+/// Applies the current config values to the active game window.
 function GameConfigApply() {
     window_set_fullscreen(global.game_config.fullscreen);
     if (!global.game_config.fullscreen) {
@@ -116,6 +134,8 @@ function GameConfigApply() {
     game_set_speed(global.game_config.target_fps, gamespeed_fps);
 }
 
+/// @func GameInitialize()
+/// Boots config, save, and runtime state and creates missing data files.
 function GameInitialize() {
     global.game_config = GameConfigCreateDefault();
     global.game_save = GameSaveDataCreateDefault();

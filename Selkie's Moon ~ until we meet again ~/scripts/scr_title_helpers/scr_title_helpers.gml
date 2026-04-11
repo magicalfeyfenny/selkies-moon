@@ -1,3 +1,5 @@
+/// @func GameTitleCharactersCreate()
+/// Creates the selectable character roster shown on the title screen.
 function GameTitleCharactersCreate() {
     return [
         {
@@ -15,6 +17,8 @@ function GameTitleCharactersCreate() {
     ];
 }
 
+/// @func GameTitleMainItemsCreate()
+/// Creates the main menu entries for the title screen.
 function GameTitleMainItemsCreate() {
     return [
         { id: "start_game", label: "Start Game" },
@@ -24,6 +28,8 @@ function GameTitleMainItemsCreate() {
     ];
 }
 
+/// @func GameTitleStateCreate()
+/// Creates the persistent UI state for the title menu flow.
 function GameTitleStateCreate() {
     return {
         phase: "press_start",
@@ -38,6 +44,8 @@ function GameTitleStateCreate() {
     };
 }
 
+/// @func GameTitleInputSnapshotCreate(up, down, left, right, fire, bomb)
+/// Creates a simple input snapshot for stepping the title state.
 function GameTitleInputSnapshotCreate(_up = false, _down = false, _left = false, _right = false, _fire = false, _bomb = false) {
     return {
         up: _up,
@@ -49,6 +57,8 @@ function GameTitleInputSnapshotCreate(_up = false, _down = false, _left = false,
     };
 }
 
+/// @func GameTitleInputSnapshotFromGlobal()
+/// Builds a title-menu input snapshot from the global input state.
 function GameTitleInputSnapshotFromGlobal() {
     return GameTitleInputSnapshotCreate(
         GameInputVerbPressed("up"),
@@ -60,6 +70,8 @@ function GameTitleInputSnapshotFromGlobal() {
     );
 }
 
+/// @func GameTitleWrapIndex(index, delta, count)
+/// Wraps a menu index forward or backward within a fixed item count.
 function GameTitleWrapIndex(_index, _delta, _count) {
     if (_count <= 0) {
         return 0;
@@ -76,6 +88,8 @@ function GameTitleWrapIndex(_index, _delta, _count) {
     return _index;
 }
 
+/// @func GameTitleConfigEntriesCreate()
+/// Creates the list of editable settings shown on the options page.
 function GameTitleConfigEntriesCreate() {
     return [
         { id: "fullscreen", label: "Fullscreen", value: string(global.game_config.fullscreen) },
@@ -83,10 +97,14 @@ function GameTitleConfigEntriesCreate() {
     ];
 }
 
+/// @func GameTitleCharacterGet(state, index)
+/// Returns the character entry at the requested roster index.
 function GameTitleCharacterGet(_state, _index) {
     return _state.characters[_index];
 }
 
+/// @func GameTitleScoresGet(character_id)
+/// Returns the stored score table for the requested character.
 function GameTitleScoresGet(_character_id) {
     if (!struct_exists(global.game_save.high_score, _character_id)) {
         return [0,0,0,0,0,0,0,0,0,0];
@@ -95,6 +113,8 @@ function GameTitleScoresGet(_character_id) {
     return global.game_save.high_score[$ _character_id];
 }
 
+/// @func GameTitleConfigValueWrap(value, delta, min, max)
+/// Wraps an option value between its minimum and maximum bounds.
 function GameTitleConfigValueWrap(_value, _delta, _min, _max) {
     _value += _delta;
 
@@ -107,6 +127,8 @@ function GameTitleConfigValueWrap(_value, _delta, _min, _max) {
     return _value;
 }
 
+/// @func GameTitleConfigEntryAdjust(entry_id, delta)
+/// Applies a left or right adjustment to one options-menu entry.
 function GameTitleConfigEntryAdjust(_entry_id, _delta) {
     var _did_change = false;
 
@@ -133,6 +155,8 @@ function GameTitleConfigEntryAdjust(_entry_id, _delta) {
     return _did_change;
 }
 
+/// @func GameTitleStateStep(state, input)
+/// Advances the title state machine by one input snapshot.
 function GameTitleStateStep(_state, _input) {
     var _result = {
         action: "none",
@@ -253,6 +277,8 @@ function GameTitleStateStep(_state, _input) {
     return _result;
 }
 
+/// @func GameTitleDrawFrame(x, y, width, height, border_color, fill_color)
+/// Draws a framed UI panel for title menu widgets.
 function GameTitleDrawFrame(_x, _y, _w, _h, _border_color, _fill_color) {
     draw_set_alpha(1.0);
     draw_set_color(_fill_color);
@@ -261,6 +287,8 @@ function GameTitleDrawFrame(_x, _y, _w, _h, _border_color, _fill_color) {
     draw_rectangle(_x, _y, _x + _w, _y + _h, true);
 }
 
+/// @func GameTitleDrawBackground()
+/// Draws the title screen background layers.
 function GameTitleDrawBackground() {
     draw_clear_alpha(make_color_rgb(8, 12, 28), 1.0);
 
@@ -275,6 +303,8 @@ function GameTitleDrawBackground() {
     draw_rectangle(32, 24, 608, 28, false);
 }
 
+/// @func GameTitleDrawLogo(state)
+/// Draws the game title card and subtitle banner.
 function GameTitleDrawLogo(_state) {
     var _character = GameTitleCharacterGet(_state, 0);
 
@@ -289,6 +319,8 @@ function GameTitleDrawLogo(_state) {
     draw_text(320, 116, "~ until we meet again ~");
 }
 
+/// @func GameTitleDrawPrompt(state)
+/// Draws the press-start prompt and input hint text.
 function GameTitleDrawPrompt(_state) {
     if (((_state.flash_timer div 20) mod 2) == 0) {
         draw_set_halign(fa_center);
@@ -305,6 +337,8 @@ function GameTitleDrawPrompt(_state) {
     draw_text(320, 310, "Arrow Keys move  Z fire  X back/bomb");
 }
 
+/// @func GameTitleDrawMenuItem(x, y, label, selected)
+/// Draws one selectable main-menu item with highlight styling.
 function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
     var _fill_color = make_color_rgb(20, 24, 40);
     var _border_color = make_color_rgb(96, 124, 180);
@@ -324,6 +358,8 @@ function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
     draw_text(_x + 12, _y + 15, _label);
 }
 
+/// @func GameTitleDrawMainMenu(state)
+/// Draws the main title menu page.
 function GameTitleDrawMainMenu(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
@@ -337,6 +373,8 @@ function GameTitleDrawMainMenu(_state) {
     }
 }
 
+/// @func GameTitleDrawOptionsPage(state)
+/// Draws the options page and highlights the active setting row.
 function GameTitleDrawOptionsPage(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
@@ -377,6 +415,8 @@ function GameTitleDrawOptionsPage(_state) {
     draw_text(320, 322, "Up/Down select  Left/Right change  X back");
 }
 
+/// @func GameTitleDrawScoresPage(state)
+/// Draws the score table for the selected character.
 function GameTitleDrawScoresPage(_state) {
     var _character = GameTitleCharacterGet(_state, _state.score_character_index);
     var _scores = GameTitleScoresGet(_character.id);
@@ -408,6 +448,8 @@ function GameTitleDrawScoresPage(_state) {
     draw_text(320, 322, "Press [LEFT]/[RIGHT] to change ship, [BOMB] to go back");
 }
 
+/// @func GameTitleDrawCharacterSelectPage(state)
+/// Draws the character select page for the active ship.
 function GameTitleDrawCharacterSelectPage(_state) {
     var _character = GameTitleCharacterGet(_state, _state.select_character_index);
     var _line_count = array_length(_character.description_lines);
@@ -451,6 +493,8 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_text(320, 322, "Press [FIRE] to begin, [LEFT]/[RIGHT] to switch, [BOMB] to go back");
 }
 
+/// @func GameTitleDraw(state)
+/// Draws the current title screen page for the active state.
 function GameTitleDraw(_state) {
     GameTitleDrawBackground();
     GameTitleDrawLogo(_state);

@@ -1,3 +1,5 @@
+/// @func GameInputVerbStateCreate()
+/// Creates the per-verb state container for one input action.
 function GameInputVerbStateCreate() {
     return {
         down: false,
@@ -6,6 +8,8 @@ function GameInputVerbStateCreate() {
     };
 }
 
+/// @func GameInputStateCreate()
+/// Creates the global input state with all supported gameplay verbs.
 function GameInputStateCreate() {
     return {
         device: "keyboard",
@@ -21,6 +25,8 @@ function GameInputStateCreate() {
     };
 }
 
+/// @func GameInputVerbAssign(state, verb, down, pressed, released)
+/// Stores the latest button state values for a named verb.
 function GameInputVerbAssign(_state, _verb, _down, _pressed, _released) {
     var _verb_state = _state.verbs[$ _verb];
 
@@ -29,6 +35,8 @@ function GameInputVerbAssign(_state, _verb, _down, _pressed, _released) {
     _verb_state.released = _released;
 }
 
+/// @func GameInputUpdateKeyboard(state)
+/// Refreshes verb states from the current keyboard mapping.
 function GameInputUpdateKeyboard(_state) {
     GameInputVerbAssign(_state, "up",
         keyboard_check(vk_up), keyboard_check_pressed(vk_up), keyboard_check_released(vk_up));
@@ -46,6 +54,8 @@ function GameInputUpdateKeyboard(_state) {
         keyboard_check(ord("X")), keyboard_check_pressed(ord("X")), keyboard_check_released(ord("X")));
 }
 
+/// @func GameInputUpdate(state)
+/// Updates the active input device and polls its mapped verbs.
 function GameInputUpdate(_state) {
     _state.device = global.game_config.input_device;
 
@@ -57,6 +67,8 @@ function GameInputUpdate(_state) {
     }
 }
 
+/// @func GameInputVerbDown(verb)
+/// Returns whether a named verb is currently held down.
 function GameInputVerbDown(_verb) {
     if (!variable_global_exists("game_input")) {
         return false;
@@ -65,6 +77,8 @@ function GameInputVerbDown(_verb) {
     return global.game_input.verbs[$ _verb].down;
 }
 
+/// @func GameInputVerbPressed(verb)
+/// Returns whether a named verb was pressed this frame.
 function GameInputVerbPressed(_verb) {
     if (!variable_global_exists("game_input")) {
         return false;
@@ -73,6 +87,8 @@ function GameInputVerbPressed(_verb) {
     return global.game_input.verbs[$ _verb].pressed;
 }
 
+/// @func GameInputVerbReleased(verb)
+/// Returns whether a named verb was released this frame.
 function GameInputVerbReleased(_verb) {
     if (!variable_global_exists("game_input")) {
         return false;
