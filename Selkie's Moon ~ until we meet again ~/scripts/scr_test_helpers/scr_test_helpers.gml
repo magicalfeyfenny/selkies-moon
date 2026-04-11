@@ -1,3 +1,5 @@
+/// @func GameDirectoryPathNormalize(path)
+/// Normalizes a directory path to forward slashes with a trailing slash.
 function GameDirectoryPathNormalize(_path) {
     _path = string_replace_all(_path, "\\", "/");
 
@@ -12,6 +14,8 @@ function GameDirectoryPathNormalize(_path) {
     return _path;
 }
 
+/// @func GameProjectDirectoryGet()
+/// Returns the project directory derived from the loaded project filename.
 function GameProjectDirectoryGet() {
     var _project_path = string_replace_all(GM_project_filename, "\\", "/");
     var _separator_index = string_last_pos("/", _project_path);
@@ -23,14 +27,20 @@ function GameProjectDirectoryGet() {
     return string_copy(_project_path, 1, _separator_index);
 }
 
+/// @func GameWorkingDirectoryGet()
+/// Returns the normalized runtime working directory.
 function GameWorkingDirectoryGet() {
     return GameDirectoryPathNormalize(working_directory);
 }
 
+/// @func GameTestsMarkerPathGet()
+/// Returns the marker file path used by the external GMTL runner.
 function GameTestsMarkerPathGet() {
     return GameWorkingDirectoryGet() + ".run-gmtl-tests.txt";
 }
 
+/// @func GameCommandLineHasFlag(flag)
+/// Checks whether the current run was launched with a specific CLI flag.
 function GameCommandLineHasFlag(_flag) {
     var _parameter_total = parameter_count();
 
@@ -43,6 +53,8 @@ function GameCommandLineHasFlag(_flag) {
     return false;
 }
 
+/// @func GameShouldQuitAfterTests()
+/// Returns whether the game should close itself after finishing tests.
 function GameShouldQuitAfterTests() {
     var _has_marker = file_exists(GameTestsMarkerPathGet());
     var _has_test_flag = GameCommandLineHasFlag("--run-test") || GameCommandLineHasFlag("-runTest");
@@ -50,6 +62,8 @@ function GameShouldQuitAfterTests() {
     return _has_marker && _has_test_flag;
 }
 
+/// @func GameShouldRunTests()
+/// Returns whether this launch should boot into GMTL test mode.
 function GameShouldRunTests() {
     return file_exists(GameTestsMarkerPathGet());
 }
