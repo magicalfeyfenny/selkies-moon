@@ -16,7 +16,9 @@
     {"$GMFolder":"","%Name":"Setup","folderPath":"folders/Libraries/GMTL/Setup.yy","name":"Setup","resourceType":"GMFolder","resourceVersion":"2.0",},
   ],
   "ForcedPrefabProjectReferences":[],
-  "IncludedFiles":[],
+  "IncludedFiles":[
+    {"$GMIncludedFile":"","%Name":"opening_story.json","CopyToMask":-1,"filePath":"datafiles","name":"opening_story.json","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
+  ],
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
@@ -60,6 +62,7 @@
     {"id":{"name":"GMTL_remove_unused_msg","path":"scripts/GMTL_remove_unused_msg/GMTL_remove_unused_msg.yy",},},
     {"id":{"name":"scr_input_helpers","path":"scripts/scr_input_helpers/scr_input_helpers.yy",},},
     {"id":{"name":"scr_setup","path":"scripts/scr_setup/scr_setup.yy",},},
+    {"id":{"name":"scr_story_helpers","path":"scripts/scr_story_helpers/scr_story_helpers.yy",},},
     {"id":{"name":"scr_test_helpers","path":"scripts/scr_test_helpers/scr_test_helpers.yy",},},
     {"id":{"name":"scr_title_helpers","path":"scripts/scr_title_helpers/scr_title_helpers.yy",},},
     {"id":{"name":"test_bootstrap","path":"scripts/test_bootstrap/test_bootstrap.yy",},},

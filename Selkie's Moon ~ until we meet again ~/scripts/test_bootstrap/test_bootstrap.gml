@@ -129,6 +129,7 @@ suite(function() {
         beforeEach(function() {
             global.game_config = GameConfigCreateDefault();
             global.game_save = GameSaveDataCreateDefault();
+            global.game_runtime = GameRuntimeDataCreateDefault();
 
             if (file_exists(GameConfigPathGet())) {
                 file_delete(GameConfigPathGet());
@@ -261,6 +262,72 @@ suite(function() {
             expect(_result.room_name).toBe("rm_opening");
             expect(_result.character_id).toBe("ship_A");
             expect(_result.character_index).toBe(0);
+        });
+    });
+
+    section("Story UI", function() {
+        beforeEach(function() {
+            global.game_config = GameConfigCreateDefault();
+            global.game_save = GameSaveDataCreateDefault();
+            global.game_runtime = GameRuntimeDataCreateDefault();
+
+            if (file_exists("test_story.json")) {
+                file_delete("test_story.json");
+            }
+        });
+
+        afterEach(function() {
+            if (file_exists("test_story.json")) {
+                file_delete("test_story.json");
+            }
+        });
+
+        test("Story queue requests enable the dialogue signal", function() {
+            expect(GameStoryQueueRequest("test_story.json")).toBeTruthy();
+            expect(global.game_runtime.signals.dialogue).toBeTruthy();
+            expect(global.game_runtime.story.requested_file).toBe("test_story.json");
+        });
+
+        test("Story update loads the first frame from a queued JSON file", function() {
+            var _file = file_text_open_write("test_story.json");
+            file_text_write_string(_file, "[{\"name\":\"Narrator\",\"text\":\"The sea remembers.\",\"portraits\":[\"narrator_wave\"],\"positions\":[\"left\"]},{\"name\":\"Selkie\",\"text\":\"Then let's answer it.\",\"portraits\":[\"selkie_focus\"],\"positions\":[\"right\"]}]");
+            file_text_close(_file);
+
+            var _state = GameStoryStateCreate();
+            GameStoryQueueRequest("test_story.json");
+            GameStoryUpdate(_state);
+
+            expect(GameStoryIsActive(_state)).toBeTruthy();
+            expect(_state.current_frame.name).toBe("Narrator");
+            expect(_state.current_frame.text).toBe("The sea remembers.");
+            expect(_state.current_frame.portraits[0]).toBe("narrator_wave");
+            expect(global.game_runtime.story.current_file).toBe("test_story.json");
+        });
+
+        test("Story advance moves through frames and clears dialogue at the end", function() {
+            var _file = file_text_open_write("test_story.json");
+            file_text_write_string(_file, "[{\"name\":\"A\",\"text\":\"One\",\"portraits\":[],\"positions\":[]},{\"name\":\"B\",\"text\":\"Two\",\"portraits\":[],\"positions\":[]}]");
+            file_text_close(_file);
+
+            var _state = GameStoryStateCreate();
+            expect(GameStoryBegin(_state, "test_story.json")).toBeTruthy();
+            expect(_state.current_frame.name).toBe("A");
+
+            expect(GameStoryAdvance(_state)).toBeTruthy();
+            expect(_state.current_frame.name).toBe("B");
+
+            expect(GameStoryAdvance(_state)).toBeFalsy();
+            expect(GameStoryIsActive(_state)).toBeFalsy();
+            expect(global.game_runtime.signals.dialogue).toBeFalsy();
+            expect(global.game_runtime.story.current_file).toBe("");
+        });
+
+        test("Opening story included file loads from the project datafiles", function() {
+            var _frames = GameStoryLoadFramesFromFile("opening_story.json");
+
+            expect(array_length(_frames)).toBe(3);
+            expect(_frames[0].name).toBe("Selkie");
+            expect(array_length(_frames[0].portraits)).toBe(2);
         });
     });
 });

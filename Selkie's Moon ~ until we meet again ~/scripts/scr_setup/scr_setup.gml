@@ -1,7 +1,7 @@
 //increment config and save versions when needed
 #macro CONFIG_VERSION 3
 #macro SAVE_VERSION 2
-#macro RUNTIME_VERSION 2
+#macro RUNTIME_VERSION 3
 
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
@@ -48,6 +48,10 @@ function GameRuntimeDataCreateDefault() {
         is_initialized: true,
         signals: {
             dialogue: false,
+        },
+        story: {
+            requested_file: "",
+            current_file: "",
         },
         score: 0,
         lives: DEFAULT_LIVES,
