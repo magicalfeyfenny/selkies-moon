@@ -1,7 +1,10 @@
 //increment config and save versions when needed
-#macro CONFIG_VERSION 2
-#macro SAVE_VERSION 1
-#macro LIVES_VERSION 
+#macro CONFIG_VERSION 3
+#macro SAVE_VERSION 2
+#macro RUNTIME_VERSION 2
+
+#macro DEFAULT_LIVES 3
+#macro DEFAULT_BOMBS 3
 
 function GameConfigCreateDefault() {
     return {
@@ -11,30 +14,38 @@ function GameConfigCreateDefault() {
         target_fps: 60,
         display_scale: 2,
         fullscreen: false,
+        input_device: "keyboard",
     };
 }
 
 function GameSaveDataCreateDefault() {
     return {
         version: SAVE_VERSION,
-        high_score: 0,
-        runs_started: 0,
-        runs_finished: 0,
-        continues_used: 0,
-        options: {
-            display_scale: 2,
-            fullscreen: false
-        }
+        high_score: {
+            ship_A: [0,0,0,0,0,0,0,0,0,0]
+        },
+        runs_started: {
+            ship_A: [0,0,0,0,0,0,0,0,0,0]
+        },
+        runs_finished: {
+            ship_A: [0,0,0,0,0,0,0,0,0,0]
+        },
+        continues_used: {
+            ship_A: [0,0,0,0,0,0,0,0,0,0]
+        },
     };
 }
 
 function GameRuntimeDataCreateDefault() {
     return {
+        version: RUNTIME_VERSION,
         is_initialized: true,
-        state: "boot",
+        signals: {
+            dialogue: false,
+        },
         score: 0,
         lives: DEFAULT_LIVES,
-        bombs: DEFAULT_BOMBS
+        bombs: DEFAULT_BOMBS,
     };
 }
 
@@ -91,12 +102,19 @@ function LoadGameConfig() {
 }
 
 function GameConfigApply() {
-    room_w
+    window_set_fullscreen(global.game_config.fullscreen);
+    if (!global.game_config.fullscreen == false) {
+        window_set_size(global.game_config.view_width * global.game_config.display_scale,
+            global.game_config.view_height * global.game_config.display_scale);
+    }
+    game_set_speed(global.game_config.target_fps, gamespeed_fps);
 }
 
 function GameInitialize() {
     global.game_config = GameConfigCreateDefault();
     global.game_save = GameSaveDataCreateDefault();
+    global.game_runtime = GameRuntimeDataCreateDefault();
+    
     var _save = LoadGameSave();
     if (_save == false) {
         //if we didn't load the save file, then we need to create or overwrite it
@@ -111,6 +129,6 @@ function GameInitialize() {
         file_text_write_string(_config_file, json_stringify(global.game_config));
         file_text_close(_config_file);
     }
-
+    
     GameConfigApply();
 }

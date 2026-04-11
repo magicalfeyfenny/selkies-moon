@@ -1,11 +1,11 @@
 {
   "$GMObject":"",
-  "%Name":"obj_bullet_parent",
+  "%Name":"obj_UI_story",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"obj_bullet_parent",
+  "name":"obj_UI_story",
   "overriddenProperties":[],
   "parent":{
     "name":"Selkie's Moon ~ until we meet again ~",
