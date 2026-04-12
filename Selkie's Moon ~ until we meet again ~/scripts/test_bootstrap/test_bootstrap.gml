@@ -265,6 +265,150 @@ suite(function() {
         });
     });
 
+    section("Gameplay", function() {
+        beforeEach(function() {
+            global.game_config = GameConfigCreateDefault();
+            global.game_save = GameSaveDataCreateDefault();
+            global.game_runtime = GameRuntimeDataCreateDefault();
+
+            if (file_exists(GameSavePathGet())) {
+                file_delete(GameSavePathGet());
+            }
+        });
+
+        afterEach(function() {
+            if (file_exists(GameSavePathGet())) {
+                file_delete(GameSavePathGet());
+            }
+        });
+
+        test("Default runtime includes continue and berserk state", function() {
+            var _runtime = GameRuntimeDataCreateDefault();
+
+            expect(_runtime.signals.continue_request).toBeFalsy();
+            expect(_runtime.continue_screen.mode).toBe("prompt");
+            expect(_runtime.meter).toBe(0);
+            expect(_runtime.is_berserk).toBeFalsy();
+            expect(_runtime.stage_frame).toBe(0);
+        });
+
+        test("Run start initialization records a run and defaults the ship", function() {
+            GameRunStartInitialize();
+
+            expect(global.game_runtime.selected_ship_id).toBe("ship_A");
+            expect(global.game_runtime.selected_ship_index).toBe(0);
+            expect(global.game_runtime.run_started_recorded).toBeTruthy();
+            expect(global.game_save.runs_started.ship_A[0]).toBe(1);
+            expect(file_exists(GameSavePathGet())).toBeTruthy();
+        });
+
+        test("Field clamping and camera drag stay inside the intended gameplay bounds", function() {
+            var _clamped = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, 999, 999);
+            var _drag_target = GameSceneCameraTargetXGet(CAMERA_HOME_X, CAMERA_HOME_X, 999);
+
+            expect(_clamped.x).toBe(CAMERA_HOME_X + PLAYFIELD_HALF_WIDTH);
+            expect(_clamped.y).toBe(CAMERA_HOME_Y + PLAYFIELD_HALF_HEIGHT);
+            expect(_drag_target).toBe(CAMERA_HOME_X + CAMERA_DRAG_LIMIT);
+        });
+
+        test("One volley tick creates twelve player shots with the intended direction split", function() {
+            var _shots = GamePlayerShotSpawnSpecsCreate(100, 100);
+            var _count_80 = 0;
+            var _count_90 = 0;
+            var _count_100 = 0;
+
+            for (var i = 0; i < array_length(_shots); i++) {
+                switch (_shots[i].direction) {
+                    case 80:
+                        _count_80 += 1;
+                        break;
+
+                    case 90:
+                        _count_90 += 1;
+                        break;
+
+                    case 100:
+                        _count_100 += 1;
+                        break;
+                }
+            }
+
+            expect(array_length(_shots)).toBe(12);
+            expect(_count_80).toBe(2);
+            expect(_count_90).toBe(8);
+            expect(_count_100).toBe(2);
+            expect(_shots[0].speed).toBe(SHOT_SPEED);
+        });
+
+        test("Holding fire long enough switches the player from volleys into sword swings", function() {
+            var _state = GamePlayerStateCreate();
+            var _input = GameGameplayInputSnapshotCreate();
+
+            _state.fire_hold_frames = FIRE_HOLD_FRAMES;
+            _input.fire_down = true;
+
+            var _result = GamePlayerFireStep(_state, _input);
+
+            expect(_result.sword_active).toBeTruthy();
+            expect(_result.spawn_shots).toBeFalsy();
+            expect(_result.current_pose.moving || _result.current_pose.angle == SWORD_START_ANGLE
+                || _result.current_pose.angle == SWORD_END_ANGLE).toBeTruthy();
+        });
+
+        test("Cancel meter rewards trigger berserk at one thousand", function() {
+            global.game_runtime.meter = 999;
+
+            expect(GamePlayerMeterRewardApply(1)).toBeTruthy();
+            expect(global.game_runtime.is_berserk).toBeTruthy();
+            expect(global.game_runtime.meter).toBe(METER_MAX);
+            expect(GamePlayerSwordPoseCreate(0, true).length).toBe(SWORD_LENGTH * BERSERK_SWORD_MULTIPLIER);
+        });
+
+        test("Continue accept resets the run state and respawns the player", function() {
+            var _state = GamePlayerStateCreate();
+
+            global.game_runtime.signals.continue_request = true;
+            global.game_runtime.lives = 0;
+            global.game_runtime.bombs = 0;
+            global.game_runtime.continues_used = 0;
+            global.game_runtime.meter = 321;
+            global.game_runtime.is_berserk = true;
+
+            var _respawn = GamePlayerContinueAccept(_state, CAMERA_HOME_X, CAMERA_HOME_Y);
+
+            expect(global.game_runtime.signals.continue_request).toBeFalsy();
+            expect(global.game_runtime.continues_used).toBe(1);
+            expect(global.game_runtime.lives).toBe(DEFAULT_LIVES);
+            expect(global.game_runtime.bombs).toBe(DEFAULT_BOMBS);
+            expect(global.game_runtime.meter).toBe(0);
+            expect(global.game_runtime.is_berserk).toBeFalsy();
+            expect(_state.invuln_timer).toBe(INVULN_TIME);
+            expect(_respawn.x).toBe(CAMERA_HOME_X);
+            expect(_respawn.y).toBe(CAMERA_HOME_Y + PLAYER_RESPAWN_OFFSET_Y);
+        });
+
+        test("Continue decline enters game over and finishes after its delay", function() {
+            var _state = GameContinueStateCreate();
+            var _input = GameGameplayInputSnapshotCreate();
+            var _action = "none";
+
+            _state.selected_index = CONTINUE_OPTION_NO;
+            _input.fire_pressed = true;
+
+            expect(GameContinueStateStep(_state, _input)).toBe("none");
+            expect(_state.mode).toBe("game_over");
+            expect(_state.game_over_timer).toBe(GAME_OVER_DELAY_FRAMES);
+
+            _input.fire_pressed = false;
+
+            for (var i = 0; i < GAME_OVER_DELAY_FRAMES; i++) {
+                _action = GameContinueStateStep(_state, _input);
+            }
+
+            expect(_action).toBe("game_over");
+        });
+    });
+
     section("Story UI", function() {
         beforeEach(function() {
             global.game_config = GameConfigCreateDefault();

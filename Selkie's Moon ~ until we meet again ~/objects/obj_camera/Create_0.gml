@@ -1,2 +1,5 @@
-//This object is the physical object followed by the viewport used in rm_game
-//Its motion through the stage is controlled by obj_scene_manager
+// Start the gameplay camera at the center of the room view.
+x = CAMERA_HOME_X;
+y = CAMERA_HOME_Y;
+
+GameCameraViewApply(x, y);

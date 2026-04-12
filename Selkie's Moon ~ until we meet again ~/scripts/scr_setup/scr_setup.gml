@@ -1,7 +1,7 @@
 //increment config and save versions when needed
 #macro CONFIG_VERSION 3
 #macro SAVE_VERSION 2
-#macro RUNTIME_VERSION 4
+#macro RUNTIME_VERSION 5
 
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
@@ -48,7 +48,9 @@ function GameRuntimeDataCreateDefault() {
         is_initialized: true,
         signals: {
             dialogue: false,
+            continue_request: false,
         },
+        continue_screen: GameContinueStateCreate(),
         story: {
             requested_file: "",
             current_file: "",
@@ -57,6 +59,11 @@ function GameRuntimeDataCreateDefault() {
         selected_ship_index: -1,
         score: 0,
         continues_used: 0,
+        meter: 0,
+        is_berserk: false,
+        stage_frame: 0,
+        stage_complete: false,
+        run_started_recorded: false,
         lives: DEFAULT_LIVES,
         bombs: DEFAULT_BOMBS,
     };
