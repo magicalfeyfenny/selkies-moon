@@ -1,11 +1,12 @@
-/// @func GameStoryFrameCreate(name, text, portraits, positions)
+/// @func GameStoryFrameCreate(name, text, portraits, positions, backgrounds)
 /// Creates a normalized dialogue frame for the story UI.
-function GameStoryFrameCreate(_name = "", _text = "", _portraits = [], _positions = []) {
+function GameStoryFrameCreate(_name = "", _text = "", _portraits = [], _positions = [], _backgrounds = []) {
     return {
         name: string(_name),
         text: string(_text),
         portraits: _portraits,
         positions: _positions,
+        backgrounds: _backgrounds,
     };
 }
 
@@ -121,6 +122,7 @@ function GameStoryFrameNormalize(_frame_data) {
     var _text = "";
     var _portraits = [];
     var _positions = [];
+    var _backgrounds = [];
 
     if (!is_struct(_frame_data)) {
         return GameStoryFrameCreate();
@@ -150,7 +152,15 @@ function GameStoryFrameNormalize(_frame_data) {
         }
     }
 
-    return GameStoryFrameCreate(_name, _text, _portraits, _positions);
+    if (struct_exists(_frame_data, "backgrounds")) {
+        if (is_array(_frame_data.backgrounds)) {
+            _backgrounds = _frame_data.backgrounds;
+        } else if (_frame_data.backgrounds != undefined) {
+            _backgrounds = [string(_frame_data.backgrounds)];
+        }
+    }
+
+    return GameStoryFrameCreate(_name, _text, _portraits, _positions, _backgrounds);
 }
 
 /// @func GameStoryFramesNormalize(json_data)
@@ -429,12 +439,35 @@ function GameStoryDrawPortrait(_portrait_id, _position) {
     GameStoryDrawPortraitPlaceholder(_portrait_id, _position);
 }
 
+/// @func GameStoryDrawBackgroundSprite(background_id)
+/// Draws a full-screen dialogue background sprite when it exists.
+function GameStoryDrawBackgroundSprite(_background_id) {
+    var _asset_index = asset_get_index(_background_id);
+
+    if (_asset_index == -1 || !sprite_exists(_asset_index)) {
+        return false;
+    }
+
+    draw_set_alpha(1.0);
+    draw_set_color(c_white);
+    draw_sprite_stretched(_asset_index, 0, 0, 0, display_get_gui_width(), display_get_gui_height());
+    return true;
+}
+
 /// @func GameStoryDrawBackground(frame)
 /// Draws the current frame portraits behind the dialogue box.
 function GameStoryDrawBackground(_frame) {
+    var _background_count = array_length(_frame.backgrounds);
     var _portrait_count = array_length(_frame.portraits);
+    var _drew_background = false;
 
-    if (_portrait_count <= 0) {
+    for (var j = 0; j < _background_count; j++) {
+        if (GameStoryDrawBackgroundSprite(string(_frame.backgrounds[j]))) {
+            _drew_background = true;
+        }
+    }
+
+    if (!_drew_background && _portrait_count <= 0) {
         draw_set_alpha(0.35);
         draw_set_color(make_color_rgb(12, 18, 34));
         draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);

@@ -452,6 +452,8 @@ suite(function() {
         test("Imported art sprites are registered with the expected sizes", function() {
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
+            var _dialogue_bg_core = asset_get_index("spr_dialogue_bg_core");
+            var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
             var _logo = asset_get_index("spr_logo");
             var _sunrise = asset_get_index("spr_sunrise");
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
@@ -461,6 +463,8 @@ suite(function() {
 
             expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
             expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
+            expect(_dialogue_bg_core != -1 && sprite_exists(_dialogue_bg_core)).toBeTruthy();
+            expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
@@ -471,6 +475,8 @@ suite(function() {
             expect(object_exists(obj_enemy_sample)).toBeTruthy();
             expect(sprite_get_width(_bullet_bead)).toBe(12);
             expect(sprite_get_width(_bullet_bead_mask)).toBe(12);
+            expect(sprite_get_width(_dialogue_bg_core)).toBe(640);
+            expect(sprite_get_height(_dialogue_bg_flower)).toBe(360);
             expect(sprite_get_width(_sunrise)).toBe(64);
             expect(sprite_get_width(_sunrise_bullet)).toBe(8);
             expect(sprite_get_height(_sunset_bullet)).toBe(8);
@@ -554,6 +560,8 @@ suite(function() {
             expect(array_length(_frames[0].portraits)).toBe(2);
             expect(_frames[1].name).toBe("Moon");
             expect(_frames[0].portraits[0]).toBe("spr_selkie_portrait");
+            expect(array_length(_frames[0].backgrounds)).toBe(1);
+            expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
         });
 
         test("Story textbox wrapping never exceeds two lines", function() {
@@ -562,6 +570,15 @@ suite(function() {
             var _lines = GameStoryTextLinesCreate("Moonlight gathers over the water while Selkie keeps the bow pointed straight into the tide.", 240, 2);
 
             expect(array_length(_lines)).toBe(2);
+        });
+
+        test("Ending story keeps flower in front of core but behind portraits", function() {
+            var _frames = GameStoryLoadFramesFromFile("ending_story.json");
+
+            expect(array_length(_frames)).toBe(3);
+            expect(array_length(_frames[0].backgrounds)).toBe(2);
+            expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
+            expect(_frames[0].backgrounds[1]).toBe("spr_dialogue_bg_flower");
         });
 
         test("Opening story completion transitions into rm_game", function() {

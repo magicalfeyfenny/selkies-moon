@@ -35,6 +35,8 @@
     {"id":{"name":"spr_logo","path":"sprites/spr_logo/spr_logo.yy",},},
     {"id":{"name":"spr_bullet_bead","path":"sprites/spr_bullet_bead/spr_bullet_bead.yy",},},
     {"id":{"name":"spr_bullet_bead_mask","path":"sprites/spr_bullet_bead_mask/spr_bullet_bead_mask.yy",},},
+    {"id":{"name":"spr_dialogue_bg_core","path":"sprites/spr_dialogue_bg_core/spr_dialogue_bg_core.yy",},},
+    {"id":{"name":"spr_dialogue_bg_flower","path":"sprites/spr_dialogue_bg_flower/spr_dialogue_bg_flower.yy",},},
     {"id":{"name":"spr_moon_portrait","path":"sprites/spr_moon_portrait/spr_moon_portrait.yy",},},
     {"id":{"name":"spr_selkie_portrait","path":"sprites/spr_selkie_portrait/spr_selkie_portrait.yy",},},
     {"id":{"name":"spr_sunrise","path":"sprites/spr_sunrise/spr_sunrise.yy",},},
