@@ -1,7 +1,7 @@
 //increment config and save versions when needed
 #macro CONFIG_VERSION 3
 #macro SAVE_VERSION 2
-#macro RUNTIME_VERSION 2
+#macro RUNTIME_VERSION 4
 
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
@@ -49,7 +49,14 @@ function GameRuntimeDataCreateDefault() {
         signals: {
             dialogue: false,
         },
+        story: {
+            requested_file: "",
+            current_file: "",
+        },
+        selected_ship_id: "",
+        selected_ship_index: -1,
         score: 0,
+        continues_used: 0,
         lives: DEFAULT_LIVES,
         bombs: DEFAULT_BOMBS,
     };
@@ -115,12 +122,121 @@ function LoadGameConfig() {
     return _did_load;
 }
 
+/// @func SaveGameSave()
+/// Writes the current save struct back to disk.
+function SaveGameSave() {
+    var _file = file_text_open_write(GameSavePathGet());
+    file_text_write_string(_file, json_stringify(global.game_save));
+    file_text_close(_file);
+}
+
 /// @func SaveGameConfig()
 /// Writes the current config struct back to disk.
 function SaveGameConfig() {
     var _file = file_text_open_write(GameConfigPathGet());
     file_text_write_string(_file, json_stringify(global.game_config));
     file_text_close(_file);
+}
+
+/// @func GameSaveShipEntriesEnsure(ship_id)
+/// Ensures a ship has all expected save arrays before results are written.
+function GameSaveShipEntriesEnsure(_ship_id) {
+    if (!struct_exists(global.game_save.high_score, _ship_id)) {
+        global.game_save.high_score[$ _ship_id] = array_create(10, 0);
+    }
+
+    if (!struct_exists(global.game_save.runs_started, _ship_id)) {
+        global.game_save.runs_started[$ _ship_id] = array_create(10, 0);
+    }
+
+    if (!struct_exists(global.game_save.runs_finished, _ship_id)) {
+        global.game_save.runs_finished[$ _ship_id] = array_create(10, 0);
+    }
+
+    if (!struct_exists(global.game_save.continues_used, _ship_id)) {
+        global.game_save.continues_used[$ _ship_id] = array_create(10, 0);
+    }
+}
+
+/// @func GameValueArrayInsertAt(values, index, value)
+/// Returns a fixed-length array with a new value inserted at the requested index.
+function GameValueArrayInsertAt(_values, _index, _value) {
+    var _count = array_length(_values);
+    var _result = array_create(_count, 0);
+    var _source_index = 0;
+
+    if (_count <= 0) {
+        return _result;
+    }
+
+    _index = clamp(_index, 0, _count - 1);
+
+    for (var i = 0; i < _count; i++) {
+        if (i == _index) {
+            _result[i] = _value;
+            continue;
+        }
+
+        _result[i] = _values[_source_index];
+        _source_index += 1;
+    }
+
+    return _result;
+}
+
+/// @func GameValueArrayInsertDescendingIndex(values, value)
+/// Returns the index where a descending score chart should insert a value.
+function GameValueArrayInsertDescendingIndex(_values, _value) {
+    var _count = array_length(_values);
+
+    if (_count <= 0) {
+        return 0;
+    }
+
+    for (var i = 0; i < _count; i++) {
+        if (_value >= _values[i]) {
+            return i;
+        }
+    }
+
+    return _count - 1;
+}
+
+/// @func GameValueArrayInsertDescending(values, value)
+/// Returns a fixed-length array with a value inserted into descending order.
+function GameValueArrayInsertDescending(_values, _value) {
+    return GameValueArrayInsertAt(_values, GameValueArrayInsertDescendingIndex(_values, _value), _value);
+}
+
+/// @func GameRunResultSave()
+/// Stores the current run's ending results into the persistent save data.
+function GameRunResultSave() {
+    var _ship_id = global.game_runtime.selected_ship_id;
+
+    if (_ship_id == "") {
+        _ship_id = "ship_A";
+    }
+
+    GameSaveShipEntriesEnsure(_ship_id);
+
+    var _high_scores = global.game_save.high_score[$ _ship_id];
+    var _continues_used = global.game_save.continues_used[$ _ship_id];
+    var _runs_finished = global.game_save.runs_finished[$ _ship_id];
+    var _score_index = GameValueArrayInsertDescendingIndex(_high_scores, global.game_runtime.score);
+
+    global.game_save.high_score[$ _ship_id] = GameValueArrayInsertAt(_high_scores, _score_index, global.game_runtime.score);
+    global.game_save.continues_used[$ _ship_id] = GameValueArrayInsertAt(_continues_used, _score_index, global.game_runtime.continues_used);
+
+    _runs_finished[0] += 1;
+    global.game_save.runs_finished[$ _ship_id] = _runs_finished;
+
+    SaveGameSave();
+}
+
+/// @func GameRuntimeReset()
+/// Resets the runtime state back to its default values.
+function GameRuntimeReset() {
+    global.game_runtime = GameRuntimeDataCreateDefault();
 }
 
 /// @func GameConfigApply()
