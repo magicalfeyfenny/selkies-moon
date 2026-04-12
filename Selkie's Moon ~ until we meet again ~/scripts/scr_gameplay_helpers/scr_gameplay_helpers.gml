@@ -19,6 +19,9 @@
 #macro PLAYER_DEATH_ANIMATION_FRAMES 45
 
 #macro SHOT_SPEED 13
+#macro PLAYER_SHOT_DAMAGE 1
+#macro SWORD_SWEEP_SHOT_EQUIVALENT 20
+#macro SWORD_SWEEP_DAMAGE (PLAYER_SHOT_DAMAGE * SWORD_SWEEP_SHOT_EQUIVALENT)
 #macro SHOT_VOLLEY_SIZE 6
 #macro SHOT_VOLLEY_INTERVAL 3
 #macro FIRE_HOLD_FRAMES 60
@@ -388,6 +391,7 @@ function GamePlayerStateCreate() {
         volley_timer: 0,
         sweep_frame: 0,
         sword_pose: undefined,
+        sword_sweep_id: 0,
     };
 }
 
@@ -645,6 +649,7 @@ function GamePlayerRespawnStateApply(_state) {
     _state.volley_timer = 0;
     _state.sweep_frame = 0;
     _state.sword_pose = GamePlayerSwordPoseCreate(0, false);
+    _state.sword_sweep_id = 0;
 }
 
 /// @func GamePlayerDeathBegin(state)
@@ -704,6 +709,36 @@ function GamePlayerGameOverFinalize() {
     room_goto(rm_title);
 }
 
+/// @func GamePlayerSwordSweepIdStep(state, previous_pose, current_pose)
+/// Advances the sword sweep id when a new cross-screen sword swing begins.
+function GamePlayerSwordSweepIdStep(_state, _previous_pose, _current_pose) {
+    var _was_moving = (_previous_pose != undefined) && _previous_pose.moving;
+    var _is_moving = (_current_pose != undefined) && _current_pose.moving;
+
+    if (_is_moving && !_was_moving) {
+        _state.sword_sweep_id += 1;
+    }
+
+    return _state.sword_sweep_id;
+}
+
+/// @func GamePlayerSwordDamageTryApply(target_id, sweep_id)
+/// Applies one sweep's worth of sword damage to a target only once for that sweep.
+function GamePlayerSwordDamageTryApply(_target_id, _sweep_id) {
+    if (!instance_exists(_target_id) || !variable_instance_exists(_target_id, "hp")) {
+        return false;
+    }
+
+    if (variable_instance_exists(_target_id, "last_sword_sweep_id")
+        && variable_instance_get(_target_id, "last_sword_sweep_id") == _sweep_id) {
+        return false;
+    }
+
+    variable_instance_set(_target_id, "last_sword_sweep_id", _sweep_id);
+    variable_instance_set(_target_id, "hp", variable_instance_get(_target_id, "hp") - SWORD_SWEEP_DAMAGE);
+    return true;
+}
+
 /// @func GamePlayerFireStep(state, input)
 /// Advances the player fire state and returns volley and sword actions for this frame.
 function GamePlayerFireStep(_state, _input) {
@@ -713,6 +748,7 @@ function GamePlayerFireStep(_state, _input) {
         previous_pose: undefined,
         current_pose: undefined,
         sword_active: false,
+        sweep_id: 0,
     };
     var _use_sword = false;
 
@@ -734,6 +770,7 @@ function GamePlayerFireStep(_state, _input) {
         _result.previous_pose = GamePlayerSwordPoseCreate(_state.sweep_frame, global.game_runtime.is_berserk);
         _state.sweep_frame = (_state.sweep_frame + 1) mod _period;
         _result.current_pose = GamePlayerSwordPoseCreate(_state.sweep_frame, global.game_runtime.is_berserk);
+        _result.sweep_id = GamePlayerSwordSweepIdStep(_state, _result.previous_pose, _result.current_pose);
         _state.sword_pose = _result.current_pose;
         _result.sword_active = true;
 

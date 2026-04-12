@@ -93,6 +93,34 @@ if (_fire.sword_active) {
             GameBulletCancelMark(_bullet, global.game_runtime.is_berserk);
         }
     }
+
+    for (var i = instance_number(obj_enemy_parent) - 1; i >= 0; i--) {
+        var _enemy = instance_find(obj_enemy_parent, i);
+
+        if (!variable_instance_exists(_enemy, "hit_radius")) {
+            continue;
+        }
+
+        if (GamePlayerSwordShouldCancelBullet(x, y, _enemy.x, _enemy.y, _fire.previous_pose, _fire.current_pose)) {
+            GamePlayerSwordDamageTryApply(_enemy, _fire.sweep_id);
+        }
+    }
+
+    for (var i = instance_number(obj_boss_parent) - 1; i >= 0; i--) {
+        var _boss = instance_find(obj_boss_parent, i);
+
+        if (!variable_instance_exists(_boss, "hit_radius")) {
+            continue;
+        }
+
+        if (variable_instance_exists(_boss, "destruction_active") && _boss.destruction_active) {
+            continue;
+        }
+
+        if (GamePlayerSwordShouldCancelBullet(x, y, _boss.x, _boss.y, _fire.previous_pose, _fire.current_pose)) {
+            GamePlayerSwordDamageTryApply(_boss, _fire.sweep_id);
+        }
+    }
 }
 
 // Resolve the 2x2 hitbox collision against active bullets.

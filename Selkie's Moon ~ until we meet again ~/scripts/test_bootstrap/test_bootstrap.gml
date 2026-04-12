@@ -414,6 +414,45 @@ suite(function() {
             expect(GamePlayerSwordPoseCreate(SWEEP_PERIOD_FRAMES * 0.5, false).angle mod 360).toBe(225);
         });
 
+        test("One sword sweep deals twenty shots of damage only once per target", function() {
+            var _state = GamePlayerStateCreate();
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+            var _first_sweep = 0;
+            var _same_sweep = 0;
+            var _second_sweep = 0;
+
+            with (_enemy) {
+                event_perform(ev_create, 0);
+                hp = 50;
+            }
+
+            _first_sweep = GamePlayerSwordSweepIdStep(_state,
+                { moving: false, angle: SWORD_START_ANGLE, length: SWORD_LENGTH },
+                { moving: true, angle: SWORD_START_ANGLE + 10, length: SWORD_LENGTH });
+            _same_sweep = GamePlayerSwordSweepIdStep(_state,
+                { moving: true, angle: SWORD_START_ANGLE + 10, length: SWORD_LENGTH },
+                { moving: true, angle: SWORD_START_ANGLE + 20, length: SWORD_LENGTH });
+
+            expect(_first_sweep).toBe(1);
+            expect(_same_sweep).toBe(1);
+            expect(GamePlayerSwordDamageTryApply(_enemy, _first_sweep)).toBeTruthy();
+            expect(variable_instance_get(_enemy, "hp")).toBe(50 - SWORD_SWEEP_DAMAGE);
+            expect(GamePlayerSwordDamageTryApply(_enemy, _first_sweep)).toBeFalsy();
+            expect(variable_instance_get(_enemy, "hp")).toBe(50 - SWORD_SWEEP_DAMAGE);
+
+            _second_sweep = GamePlayerSwordSweepIdStep(_state,
+                { moving: false, angle: SWORD_END_ANGLE, length: SWORD_LENGTH },
+                { moving: true, angle: SWORD_END_ANGLE - 10, length: SWORD_LENGTH });
+
+            expect(_second_sweep).toBe(2);
+            expect(GamePlayerSwordDamageTryApply(_enemy, _second_sweep)).toBeTruthy();
+            expect(variable_instance_get(_enemy, "hp")).toBe(50 - (SWORD_SWEEP_DAMAGE * 2));
+
+            with (_enemy) {
+                instance_destroy();
+            }
+        });
+
         test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
             var _shot = GameTurretShotSpecCreate(100, 120, 100, 220);
             var _spawn = GameSceneTurretSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
