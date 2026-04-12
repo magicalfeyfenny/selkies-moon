@@ -45,3 +45,31 @@ function GameStageMusicSync() {
         global.game_audio.stage_music_playing = false;
     }
 }
+
+/// @func GameSoundPlay(sound_id)
+/// Plays a one-shot sound effect unless the automated test runner is active.
+function GameSoundPlay(_sound_id) {
+    if (GameShouldQuitAfterTests()) {
+        return -1;
+    }
+
+    return audio_play_sound(_sound_id, 0, false);
+}
+
+/// @func GameEnemyDestroySoundPlay()
+/// Plays the shared enemy destruction sound effect.
+function GameEnemyDestroySoundPlay() {
+    return GameSoundPlay(snd_enemy_destroy);
+}
+
+/// @func GamePlayerHitSoundPlay()
+/// Plays the player damage sound effect.
+function GamePlayerHitSoundPlay() {
+    return GameSoundPlay(snd_ow);
+}
+
+/// @func GameEnemyFireSoundPlay()
+/// Plays the shared enemy firing sound effect.
+function GameEnemyFireSoundPlay() {
+    return GameSoundPlay(snd_typewriter);
+}

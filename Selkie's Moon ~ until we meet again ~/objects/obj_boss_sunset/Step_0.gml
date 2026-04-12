@@ -30,6 +30,8 @@ switch (phase_index) {
                 _bullet.spiral_radial_speed = _shot.spiral_radial_speed;
                 _bullet.image_angle = _shot.spiral_angle;
             }
+
+            GameEnemyFireSoundPlay();
         }
 
         pattern_timer += 1;
@@ -50,6 +52,8 @@ switch (phase_index) {
                     _diamond.move_direction = _bee_shot.direction;
                     _diamond.move_speed = _bee_shot.speed;
                 }
+
+                GameEnemyFireSoundPlay();
             }
         }
         break;
@@ -62,6 +66,8 @@ switch (phase_index) {
                 _bead.move_direction = _scatter.direction;
                 _bead.move_speed = _scatter.speed;
             }
+
+            GameEnemyFireSoundPlay();
         }
         break;
 
@@ -82,6 +88,8 @@ switch (phase_index) {
                 _blade.spiral_radial_speed = _phase_three_shot.spiral_radial_speed;
                 _blade.image_angle = _phase_three_shot.spiral_angle;
             }
+
+            GameEnemyFireSoundPlay();
         }
 
         pattern_timer += 1;

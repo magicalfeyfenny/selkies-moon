@@ -13,6 +13,9 @@
 #macro CAMERA_DRAG_LIMIT 100
 #macro CAMERA_DRAG_MARGIN 24
 #macro CAMERA_SCROLL_SPEED 1
+#macro STAGE_SPAWN_ABOVE_VIEW 100
+#macro STAGE_SPAWN_SIDE_MARGIN 16
+#macro STAGE_BEE_WAVE_COUNT 3
 
 #macro PLAYER_MOVE_SPEED 4
 #macro PLAYER_RESPAWN_OFFSET_Y 120
@@ -317,6 +320,95 @@ function GameSceneBossSpawnPositionGet(_camera_x, _camera_y) {
         x: _camera_x,
         y: _field.top + 84,
     };
+}
+
+/// @func GameStageSpawnBandRectGet(camera_x, camera_y)
+/// Returns the horizontal spawn band used for timeline enemies above the visible field.
+function GameStageSpawnBandRectGet(_camera_x, _camera_y) {
+    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
+
+    return {
+        left: _field.left + STAGE_SPAWN_SIDE_MARGIN,
+        right: _field.right - STAGE_SPAWN_SIDE_MARGIN,
+        y: _field.top - STAGE_SPAWN_ABOVE_VIEW,
+    };
+}
+
+/// @func GameStageRandomSpawnXGet(left, right)
+/// Returns one random horizontal position within the stage spawn band.
+function GameStageRandomSpawnXGet(_left, _right) {
+    return irandom_range(round(_left), round(_right));
+}
+
+/// @func GameStageTurretSpawnPositionCreate(camera_x, camera_y)
+/// Returns one turret spawn point above the visible play area.
+function GameStageTurretSpawnPositionCreate(_camera_x, _camera_y) {
+    var _band = GameStageSpawnBandRectGet(_camera_x, _camera_y);
+
+    return {
+        x: GameStageRandomSpawnXGet(_band.left, _band.right),
+        y: _band.y,
+    };
+}
+
+/// @func GameStageBeeSpawnPositionsCreate(camera_x, camera_y)
+/// Returns three horizontally scattered bee spawn points above the visible play area.
+function GameStageBeeSpawnPositionsCreate(_camera_x, _camera_y) {
+    var _band = GameStageSpawnBandRectGet(_camera_x, _camera_y);
+    var _positions = array_create(STAGE_BEE_WAVE_COUNT);
+    var _span = _band.right - _band.left;
+    var _slice_width = _span / max(1, STAGE_BEE_WAVE_COUNT);
+
+    for (var i = 0; i < STAGE_BEE_WAVE_COUNT; i++) {
+        var _slice_left = _band.left + (_slice_width * i);
+        var _slice_right = _slice_left + _slice_width;
+
+        _positions[i] = {
+            x: GameStageRandomSpawnXGet(_slice_left, _slice_right),
+            y: _band.y,
+        };
+    }
+
+    return _positions;
+}
+
+/// @func GameStageMayflySpawnPositionCreate(camera_x, camera_y)
+/// Returns one random mayfly spawn point above the visible play area.
+function GameStageMayflySpawnPositionCreate(_camera_x, _camera_y) {
+    return GameStageTurretSpawnPositionCreate(_camera_x, _camera_y);
+}
+
+/// @func GameStageTimelineTurretSpawn(camera_x, camera_y)
+/// Spawns one turret from the active stage timeline.
+function GameStageTimelineTurretSpawn(_camera_x, _camera_y) {
+    var _spawn = GameStageTurretSpawnPositionCreate(_camera_x, _camera_y);
+    return instance_create_layer(_spawn.x, _spawn.y, "Instances", obj_enemy_turret);
+}
+
+/// @func GameStageTimelineBeeWaveSpawn(camera_x, camera_y)
+/// Spawns one three-bee wave from the active stage timeline.
+function GameStageTimelineBeeWaveSpawn(_camera_x, _camera_y) {
+    var _positions = GameStageBeeSpawnPositionsCreate(_camera_x, _camera_y);
+    var _count = array_length(_positions);
+
+    for (var i = 0; i < _count; i++) {
+        instance_create_layer(_positions[i].x, _positions[i].y, "Instances", obj_enemy_bee);
+    }
+
+    return _count;
+}
+
+/// @func GameStageTimelineMayflySpawn(camera_x, camera_y)
+/// Spawns one mayfly from the active stage timeline.
+function GameStageTimelineMayflySpawn(_camera_x, _camera_y) {
+    var _spawn = GameStageMayflySpawnPositionCreate(_camera_x, _camera_y);
+    return instance_create_layer(_spawn.x, _spawn.y, "Instances", obj_enemy_mayfly);
+}
+
+/// @func GameStageTimelineShouldRun(state)
+/// Returns whether the stage timeline should currently advance.
+function GameStageTimelineShouldRun(_state) {
+    return !GameGameplayIsFrozen() && _state.mode == "scroll";
 }
 
 /// @func GameSceneCombatClear()
@@ -659,6 +751,7 @@ function GamePlayerDeathBegin(_state) {
         return false;
     }
 
+    GamePlayerHitSoundPlay();
     _state.hit = true;
     _state.death_timer = PLAYER_DEATH_ANIMATION_FRAMES;
     global.game_runtime.lives = max(0, global.game_runtime.lives - 1);

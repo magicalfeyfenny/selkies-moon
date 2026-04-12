@@ -20,5 +20,6 @@ if (fire_timer >= fire_interval) {
         var _bullet = instance_create_layer(_shot.x, _shot.y, "Instances", _shot.object_index);
         _bullet.move_direction = _shot.direction;
         _bullet.move_speed = _shot.speed;
+        GameEnemyFireSoundPlay();
     }
 }

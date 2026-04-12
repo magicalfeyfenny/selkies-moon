@@ -31,5 +31,7 @@ if (fire_timer >= fire_interval) {
             _bullet.move_direction = _shot.direction;
             _bullet.move_speed = _shot.speed;
         }
+
+        GameEnemyFireSoundPlay();
     }
 }

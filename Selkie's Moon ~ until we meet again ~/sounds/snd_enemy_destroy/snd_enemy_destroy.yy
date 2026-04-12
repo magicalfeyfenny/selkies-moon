@@ -1,0 +1,26 @@
+{
+  "$GMSound":"v2",
+  "%Name":"snd_enemy_destroy",
+  "audioGroupId":{
+    "name":"audiogroup_default",
+    "path":"audiogroups/audiogroup_default",
+  },
+  "bitDepth":1,
+  "channelFormat":0,
+  "compression":0,
+  "compressionQuality":4,
+  "conversionMode":0,
+  "duration":0.267029,
+  "exportDir":"",
+  "name":"snd_enemy_destroy",
+  "parent":{
+    "name":"Selkie's Moon ~ until we meet again ~",
+    "path":"Selkie's Moon ~ until we meet again ~.yyp",
+  },
+  "preload":false,
+  "resourceType":"GMSound",
+  "resourceVersion":"2.0",
+  "sampleRate":44100,
+  "soundFile":"snd_enemy_destroy.wav",
+  "volume":1.0,
+}

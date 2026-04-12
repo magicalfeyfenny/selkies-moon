@@ -340,6 +340,35 @@ suite(function() {
             expect(_state.stage_length_frames).toBe(3600);
         });
 
+        test("Stage timeline helpers spawn above the field and stop once scrolling ends", function() {
+            var _state = GameSceneStateCreate();
+            var _turret = GameStageTurretSpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _bees = GameStageBeeSpawnPositionsCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _mayfly = GameStageMayflySpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _band = GameStageSpawnBandRectGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+
+            expect(GameStageTimelineShouldRun(_state)).toBeTruthy();
+            expect(_turret.y).toBe(_band.y);
+            expect(_mayfly.y).toBe(_band.y);
+            expect(_turret.x >= _band.left).toBeTruthy();
+            expect(_turret.x <= _band.right).toBeTruthy();
+            expect(array_length(_bees)).toBe(STAGE_BEE_WAVE_COUNT);
+
+            for (var i = 0; i < array_length(_bees); i++) {
+                expect(_bees[i].x >= _band.left).toBeTruthy();
+                expect(_bees[i].x <= _band.right).toBeTruthy();
+                expect(_bees[i].y).toBe(_band.y);
+            }
+
+            _state.mode = "boss_intro";
+            expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
+
+            _state.mode = "scroll";
+            global.game_runtime.signals.dialogue = true;
+            expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
+            global.game_runtime.signals.dialogue = false;
+        });
+
         test("Field clamping and camera drag stay inside the intended gameplay bounds", function() {
             var _clamped = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, 999, 999);
             var _clamped_top = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, -999, -999);
@@ -681,6 +710,37 @@ suite(function() {
             expect(GameBossPhaseThreeRedirectDue(299)).toBeFalsy();
         });
 
+        test("Boss intro combat clear removes enemies and bullets but keeps bosses and score unchanged", function() {
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+            var _bullet = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
+            var _boss = instance_create_layer(0, 0, "Instances", obj_boss_sunset);
+
+            with (_enemy) {
+                event_perform(ev_create, 0);
+                points = 500;
+            }
+
+            with (_bullet) {
+                event_perform(ev_create, 0);
+            }
+
+            with (_boss) {
+                event_perform(ev_create, 0);
+            }
+
+            global.game_runtime.score = 0;
+            GameSceneCombatClear();
+
+            expect(instance_exists(_enemy)).toBeFalsy();
+            expect(instance_exists(_bullet)).toBeFalsy();
+            expect(instance_exists(_boss)).toBeTruthy();
+            expect(global.game_runtime.score).toBe(0);
+
+            with (_boss) {
+                instance_destroy();
+            }
+        });
+
         test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
             var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
             var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
@@ -790,7 +850,7 @@ suite(function() {
             expect(_action).toBe("game_over");
         });
 
-        test("Imported art sprites are registered with the expected sizes", function() {
+        test("Imported art and audio assets are registered with the expected sizes", function() {
             var _bee = asset_get_index("spr_bee");
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
@@ -801,7 +861,10 @@ suite(function() {
             var _logo = asset_get_index("spr_logo");
             var _mayfly = asset_get_index("spr_mayfly");
             var _medal = asset_get_index("spr_medal");
+            var _enemy_destroy = asset_get_index("snd_enemy_destroy");
+            var _ow = asset_get_index("snd_ow");
             var _stage_music = asset_get_index("snd_stage_music");
+            var _typewriter = asset_get_index("snd_typewriter");
             var _sunrise = asset_get_index("spr_sunrise");
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
             var _sunset = asset_get_index("spr_sunset");
@@ -820,7 +883,10 @@ suite(function() {
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
             expect(_medal != -1 && sprite_exists(_medal)).toBeTruthy();
+            expect(_enemy_destroy != -1).toBeTruthy();
+            expect(_ow != -1).toBeTruthy();
             expect(_stage_music != -1).toBeTruthy();
+            expect(_typewriter != -1).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
             expect(_sunset != -1 && sprite_exists(_sunset)).toBeTruthy();

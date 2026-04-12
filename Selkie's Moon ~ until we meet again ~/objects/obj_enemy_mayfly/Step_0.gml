@@ -27,6 +27,8 @@ if (_burst.fire) {
         _bullet.spiral_radial_speed = _shot.spiral_radial_speed;
         _bullet.image_angle = _shot.spiral_angle;
     }
+
+    GameEnemyFireSoundPlay();
 }
 
 fire_timer += 1;

@@ -1,5 +1,6 @@
 // Destroy defeated enemies and award their score before any motion update.
 if (hp <= 0) {
+    GameEnemyDestroySoundPlay();
     global.game_runtime.score += points;
     instance_destroy();
     exit;
