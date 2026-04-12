@@ -276,9 +276,13 @@ suite(function() {
 
             expect(_characters[0].pilot_name).toBe("Moon");
             expect(_characters[0].support_name).toBe("");
-            expect(_characters[0].description_lines[0]).toBe("A ship that carries on the wishes of a former companion.");
-            expect(_characters[0].description_lines[1]).toBe("As she chases her companion around the world,");
-            expect(_characters[0].description_lines[2]).toBe("her companion chases her in kind");
+            expect(_characters[0].subtitle).toBe("Moonlight reflects a warm sunshine");
+            expect(array_length(_characters[0].description_lines)).toBe(5);
+            expect(_characters[0].description_lines[0]).toBe("A ship that carries on");
+            expect(_characters[0].description_lines[1]).toBe("the wishes of a former companion.");
+            expect(_characters[0].description_lines[2]).toBe("As she chases her companion");
+            expect(_characters[0].description_lines[3]).toBe("around the world, her companion");
+            expect(_characters[0].description_lines[4]).toBe("chases her in kind");
         });
 
         test("Press-start subtitle fades in over one second while sliding left", function() {

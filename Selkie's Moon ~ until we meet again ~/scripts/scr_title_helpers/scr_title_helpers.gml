@@ -5,16 +5,18 @@ function GameTitleCharactersCreate() {
         {
             id: "ship_A",
             name: "Sunrise",
-            subtitle: "Selkie's seafaring frame",
+            subtitle: "Moonlight reflects a warm sunshine",
             accent_color: make_color_rgb(64, 232, 255),
             logo_color: make_color_rgb(255, 96, 196),
             preview_sprite: "spr_sunrise",
             pilot_name: "Moon",
             support_name: "",
             description_lines: [
-                "A ship that carries on the wishes of a former companion.",
-                "As she chases her companion around the world,",
-                "her companion chases her in kind"
+                "A ship that carries on",
+                "the wishes of a former companion.",
+                "As she chases her companion",
+                "around the world, her companion",
+                "chases her in kind"
             ]
         }
     ];
