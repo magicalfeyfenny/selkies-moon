@@ -39,6 +39,7 @@
     {"id":{"name":"spr_sunrise_bullet","path":"sprites/spr_sunrise_bullet/spr_sunrise_bullet.yy",},},
     {"id":{"name":"spr_sunset_bullet","path":"sprites/spr_sunset_bullet/spr_sunset_bullet.yy",},},
     {"id":{"name":"spr_textbox","path":"sprites/spr_textbox/spr_textbox.yy",},},
+    {"id":{"name":"spr_violet_tiles","path":"sprites/spr_violet_tiles/spr_violet_tiles.yy",},},
     {"id":{"name":"obj_app_init","path":"objects/obj_app_init/obj_app_init.yy",},},
     {"id":{"name":"obj_boss_parent","path":"objects/obj_boss_parent/obj_boss_parent.yy",},},
     {"id":{"name":"obj_bullet_parent","path":"objects/obj_bullet_parent/obj_bullet_parent.yy",},},

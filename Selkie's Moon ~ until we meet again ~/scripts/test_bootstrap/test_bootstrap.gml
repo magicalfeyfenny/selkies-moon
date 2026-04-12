@@ -435,17 +435,21 @@ suite(function() {
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
             var _sunset_bullet = asset_get_index("spr_sunset_bullet");
             var _textbox = asset_get_index("spr_textbox");
+            var _violet_tiles = asset_get_index("spr_violet_tiles");
 
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
             expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
+            expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
             expect(sprite_get_width(_sunrise)).toBe(64);
             expect(sprite_get_width(_sunrise_bullet)).toBe(8);
             expect(sprite_get_height(_sunset_bullet)).toBe(8);
             expect(sprite_get_width(_textbox)).toBe(640);
             expect(sprite_get_height(_textbox)).toBe(130);
+            expect(sprite_get_width(_violet_tiles)).toBe(128);
+            expect(sprite_get_height(_violet_tiles)).toBe(128);
         });
     });
 
