@@ -81,6 +81,7 @@ if (_fire.spawn_shots) {
         var _shot = instance_create_layer(_shots[i].x, _shots[i].y, "Instances", obj_player_shot);
         _shot.move_direction = _shots[i].direction;
         _shot.move_speed = _shots[i].speed;
+        _shot.shot_sprite = _shots[i].sprite_id;
     }
 }
 

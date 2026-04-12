@@ -21,6 +21,8 @@
 #macro SHOT_VOLLEY_SIZE 6
 #macro SHOT_VOLLEY_INTERVAL 3
 #macro FIRE_HOLD_FRAMES 60
+#macro SHOT_SPRITE_FRONT spr_sunrise_bullet
+#macro SHOT_SPRITE_SIDE spr_sunset_bullet
 
 #macro SWEEP_RATE 2
 #macro SWEEP_PERIOD_FRAMES 30
@@ -287,26 +289,27 @@ function GamePlayerStateCreate() {
     };
 }
 
-/// @func GameShotSpecCreate(x, y, direction, speed)
+/// @func GameShotSpecCreate(x, y, direction, speed, sprite_id)
 /// Creates one normalized shot spawn specification.
-function GameShotSpecCreate(_x, _y, _direction, _speed) {
+function GameShotSpecCreate(_x, _y, _direction, _speed, _sprite_id) {
     return {
         x: _x,
         y: _y,
         direction: _direction,
         speed: _speed,
+        sprite_id: _sprite_id,
     };
 }
 
-/// @func GamePlayerShotPairWrite(shots, index, center_x, center_y, direction)
+/// @func GamePlayerShotPairWrite(shots, index, center_x, center_y, direction, sprite_id)
 /// Writes one mirrored pair of shots into a shot specification array.
-function GamePlayerShotPairWrite(_shots, _index, _center_x, _center_y, _direction) {
+function GamePlayerShotPairWrite(_shots, _index, _center_x, _center_y, _direction, _sprite_id) {
     var _perpendicular = _direction + 90;
     var _offset_x = lengthdir_x(2.5, _perpendicular);
     var _offset_y = lengthdir_y(2.5, _perpendicular);
 
-    _shots[_index] = GameShotSpecCreate(_center_x - _offset_x, _center_y - _offset_y, _direction, SHOT_SPEED);
-    _shots[_index + 1] = GameShotSpecCreate(_center_x + _offset_x, _center_y + _offset_y, _direction, SHOT_SPEED);
+    _shots[_index] = GameShotSpecCreate(_center_x - _offset_x, _center_y - _offset_y, _direction, SHOT_SPEED, _sprite_id);
+    _shots[_index + 1] = GameShotSpecCreate(_center_x + _offset_x, _center_y + _offset_y, _direction, SHOT_SPEED, _sprite_id);
 }
 
 /// @func GamePlayerShotSpawnSpecsCreate(x, y)
@@ -315,17 +318,17 @@ function GamePlayerShotSpawnSpecsCreate(_x, _y) {
     var _shots = array_create(12);
     var _index = 0;
 
-    GamePlayerShotPairWrite(_shots, _index, _x - 26, _y - 12, 100);
+    GamePlayerShotPairWrite(_shots, _index, _x - 26, _y - 12, 100, SHOT_SPRITE_SIDE);
     _index += 2;
-    GamePlayerShotPairWrite(_shots, _index, _x + 26, _y - 12, 80);
+    GamePlayerShotPairWrite(_shots, _index, _x + 26, _y - 12, 80, SHOT_SPRITE_SIDE);
     _index += 2;
-    GamePlayerShotPairWrite(_shots, _index, _x - 24, _y - 30, 90);
+    GamePlayerShotPairWrite(_shots, _index, _x - 24, _y - 30, 90, SHOT_SPRITE_FRONT);
     _index += 2;
-    GamePlayerShotPairWrite(_shots, _index, _x - 8, _y - 36, 90);
+    GamePlayerShotPairWrite(_shots, _index, _x - 8, _y - 36, 90, SHOT_SPRITE_FRONT);
     _index += 2;
-    GamePlayerShotPairWrite(_shots, _index, _x + 8, _y - 36, 90);
+    GamePlayerShotPairWrite(_shots, _index, _x + 8, _y - 36, 90, SHOT_SPRITE_FRONT);
     _index += 2;
-    GamePlayerShotPairWrite(_shots, _index, _x + 24, _y - 30, 90);
+    GamePlayerShotPairWrite(_shots, _index, _x + 24, _y - 30, 90, SHOT_SPRITE_FRONT);
 
     return _shots;
 }

@@ -36,6 +36,8 @@
     {"id":{"name":"spr_moon_portrait","path":"sprites/spr_moon_portrait/spr_moon_portrait.yy",},},
     {"id":{"name":"spr_selkie_portrait","path":"sprites/spr_selkie_portrait/spr_selkie_portrait.yy",},},
     {"id":{"name":"spr_sunrise","path":"sprites/spr_sunrise/spr_sunrise.yy",},},
+    {"id":{"name":"spr_sunrise_bullet","path":"sprites/spr_sunrise_bullet/spr_sunrise_bullet.yy",},},
+    {"id":{"name":"spr_sunset_bullet","path":"sprites/spr_sunset_bullet/spr_sunset_bullet.yy",},},
     {"id":{"name":"spr_textbox","path":"sprites/spr_textbox/spr_textbox.yy",},},
     {"id":{"name":"obj_app_init","path":"objects/obj_app_init/obj_app_init.yy",},},
     {"id":{"name":"obj_boss_parent","path":"objects/obj_boss_parent/obj_boss_parent.yy",},},

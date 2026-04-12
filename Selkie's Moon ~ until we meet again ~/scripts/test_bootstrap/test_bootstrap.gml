@@ -318,11 +318,13 @@ suite(function() {
             expect(_drag_target).toBe(CAMERA_HOME_X + CAMERA_DRAG_LIMIT);
         });
 
-        test("One volley tick creates twelve player shots with the intended direction split", function() {
+        test("One volley tick creates twelve player shots with the intended direction and sprite split", function() {
             var _shots = GamePlayerShotSpawnSpecsCreate(100, 100);
             var _count_80 = 0;
             var _count_90 = 0;
             var _count_100 = 0;
+            var _count_front_sprite = 0;
+            var _count_side_sprite = 0;
 
             for (var i = 0; i < array_length(_shots); i++) {
                 switch (_shots[i].direction) {
@@ -338,6 +340,14 @@ suite(function() {
                         _count_100 += 1;
                         break;
                 }
+
+                if (_shots[i].sprite_id == spr_sunrise_bullet) {
+                    _count_front_sprite += 1;
+                }
+
+                if (_shots[i].sprite_id == spr_sunset_bullet) {
+                    _count_side_sprite += 1;
+                }
             }
 
             expect(array_length(_shots)).toBe(12);
@@ -345,6 +355,10 @@ suite(function() {
             expect(_count_90).toBe(8);
             expect(_count_100).toBe(2);
             expect(_shots[0].speed).toBe(SHOT_SPEED);
+            expect(_shots[0].sprite_id).toBe(spr_sunset_bullet);
+            expect(_shots[4].sprite_id).toBe(spr_sunrise_bullet);
+            expect(_count_front_sprite).toBe(8);
+            expect(_count_side_sprite).toBe(4);
         });
 
         test("Holding fire long enough switches the player from volleys into sword swings", function() {
@@ -418,12 +432,18 @@ suite(function() {
         test("Imported art sprites are registered with the expected sizes", function() {
             var _logo = asset_get_index("spr_logo");
             var _sunrise = asset_get_index("spr_sunrise");
+            var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
+            var _sunset_bullet = asset_get_index("spr_sunset_bullet");
             var _textbox = asset_get_index("spr_textbox");
 
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
+            expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
+            expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
             expect(sprite_get_width(_sunrise)).toBe(64);
+            expect(sprite_get_width(_sunrise_bullet)).toBe(8);
+            expect(sprite_get_height(_sunset_bullet)).toBe(8);
             expect(sprite_get_width(_textbox)).toBe(640);
             expect(sprite_get_height(_textbox)).toBe(130);
         });
