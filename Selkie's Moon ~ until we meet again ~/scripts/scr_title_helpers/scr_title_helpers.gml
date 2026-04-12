@@ -352,9 +352,9 @@ function GameTitlePressStartSubtitleAnimCreate(_timer) {
     };
 }
 
-/// @func GameTitleDrawOutlinedText(text, x, y, text_color, outline_color, alpha)
-/// Draws one line of title text with a four-direction one-pixel outline.
-function GameTitleDrawOutlinedText(_text, _x, _y, _text_color = c_white, _outline_color = c_black, _alpha = 1.0) {
+/// @func GameUiDrawOutlinedText(text, x, y, text_color, outline_color, alpha)
+/// Draws one line of UI text with a four-direction one-pixel outline.
+function GameUiDrawOutlinedText(_text, _x, _y, _text_color = c_white, _outline_color = c_black, _alpha = 1.0) {
     draw_set_alpha(_alpha);
     draw_set_color(_outline_color);
     draw_text(_x - 1, _y, _text);
@@ -383,7 +383,7 @@ function GameTitleDrawLogo(_state) {
             draw_set_halign(fa_center);
             draw_set_valign(fa_middle);
             draw_set_font(fn_subtitle);
-            GameTitleDrawOutlinedText("~ until we meet again ~", _subtitle_anim.x, _subtitle_anim.y, c_white, c_black, _subtitle_anim.alpha);
+            GameUiDrawOutlinedText("~ until we meet again ~", _subtitle_anim.x, _subtitle_anim.y, c_white, c_black, _subtitle_anim.alpha);
         } else {
             GameTitleDrawSpriteFit("spr_logo", 82, 56, 84, 84, 1);
         }
@@ -397,11 +397,10 @@ function GameTitleDrawLogo(_state) {
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_color(c_black);
     draw_set_font(fn_title);
-    draw_text(320, 90, "Selkie's Moon");
+    GameUiDrawOutlinedText("Selkie's Moon", 320, 90, c_white);
     draw_set_font(fn_subtitle);
-    draw_text(320, 116, "~ until we meet again ~");
+    GameUiDrawOutlinedText("~ until we meet again ~", 320, 116, c_white);
 }
 
 /// @func GameTitleDrawPrompt(state)
@@ -410,16 +409,14 @@ function GameTitleDrawPrompt(_state) {
     if (((_state.flash_timer div 20) mod 2) == 0) {
         draw_set_halign(fa_center);
         draw_set_valign(fa_middle);
-        draw_set_color(c_white);
         draw_set_font(fn_menu);
-        draw_text(470, 190, "Press [FIRE] to start");
+        GameUiDrawOutlinedText("Press [FIRE] to start", 470, 190, c_white);
     }
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_color(make_color_rgb(140, 210, 255));
     draw_set_font(fn_menu);
-    draw_text(470, 232, "Arrow Keys move  Z fire  X back/bomb");
+    GameUiDrawOutlinedText("Arrow Keys move  Z fire  X back/bomb", 470, 232, make_color_rgb(140, 210, 255));
 }
 
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
@@ -438,9 +435,8 @@ function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
     GameTitleDrawFrame(_x, _y, 220, 28, _border_color, _fill_color, 0.75);
     draw_set_halign(fa_left);
     draw_set_valign(fa_middle);
-    draw_set_color(_text_color);
     draw_set_font(fn_menu);
-    draw_text(_x + 12, _y + 15, _label);
+    GameUiDrawOutlinedText(_label, _x + 12, _y + 15, _text_color);
 }
 
 /// @func GameTitleDrawMainMenu(state)
@@ -448,9 +444,8 @@ function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
 function GameTitleDrawMainMenu(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_color(c_white);
     draw_set_font(fn_menu);
-    draw_text(320, 44, "Main Menu");
+    GameUiDrawOutlinedText("Main Menu", 320, 44, c_white);
 
     var _item_count = array_length(_state.main_items);
     for (var i = 0; i < _item_count; i++) {
@@ -463,9 +458,8 @@ function GameTitleDrawMainMenu(_state) {
 function GameTitleDrawOptionsPage(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_color(c_white);
     draw_set_font(fn_menu);
-    draw_text(320, 44, "Options");
+    GameUiDrawOutlinedText("Options", 320, 44, c_white);
 
     var _entries = GameTitleConfigEntriesCreate();
     var _entry_count = array_length(_entries);
@@ -486,18 +480,15 @@ function GameTitleDrawOptionsPage(_state) {
 
         GameTitleDrawFrame(136, 96 + (i * 36), 368, 28, _border_color, _fill_color);
         draw_set_halign(fa_left);
-        draw_set_color(_text_color);
         draw_set_font(fn_menu);
-        draw_text(148, 111 + (i * 36), _entry.label);
+        GameUiDrawOutlinedText(_entry.label, 148, 111 + (i * 36), _text_color);
         draw_set_halign(fa_right);
-        draw_set_color(_value_color);
-        draw_text(492, 111 + (i * 36), _entry.value);
+        GameUiDrawOutlinedText(_entry.value, 492, 111 + (i * 36), _value_color);
     }
 
     draw_set_halign(fa_center);
-    draw_set_color(make_color_rgb(160, 188, 220));
     draw_set_font(fn_menu);
-    draw_text(320, 322, "Up/Down select  Left/Right change  X back");
+    GameUiDrawOutlinedText("Up/Down select  Left/Right change  X back", 320, 322, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawScoresPage(state)
@@ -509,28 +500,24 @@ function GameTitleDrawScoresPage(_state) {
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_color(c_white);
     draw_set_font(fn_menu);
-    draw_text(320, 36, "Scores");
-    draw_set_color(_character.accent_color);
-    draw_text(320, 60, _character.name);
+    GameUiDrawOutlinedText("Scores", 320, 36, c_white);
+    GameUiDrawOutlinedText(_character.name, 320, 60, _character.accent_color);
 
     for (var i = 0; i < _score_count; i++) {
         GameTitleDrawFrame(180, 92 + (i * 22), 280, 18, make_color_rgb(88, 108, 156), make_color_rgb(20, 24, 40));
 
         draw_set_halign(fa_left);
-        draw_set_color(c_white);
         draw_set_font(fn_menu);
-        draw_text(194, 102 + (i * 22), string(i + 1) + ".");
+        GameUiDrawOutlinedText(string(i + 1) + ".", 194, 102 + (i * 22), c_white);
 
         draw_set_halign(fa_right);
-        draw_text(446, 102 + (i * 22), string(_scores[i]));
+        GameUiDrawOutlinedText(string(_scores[i]), 446, 102 + (i * 22), c_white);
     }
 
     draw_set_halign(fa_center);
-    draw_set_color(make_color_rgb(160, 188, 220));
     draw_set_font(fn_menu);
-    draw_text(320, 322, "Press [LEFT]/[RIGHT] to change ship, [BOMB] to go back");
+    GameUiDrawOutlinedText("Press [LEFT]/[RIGHT] to change ship, [BOMB] to go back", 320, 322, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawCharacterSelectPage(state)
@@ -541,40 +528,33 @@ function GameTitleDrawCharacterSelectPage(_state) {
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_color(c_white);
     draw_set_font(fn_menu);
-    draw_text(320, 36, "Character Select");
-    draw_set_color(_character.accent_color);
-    draw_text(320, 62, _character.name);
-    draw_set_color(make_color_rgb(180, 204, 224));
-    draw_text(320, 84, _character.subtitle);
+    GameUiDrawOutlinedText("Character Select", 320, 36, c_white);
+    GameUiDrawOutlinedText(_character.name, 320, 62, _character.accent_color);
+    GameUiDrawOutlinedText(_character.subtitle, 320, 84, make_color_rgb(180, 204, 224));
 
     GameTitleDrawFrame(96, 112, 124, 140, c_white, make_color_rgb(24, 34, 66));
     if (!GameTitleDrawSpriteFit(_character.preview_sprite, 158, 176, 92, 92, 2)) {
         draw_set_color(_character.accent_color);
         draw_rectangle(118, 138, 198, 226, false);
     }
-    draw_set_color(c_white);
     draw_set_font(fn_menu);
-    draw_text(158, 242, _character.name);
+    GameUiDrawOutlinedText(_character.name, 158, 242, c_white);
 
     GameTitleDrawFrame(252, 112, 292, 140, c_white, make_color_rgb(18, 22, 34));
     draw_set_halign(fa_left);
-    draw_set_color(make_color_rgb(180, 204, 224));
     draw_set_font(fn_menu);
-    draw_text(266, 130, "Pilot: " + _character.pilot_name);
-    draw_text(266, 152, "Support: " + _character.support_name);
+    GameUiDrawOutlinedText("Pilot: " + _character.pilot_name, 266, 130, make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText("Support: " + _character.support_name, 266, 152, make_color_rgb(180, 204, 224));
 
-    draw_set_color(c_white);
     draw_set_font(fn_menu);
     for (var i = 0; i < _line_count; i++) {
-        draw_text(266, 186 + (i * 18), _character.description_lines[i]);
+        GameUiDrawOutlinedText(_character.description_lines[i], 266, 186 + (i * 18), c_white);
     }
 
     draw_set_halign(fa_center);
-    draw_set_color(make_color_rgb(160, 188, 220));
     draw_set_font(fn_menu);
-    draw_text(320, 322, "Press [FIRE] to begin, [LEFT]/[RIGHT] to switch, [BOMB] to go back");
+    GameUiDrawOutlinedText("Press [FIRE] to begin, [LEFT]/[RIGHT] to switch, [BOMB] to go back", 320, 322, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDraw(state)

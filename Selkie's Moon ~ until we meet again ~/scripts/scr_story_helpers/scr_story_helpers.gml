@@ -419,8 +419,7 @@ function GameStoryDrawPortraitPlaceholder(_portrait_id, _position) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_font(fn_dialogue_name);
-    draw_set_color(c_white);
-    draw_text(_rect.x + (_rect.width * 0.5), _rect.y + (_rect.height * 0.5), string_upper(string(_portrait_id)));
+    GameUiDrawOutlinedText(string_upper(string(_portrait_id)), _rect.x + (_rect.width * 0.5), _rect.y + (_rect.height * 0.5), c_white);
 }
 
 /// @func GameStoryDrawPortrait(portrait_id, position)
@@ -606,22 +605,19 @@ function GameStoryDrawBox(_frame) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_top);
     draw_set_font(fn_dialogue_name);
-    draw_set_color(make_color_rgb(255, 230, 180));
-    draw_text(_gui_width * 0.5, _box_top + 10, _frame.name);
+    GameUiDrawOutlinedText(_frame.name, _gui_width * 0.5, _box_top + 10, make_color_rgb(255, 230, 180));
 
     draw_set_font(fn_dialogue_speech);
-    draw_set_color(c_white);
     _lines = GameStoryTextLinesCreate(_frame.text, _text_width, 2);
 
     for (var i = 0; i < array_length(_lines); i++) {
-        draw_text(_gui_width * 0.5, _box_top + 42 + (i * 22), _lines[i]);
+        GameUiDrawOutlinedText(_lines[i], _gui_width * 0.5, _box_top + 42 + (i * 22), c_white);
     }
 
     draw_set_halign(fa_right);
     draw_set_valign(fa_bottom);
     draw_set_font(fn_menu);
-    draw_set_color(make_color_rgb(180, 204, 232));
-    draw_text(_gui_width - 34, _gui_height - 16, "Z / C / X continue");
+    GameUiDrawOutlinedText("Z / C / X continue", _gui_width - 34, _gui_height - 16, make_color_rgb(180, 204, 232));
 }
 
 /// @func GameStoryDraw(state)
