@@ -1,3 +1,6 @@
+// Keep the run music loop aligned with the current room flow across the persistent bootstrap object.
+GameStageMusicSync();
+
 // Skip the auto-quit path during normal IDE runs.
 if (!GameShouldQuitAfterTests()) {
     exit;

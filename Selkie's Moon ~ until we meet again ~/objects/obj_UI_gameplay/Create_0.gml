@@ -1,2 +1,2 @@
-//This object displays UI elements relevant to the game
-//For now, it should display text in the top left corner of the screen that shows the current global.game_runtime.lives, global.game_runtime.bombs, and global.game_runtime.score
+// Gameplay HUD state is read directly from the shared runtime globals.
+GameRuntimeGameplayEnsure();

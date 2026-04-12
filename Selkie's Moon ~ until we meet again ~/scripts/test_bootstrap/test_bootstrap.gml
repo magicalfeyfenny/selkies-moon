@@ -263,6 +263,748 @@ suite(function() {
             expect(_result.character_id).toBe("ship_A");
             expect(_result.character_index).toBe(0);
         });
+
+        test("Title art metadata uses the Sunrise ship preview", function() {
+            var _characters = GameTitleCharactersCreate();
+
+            expect(_characters[0].name).toBe("Sunrise");
+            expect(_characters[0].preview_sprite).toBe("spr_sunrise");
+        });
+
+        test("Sunrise character metadata matches Moon's story role", function() {
+            var _characters = GameTitleCharactersCreate();
+
+            expect(_characters[0].pilot_name).toBe("Moon");
+            expect(_characters[0].support_name).toBe("");
+            expect(_characters[0].subtitle).toBe("Moonlight reflects a warm sunshine");
+            expect(array_length(_characters[0].description_lines)).toBe(5);
+            expect(_characters[0].description_lines[0]).toBe("A ship that carries on");
+            expect(_characters[0].description_lines[1]).toBe("the wishes of a former companion.");
+            expect(_characters[0].description_lines[2]).toBe("As she chases her companion");
+            expect(_characters[0].description_lines[3]).toBe("around the world, her companion");
+            expect(_characters[0].description_lines[4]).toBe("chases her in kind");
+        });
+
+        test("Press-start subtitle fades in over one second while sliding left", function() {
+            var _start = GameTitlePressStartSubtitleAnimCreate(0);
+            var _halfway = GameTitlePressStartSubtitleAnimCreate(30);
+            var _finish = GameTitlePressStartSubtitleAnimCreate(60);
+            var _clamped = GameTitlePressStartSubtitleAnimCreate(90);
+
+            expect(_start.x).toBe(300);
+            expect(_start.y).toBe(160);
+            expect(_start.alpha).toBe(0);
+
+            expect(_halfway.x).toBe(270);
+            expect(_halfway.alpha).toBe(0.5);
+
+            expect(_finish.x).toBe(240);
+            expect(_finish.alpha).toBe(1);
+
+            expect(_clamped.x).toBe(240);
+            expect(_clamped.alpha).toBe(1);
+        });
+
+        test("Title submenu panels share the same 75 percent purple styling", function() {
+            var _normal = GameTitlePanelStyleCreate(false);
+            var _selected = GameTitlePanelStyleCreate(true);
+
+            expect(_normal.fill_alpha).toBe(0.75);
+            expect(_normal.fill_color).toBe(make_color_rgb(58, 18, 92));
+            expect(_selected.fill_alpha).toBe(0.75);
+            expect(_selected.fill_color).toBe(make_color_rgb(78, 28, 116));
+        });
+    });
+
+    section("Gameplay", function() {
+        beforeEach(function() {
+            global.game_config = GameConfigCreateDefault();
+            global.game_save = GameSaveDataCreateDefault();
+            global.game_runtime = GameRuntimeDataCreateDefault();
+
+            if (file_exists(GameSavePathGet())) {
+                file_delete(GameSavePathGet());
+            }
+        });
+
+        afterEach(function() {
+            if (file_exists(GameSavePathGet())) {
+                file_delete(GameSavePathGet());
+            }
+        });
+
+        test("Default runtime includes continue and berserk state", function() {
+            var _runtime = GameRuntimeDataCreateDefault();
+
+            expect(_runtime.signals.continue_request).toBeFalsy();
+            expect(_runtime.continue_screen.mode).toBe("prompt");
+            expect(_runtime.meter).toBe(0);
+            expect(_runtime.is_berserk).toBeFalsy();
+            expect(_runtime.bomb_active).toBeFalsy();
+            expect(_runtime.bomb_timer).toBe(0);
+            expect(_runtime.stage_frame).toBe(0);
+        });
+
+        test("Run start initialization records a run and defaults the ship", function() {
+            GameRunStartInitialize();
+
+            expect(global.game_runtime.selected_ship_id).toBe("ship_A");
+            expect(global.game_runtime.selected_ship_index).toBe(0);
+            expect(global.game_runtime.run_started_recorded).toBeTruthy();
+            expect(global.game_save.runs_started.ship_A[0]).toBe(1);
+            expect(file_exists(GameSavePathGet())).toBeTruthy();
+        });
+
+        test("Stage scroll lasts sixty seconds before it transitions into the boss intro", function() {
+            var _state = GameSceneStateCreate();
+
+            _state.frame = STAGE_LENGTH_FRAMES - 1;
+
+            expect(GameSceneStageAdvance(_state)).toBe("boss_intro");
+            expect(_state.mode).toBe("boss_intro");
+            expect(_state.scroll_speed).toBe(0);
+            expect(_state.stage_length_frames).toBe(3600);
+        });
+
+        test("Stage timeline helpers spawn above the field and stop once scrolling ends", function() {
+            var _state = GameSceneStateCreate();
+            var _turret = GameStageTurretSpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _bees = GameStageBeeSpawnPositionsCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _mayfly = GameStageMayflySpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _band = GameStageSpawnBandRectGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+
+            expect(GameStageTimelineShouldRun(_state)).toBeTruthy();
+            expect(_turret.y).toBe(_band.y);
+            expect(_mayfly.y).toBe(_band.y);
+            expect(_turret.x >= _band.left).toBeTruthy();
+            expect(_turret.x <= _band.right).toBeTruthy();
+            expect(array_length(_bees)).toBe(STAGE_BEE_WAVE_COUNT);
+
+            for (var i = 0; i < array_length(_bees); i++) {
+                expect(_bees[i].x >= _band.left).toBeTruthy();
+                expect(_bees[i].x <= _band.right).toBeTruthy();
+                expect(_bees[i].y).toBe(_band.y);
+            }
+
+            _state.mode = "boss_intro";
+            expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
+
+            _state.mode = "scroll";
+            global.game_runtime.signals.dialogue = true;
+            expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
+            global.game_runtime.signals.dialogue = false;
+        });
+
+        test("Field clamping and camera drag stay inside the intended gameplay bounds", function() {
+            var _clamped = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, 999, 999);
+            var _clamped_top = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, -999, -999);
+            var _drag_target = GameSceneCameraTargetXGet(CAMERA_HOME_X, CAMERA_HOME_X, 999);
+            var _layout = GameGameplayHudLayoutCreate();
+
+            expect(_clamped.x).toBe(CAMERA_HOME_X + PLAYFIELD_HALF_WIDTH);
+            expect(_clamped.y).toBe(CAMERA_HOME_Y + PLAYFIELD_HALF_HEIGHT - PLAYFIELD_VERTICAL_PADDING);
+            expect(_clamped_top.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + PLAYFIELD_VERTICAL_PADDING);
+            expect(_drag_target).toBe(CAMERA_HOME_X + CAMERA_DRAG_LIMIT);
+            expect(_layout.left_panel_right).toBe(_layout.playfield_left);
+            expect(_layout.right_panel_left).toBe(_layout.playfield_right);
+            expect(_layout.meter_left).toBeGreaterThan(_layout.playfield_right);
+        });
+
+        test("One volley tick creates twelve player shots with the intended direction and sprite split", function() {
+            var _shots = GamePlayerShotSpawnSpecsCreate(100, 100);
+            var _count_80 = 0;
+            var _count_90 = 0;
+            var _count_100 = 0;
+            var _count_front_sprite = 0;
+            var _count_side_sprite = 0;
+
+            for (var i = 0; i < array_length(_shots); i++) {
+                switch (_shots[i].direction) {
+                    case 80:
+                        _count_80 += 1;
+                        break;
+
+                    case 90:
+                        _count_90 += 1;
+                        break;
+
+                    case 100:
+                        _count_100 += 1;
+                        break;
+                }
+
+                if (_shots[i].sprite_id == spr_sunrise_bullet) {
+                    _count_front_sprite += 1;
+                }
+
+                if (_shots[i].sprite_id == spr_sunset_bullet) {
+                    _count_side_sprite += 1;
+                }
+            }
+
+            expect(array_length(_shots)).toBe(12);
+            expect(_count_80).toBe(2);
+            expect(_count_90).toBe(8);
+            expect(_count_100).toBe(2);
+            expect(_shots[0].speed).toBe(SHOT_SPEED);
+            expect(_shots[0].sprite_id).toBe(spr_sunset_bullet);
+            expect(_shots[4].sprite_id).toBe(spr_sunrise_bullet);
+            expect(_count_front_sprite).toBe(8);
+            expect(_count_side_sprite).toBe(4);
+        });
+
+        test("Holding fire long enough switches the player from volleys into sword swings", function() {
+            var _state = GamePlayerStateCreate();
+            var _input = GameGameplayInputSnapshotCreate();
+
+            _state.fire_hold_frames = FIRE_HOLD_FRAMES;
+            _input.fire_down = true;
+
+            var _result = GamePlayerFireStep(_state, _input);
+
+            expect(_result.sword_active).toBeTruthy();
+            expect(_result.spawn_shots).toBeFalsy();
+            expect(_result.current_pose.moving || _result.current_pose.angle == SWORD_START_ANGLE
+                || _result.current_pose.angle == SWORD_END_ANGLE).toBeTruthy();
+            expect(GamePlayerSwordPoseCreate(SWEEP_PERIOD_FRAMES * 0.5, false).angle mod 360).toBe(225);
+        });
+
+        test("One sword sweep deals twenty shots of damage only once per target", function() {
+            var _state = GamePlayerStateCreate();
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+            var _first_sweep = 0;
+            var _same_sweep = 0;
+            var _second_sweep = 0;
+
+            with (_enemy) {
+                event_perform(ev_create, 0);
+                hp = 50;
+            }
+
+            _first_sweep = GamePlayerSwordSweepIdStep(_state,
+                { moving: false, angle: SWORD_START_ANGLE, length: SWORD_LENGTH },
+                { moving: true, angle: SWORD_START_ANGLE + 10, length: SWORD_LENGTH });
+            _same_sweep = GamePlayerSwordSweepIdStep(_state,
+                { moving: true, angle: SWORD_START_ANGLE + 10, length: SWORD_LENGTH },
+                { moving: true, angle: SWORD_START_ANGLE + 20, length: SWORD_LENGTH });
+
+            expect(_first_sweep).toBe(1);
+            expect(_same_sweep).toBe(1);
+            expect(GamePlayerSwordDamageTryApply(_enemy, _first_sweep)).toBeTruthy();
+            expect(variable_instance_get(_enemy, "hp")).toBe(50 - SWORD_SWEEP_DAMAGE);
+            expect(GamePlayerSwordDamageTryApply(_enemy, _first_sweep)).toBeFalsy();
+            expect(variable_instance_get(_enemy, "hp")).toBe(50 - SWORD_SWEEP_DAMAGE);
+
+            _second_sweep = GamePlayerSwordSweepIdStep(_state,
+                { moving: false, angle: SWORD_END_ANGLE, length: SWORD_LENGTH },
+                { moving: true, angle: SWORD_END_ANGLE - 10, length: SWORD_LENGTH });
+
+            expect(_second_sweep).toBe(2);
+            expect(GamePlayerSwordDamageTryApply(_enemy, _second_sweep)).toBeTruthy();
+            expect(variable_instance_get(_enemy, "hp")).toBe(50 - (SWORD_SWEEP_DAMAGE * 2));
+
+            with (_enemy) {
+                instance_destroy();
+            }
+        });
+
+        test("Stage music is only marked to play during the run rooms", function() {
+            expect(GameRunMusicShouldPlay(rm_title)).toBeFalsy();
+            expect(GameRunMusicShouldPlay(rm_opening)).toBeTruthy();
+            expect(GameRunMusicShouldPlay(rm_game)).toBeTruthy();
+            expect(GameRunMusicShouldPlay(rm_ending)).toBeTruthy();
+        });
+
+        test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
+            var _shot = GameTurretShotSpecCreate(100, 120, 100, 220);
+            var _spawn = GameSceneTurretSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+
+            expect(_shot.object_index).toBe(obj_bullet_bead);
+            expect(_shot.direction).toBe(270);
+            expect(_shot.speed).toBe(TURRET_BULLET_SPEED);
+            expect(GamePlayerBulletHitCheck(100, 100, 105, 100, 4)).toBeTruthy();
+            expect(GamePlayerBulletHitCheck(100, 100, 106, 100, 4)).toBeFalsy();
+            expect(_spawn.x).toBe(CAMERA_HOME_X);
+            expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 72);
+        });
+
+        test("Bee enemies drift toward the player and fire three aligned diamond shots every six frames", function() {
+            var _player = instance_create_layer(0, 0, "Instances", obj_player);
+            var _bee = instance_create_layer(0, 0, "Instances", obj_enemy_bee);
+            var _spawn = GameSceneBeeSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _slow_count = 0;
+            var _mid_count = 0;
+            var _fast_count = 0;
+
+            with (_player) {
+                event_perform(ev_create, 0);
+                x = 140;
+                y = 100;
+            }
+
+            with (_bee) {
+                event_perform(ev_create, 0);
+                x = 100;
+                y = 100;
+                move_direction = 0;
+                move_speed = BEE_MOVE_SPEED;
+                fire_interval = BEE_FIRE_INTERVAL;
+                fire_timer = BEE_FIRE_INTERVAL - 1;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _bee);
+
+            expect(variable_instance_get(_bee, "sprite_index")).toBe(spr_bee);
+            expect(variable_instance_get(_bee, "x")).toBe(101);
+            expect(variable_instance_get(_bee, "y")).toBe(100);
+            expect(variable_instance_get(_bee, "move_direction")).toBe(0);
+            expect(variable_instance_get(_bee, "image_angle")).toBe(0);
+            expect(instance_number(obj_bullet_diamond)).toBe(3);
+            expect(_spawn.x).toBe(CAMERA_HOME_X - PLAYFIELD_HALF_WIDTH + 40);
+            expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 96);
+
+            for (var i = 0; i < instance_number(obj_bullet_diamond); i++) {
+                var _bullet = instance_find(obj_bullet_diamond, i);
+                var _speed = variable_instance_get(_bullet, "move_speed");
+                var _direction = variable_instance_get(_bullet, "move_direction");
+
+                expect(_direction).toBe(0);
+
+                if (_speed == BEE_BULLET_SPEED - BEE_BULLET_SPEED_DELTA) {
+                    _slow_count += 1;
+                }
+
+                if (_speed == BEE_BULLET_SPEED) {
+                    _mid_count += 1;
+                }
+
+                if (_speed == BEE_BULLET_SPEED + BEE_BULLET_SPEED_DELTA) {
+                    _fast_count += 1;
+                }
+            }
+
+            expect(_slow_count).toBe(1);
+            expect(_mid_count).toBe(1);
+            expect(_fast_count).toBe(1);
+
+            with (obj_bullet_diamond) {
+                instance_destroy();
+            }
+
+            with (_bee) {
+                instance_destroy();
+            }
+
+            with (_player) {
+                instance_destroy();
+            }
+        });
+
+        test("Mayfly bursts alternate spiral direction while dropping into the y=100 camera lane", function() {
+            var _camera = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y, "Instances", obj_camera);
+            var _mayfly_spawn = GameSceneMayflySpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _mayfly = instance_create_layer(_mayfly_spawn.x, _mayfly_spawn.y, "Instances", obj_enemy_mayfly);
+            var _clockwise_count = 0;
+            var _counter_count = 0;
+            var _offset = GameMayflyInfinityOffsetCreate(90);
+            var _primary = GameMayflyBurstStateCreate(0, true);
+            var _secondary = GameMayflyBurstStateCreate(MAYFLY_SECOND_BURST_DELAY, true);
+            var _ring = GameMayflyShotSpawnSpecsCreate(0, 0, true);
+            var _stage_spawn = GameStageMayflySpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _dropping_mayfly = instance_create_layer(_stage_spawn.x, _stage_spawn.y, "Instances", obj_enemy_mayfly);
+
+            with (_mayfly) {
+                event_perform(ev_create, 0);
+                float_phase = 0;
+                fire_timer = 0;
+                clockwise_first = true;
+            }
+
+            with (_dropping_mayfly) {
+                event_perform(ev_create, 0);
+                float_phase = 0;
+                fire_timer = 1;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _mayfly);
+
+            expect(_primary.fire).toBeTruthy();
+            expect(_primary.clockwise).toBeTruthy();
+            expect(_secondary.fire).toBeTruthy();
+            expect(_secondary.clockwise).toBeFalsy();
+            expect(variable_instance_get(_mayfly, "x")).toBe(CAMERA_HOME_X);
+            expect(variable_instance_get(_mayfly, "y")).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y);
+            expect(variable_instance_get(_mayfly, "float_phase")).toBe(MAYFLY_FLOAT_RATE);
+            expect(instance_number(obj_bullet_blade)).toBe(12);
+            expect(_offset.x).toBe(MAYFLY_FLOAT_X_RADIUS);
+            expect(round(_offset.y)).toBe(0);
+            expect(_ring[0].spiral_angle).toBe(0);
+            expect(_ring[3].spiral_angle).toBe(90);
+            expect(_ring[11].spiral_angle).toBe(330);
+            expect(GameMayflyTargetAnchorOffsetYGet()).toBe(-PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y);
+
+            for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
+                var _bullet = instance_find(obj_bullet_blade, i);
+
+                if (variable_instance_get(_bullet, "spiral_direction") < 0) {
+                    _clockwise_count += 1;
+                } else {
+                    _counter_count += 1;
+                }
+            }
+
+            expect(_clockwise_count).toBe(12);
+            expect(_counter_count).toBe(0);
+
+            for (var step = 0; step < MAYFLY_SECOND_BURST_DELAY; step++) {
+                simulateEvent(ev_step, ev_step_normal, _mayfly);
+            }
+
+            _clockwise_count = 0;
+            _counter_count = 0;
+
+            for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
+                var _bullet = instance_find(obj_bullet_blade, i);
+
+                if (variable_instance_get(_bullet, "spiral_direction") < 0) {
+                    _clockwise_count += 1;
+                } else {
+                    _counter_count += 1;
+                }
+            }
+
+            expect(instance_number(obj_bullet_blade)).toBe(24);
+            expect(_clockwise_count).toBe(12);
+            expect(_counter_count).toBe(12);
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            with (_mayfly) {
+                instance_destroy();
+            }
+
+            for (var drop_step = 0; drop_step < 80; drop_step++) {
+                simulateEvent(ev_step, ev_step_normal, _dropping_mayfly);
+            }
+
+            expect(variable_instance_get(_dropping_mayfly, "anchor_offset_y")).toBe(GameMayflyTargetAnchorOffsetYGet());
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            with (_dropping_mayfly) {
+                instance_destroy();
+            }
+
+            with (_camera) {
+                instance_destroy();
+            }
+        });
+
+        test("Blade bullets spiral outward from their spawn point in either rotation direction", function() {
+            var _counter = instance_create_layer(0, 0, "Instances", obj_bullet_blade);
+            var _clockwise = instance_create_layer(0, 0, "Instances", obj_bullet_blade);
+
+            with (_counter) {
+                event_perform(ev_create, 0);
+                spiral_origin_x = 0;
+                spiral_origin_y = 0;
+                spiral_radius = 0;
+                spiral_angle = 0;
+                spiral_turn_speed = 90;
+                spiral_radial_speed = 2;
+                spiral_direction = 1;
+            }
+
+            with (_clockwise) {
+                event_perform(ev_create, 0);
+                spiral_origin_x = 0;
+                spiral_origin_y = 0;
+                spiral_radius = 0;
+                spiral_angle = 0;
+                spiral_turn_speed = 90;
+                spiral_radial_speed = 2;
+                spiral_direction = -1;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _counter);
+            simulateEvent(ev_step, ev_step_normal, _clockwise);
+
+            expect(round(variable_instance_get(_counter, "x"))).toBe(0);
+            expect(round(variable_instance_get(_counter, "y"))).toBe(-2);
+            expect(round(variable_instance_get(_clockwise, "x"))).toBe(0);
+            expect(round(variable_instance_get(_clockwise, "y"))).toBe(2);
+
+            with (_counter) {
+                instance_destroy();
+            }
+
+            with (_clockwise) {
+                instance_destroy();
+            }
+        });
+
+        test("Boss helpers expose segmented life bars and timed attack windows", function() {
+            var _segments = GameBossBarSegmentsCreate(1, BOSS_PHASE_HP * 0.5, BOSS_PHASE_HP);
+
+            expect(_segments[0]).toBe(0);
+            expect(_segments[1]).toBe(0.5);
+            expect(_segments[2]).toBe(1);
+            expect(GameBossPhaseTwoScatterActive(19)).toBeTruthy();
+            expect(GameBossPhaseTwoScatterActive(20)).toBeFalsy();
+            expect(GameBossPhaseThreeRedirectDue(300)).toBeTruthy();
+            expect(GameBossPhaseThreeRedirectDue(299)).toBeFalsy();
+        });
+
+        test("Boss intro combat clear removes enemies and bullets but keeps bosses and score unchanged", function() {
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+            var _bullet = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
+            var _boss = instance_create_layer(0, 0, "Instances", obj_boss_sunset);
+
+            with (_enemy) {
+                event_perform(ev_create, 0);
+                points = 500;
+            }
+
+            with (_bullet) {
+                event_perform(ev_create, 0);
+            }
+
+            with (_boss) {
+                event_perform(ev_create, 0);
+            }
+
+            global.game_runtime.score = 0;
+            GameSceneCombatClear();
+
+            expect(instance_exists(_enemy)).toBeFalsy();
+            expect(instance_exists(_bullet)).toBeFalsy();
+            expect(instance_exists(_boss)).toBeTruthy();
+            expect(global.game_runtime.score).toBe(0);
+
+            with (_boss) {
+                instance_destroy();
+            }
+        });
+
+        test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
+            var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+
+            with (_bead) {
+                event_perform(ev_create, 0);
+            }
+
+            with (_enemy) {
+                event_perform(ev_create, 0);
+            }
+
+            expect(variable_instance_get(_bead, "cancelled")).toBeFalsy();
+            expect(variable_instance_get(_bead, "medal_score_value")).toBe(CANCEL_BONUS);
+            expect(variable_instance_get(_bead, "move_speed")).toBe(TURRET_BULLET_SPEED);
+            expect(variable_instance_get(_bead, "collision_radius")).toBe(4);
+
+            global.game_runtime.score = 0;
+
+            with (_enemy) {
+                x = 10;
+                y = 12;
+                move_direction = 0;
+                move_speed = 3;
+                hp = 5;
+                points = 750;
+                fire_interval = 999;
+                fire_timer = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _enemy);
+
+            expect(variable_instance_get(_enemy, "x")).toBe(13);
+            expect(variable_instance_get(_enemy, "y")).toBe(12);
+            expect(variable_instance_get(_enemy, "fire_timer")).toBe(1);
+
+            with (_enemy) {
+                hp = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _enemy);
+
+            expect(global.game_runtime.score).toBe(750);
+            expect(instance_exists(_enemy)).toBeFalsy();
+
+            with (_bead) {
+                instance_destroy();
+            }
+
+            if (instance_exists(_enemy)) {
+                with (_enemy) {
+                    instance_destroy();
+                }
+            }
+        });
+
+        test("Cancel meter rewards trigger berserk at one thousand", function() {
+            global.game_runtime.meter = 999;
+
+            expect(GamePlayerMeterRewardApply(1)).toBeTruthy();
+            expect(global.game_runtime.is_berserk).toBeTruthy();
+            expect(global.game_runtime.meter).toBe(METER_MAX);
+            expect(GamePlayerSwordPoseCreate(0, true).length).toBe(SWORD_LENGTH * BERSERK_SWORD_MULTIPLIER);
+        });
+
+        test("Continue accept resets the run state and respawns the player", function() {
+            var _state = GamePlayerStateCreate();
+
+            global.game_runtime.signals.continue_request = true;
+            global.game_runtime.lives = 0;
+            global.game_runtime.bombs = 0;
+            global.game_runtime.continues_used = 0;
+            global.game_runtime.meter = 321;
+            global.game_runtime.is_berserk = true;
+
+            var _respawn = GamePlayerContinueAccept(_state, CAMERA_HOME_X, CAMERA_HOME_Y);
+
+            expect(global.game_runtime.signals.continue_request).toBeFalsy();
+            expect(global.game_runtime.continues_used).toBe(1);
+            expect(global.game_runtime.lives).toBe(DEFAULT_LIVES);
+            expect(global.game_runtime.bombs).toBe(DEFAULT_BOMBS);
+            expect(global.game_runtime.meter).toBe(0);
+            expect(global.game_runtime.is_berserk).toBeFalsy();
+            expect(_state.invuln_timer).toBe(INVULN_TIME);
+            expect(_respawn.x).toBe(CAMERA_HOME_X);
+            expect(_respawn.y).toBe(CAMERA_HOME_Y + PLAYER_RESPAWN_OFFSET_Y);
+        });
+
+        test("Bombs consume stock, stay active for their animation, and cancel bullets while they run", function() {
+            var _state = GamePlayerStateCreate();
+            var _bullet = noone;
+
+            global.game_runtime.bombs = 1;
+            _state.invuln_timer = 0;
+
+            expect(GamePlayerBombTryStart(_state)).toBeTruthy();
+            expect(global.game_runtime.bombs).toBe(0);
+            expect(GamePlayerBombActiveGet()).toBeTruthy();
+            expect(GamePlayerIsInvulnerable(_state)).toBeTruthy();
+            expect(GamePlayerBombTryStart(_state)).toBeFalsy();
+
+            _bullet = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
+            with (_bullet) {
+                event_perform(ev_create, 0);
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _bullet);
+
+            expect(instance_exists(_bullet)).toBeFalsy();
+            expect(instance_number(obj_medal)).toBe(1);
+
+            for (var i = 0; i < BOMB_DURATION_FRAMES; i++) {
+                GamePlayerBombStep(_state);
+            }
+
+            expect(GamePlayerBombActiveGet()).toBeFalsy();
+            expect(GamePlayerIsInvulnerable(_state)).toBeFalsy();
+            expect(GamePlayerBombTryStart(_state)).toBeFalsy();
+
+            with (obj_medal) {
+                instance_destroy();
+            }
+        });
+
+        test("Continue decline enters game over and finishes after its delay", function() {
+            var _state = GameContinueStateCreate();
+            var _input = GameGameplayInputSnapshotCreate();
+            var _action = "none";
+
+            _state.selected_index = CONTINUE_OPTION_NO;
+            _input.fire_pressed = true;
+
+            expect(GameContinueStateStep(_state, _input)).toBe("none");
+            expect(_state.mode).toBe("game_over");
+            expect(_state.game_over_timer).toBe(GAME_OVER_DELAY_FRAMES);
+
+            _input.fire_pressed = false;
+
+            for (var i = 0; i < GAME_OVER_DELAY_FRAMES; i++) {
+                _action = GameContinueStateStep(_state, _input);
+            }
+
+            expect(_action).toBe("game_over");
+        });
+
+        test("Imported art and audio assets are registered with the expected sizes", function() {
+            var _bee = asset_get_index("spr_bee");
+            var _bullet_bead = asset_get_index("spr_bullet_bead");
+            var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
+            var _bullet_blade = asset_get_index("spr_bullet_blade");
+            var _bullet_diamond = asset_get_index("spr_bullet_diamond");
+            var _dialogue_bg_core = asset_get_index("spr_dialogue_bg_core");
+            var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
+            var _logo = asset_get_index("spr_logo");
+            var _mayfly = asset_get_index("spr_mayfly");
+            var _medal = asset_get_index("spr_medal");
+            var _enemy_destroy = asset_get_index("snd_enemy_destroy");
+            var _ow = asset_get_index("snd_ow");
+            var _stage_music = asset_get_index("snd_stage_music");
+            var _typewriter = asset_get_index("snd_typewriter");
+            var _sunrise = asset_get_index("spr_sunrise");
+            var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
+            var _sunset = asset_get_index("spr_sunset");
+            var _sunset_bullet = asset_get_index("spr_sunset_bullet");
+            var _textbox = asset_get_index("spr_textbox");
+            var _turret = asset_get_index("spr_turret");
+            var _violet_tiles = asset_get_index("spr_violet_tiles");
+
+            expect(_bee != -1 && sprite_exists(_bee)).toBeTruthy();
+            expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
+            expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
+            expect(_bullet_blade != -1 && sprite_exists(_bullet_blade)).toBeTruthy();
+            expect(_bullet_diamond != -1 && sprite_exists(_bullet_diamond)).toBeTruthy();
+            expect(_dialogue_bg_core != -1 && sprite_exists(_dialogue_bg_core)).toBeTruthy();
+            expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
+            expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
+            expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
+            expect(_medal != -1 && sprite_exists(_medal)).toBeTruthy();
+            expect(_enemy_destroy != -1).toBeTruthy();
+            expect(_ow != -1).toBeTruthy();
+            expect(_stage_music != -1).toBeTruthy();
+            expect(_typewriter != -1).toBeTruthy();
+            expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
+            expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
+            expect(_sunset != -1 && sprite_exists(_sunset)).toBeTruthy();
+            expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
+            expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
+            expect(_turret != -1 && sprite_exists(_turret)).toBeTruthy();
+            expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
+            expect(object_exists(obj_boss_sunset)).toBeTruthy();
+            expect(object_exists(obj_bullet_bead)).toBeTruthy();
+            expect(object_exists(obj_bullet_blade)).toBeTruthy();
+            expect(object_exists(obj_bullet_diamond)).toBeTruthy();
+            expect(object_exists(obj_enemy_bee)).toBeTruthy();
+            expect(object_exists(obj_enemy_mayfly)).toBeTruthy();
+            expect(object_exists(obj_enemy_turret)).toBeTruthy();
+            expect(sprite_get_width(_bee)).toBe(64);
+            expect(sprite_get_width(_bullet_bead)).toBe(16);
+            expect(sprite_get_width(_bullet_bead_mask)).toBe(16);
+            expect(sprite_get_width(_bullet_blade)).toBe(16);
+            expect(sprite_get_width(_bullet_diamond)).toBe(16);
+            expect(sprite_get_width(_dialogue_bg_core)).toBe(640);
+            expect(sprite_get_height(_dialogue_bg_flower)).toBe(360);
+            expect(sprite_get_width(_mayfly)).toBe(64);
+            expect(sprite_get_width(_medal)).toBe(32);
+            expect(sprite_get_width(_sunrise)).toBe(64);
+            expect(sprite_get_width(_sunrise_bullet)).toBe(8);
+            expect(sprite_get_width(_sunset)).toBe(64);
+            expect(sprite_get_height(_sunset_bullet)).toBe(8);
+            expect(sprite_get_width(_textbox)).toBe(640);
+            expect(sprite_get_height(_textbox)).toBe(130);
+            expect(sprite_get_width(_turret)).toBe(32);
+            expect(sprite_get_width(_violet_tiles)).toBe(128);
+            expect(sprite_get_height(_violet_tiles)).toBe(128);
+        });
     });
 
     section("Story UI", function() {
@@ -333,9 +1075,45 @@ suite(function() {
         test("Opening story included file loads from the project datafiles", function() {
             var _frames = GameStoryLoadFramesFromFile("opening_story.json");
 
-            expect(array_length(_frames)).toBe(3);
-            expect(_frames[0].name).toBe("Selkie");
-            expect(array_length(_frames[0].portraits)).toBe(2);
+            expect(array_length(_frames)).toBe(12);
+            expect(_frames[0].name).toBe("Moon");
+            expect(array_length(_frames[0].portraits)).toBe(1);
+            expect(_frames[0].portraits[0]).toBe("spr_moon_portrait");
+            expect(array_length(_frames[0].backgrounds)).toBe(1);
+            expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
+            expect(_frames[4].name).toBe("");
+            expect(array_length(_frames[9].portraits)).toBe(0);
+        });
+
+        test("Boss intro story stays in rm_game without any dialogue background art", function() {
+            var _frames = GameStoryLoadFramesFromFile("boss_intro_story.json");
+
+            expect(array_length(_frames)).toBe(20);
+            expect(_frames[0].name).toBe("Moon");
+            expect(array_length(_frames[0].backgrounds)).toBe(0);
+            expect(_frames[3].name).toBe("???");
+            expect(array_length(_frames[4].portraits)).toBe(2);
+            expect(_frames[19].name).toBe("Selkie");
+        });
+
+        test("Story textbox wrapping never exceeds two lines", function() {
+            draw_set_font(fn_dialogue_speech);
+
+            var _lines = GameStoryTextLinesCreate("Moonlight gathers over the water while Selkie keeps the bow pointed straight into the tide.", 240, 2);
+
+            expect(array_length(_lines)).toBe(2);
+        });
+
+        test("Ending story keeps flower in front of core but behind portraits", function() {
+            var _frames = GameStoryLoadFramesFromFile("ending_story.json");
+
+            expect(array_length(_frames)).toBe(7);
+            expect(array_length(_frames[0].backgrounds)).toBe(2);
+            expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
+            expect(_frames[0].backgrounds[1]).toBe("spr_dialogue_bg_flower");
+            expect(_frames[0].name).toBe("");
+            expect(array_length(_frames[0].portraits)).toBe(0);
+            expect(array_length(_frames[4].portraits)).toBe(2);
         });
 
         test("Opening story completion transitions into rm_game", function() {
