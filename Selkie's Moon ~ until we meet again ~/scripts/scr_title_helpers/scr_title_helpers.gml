@@ -352,6 +352,21 @@ function GameTitlePressStartSubtitleAnimCreate(_timer) {
     };
 }
 
+/// @func GameTitleDrawOutlinedText(text, x, y, text_color, outline_color, alpha)
+/// Draws one line of title text with a four-direction one-pixel outline.
+function GameTitleDrawOutlinedText(_text, _x, _y, _text_color = c_white, _outline_color = c_black, _alpha = 1.0) {
+    draw_set_alpha(_alpha);
+    draw_set_color(_outline_color);
+    draw_text(_x - 1, _y, _text);
+    draw_text(_x + 1, _y, _text);
+    draw_text(_x, _y - 1, _text);
+    draw_text(_x, _y + 1, _text);
+
+    draw_set_color(_text_color);
+    draw_text(_x, _y, _text);
+    draw_set_alpha(1.0);
+}
+
 /// @func GameTitleDrawLogo(state)
 /// Draws the game title card and subtitle banner.
 function GameTitleDrawLogo(_state) {
@@ -367,11 +382,8 @@ function GameTitleDrawLogo(_state) {
 
             draw_set_halign(fa_center);
             draw_set_valign(fa_middle);
-            draw_set_color(c_white);
             draw_set_font(fn_subtitle);
-            draw_set_alpha(_subtitle_anim.alpha);
-            draw_text(_subtitle_anim.x, _subtitle_anim.y, "~ until we meet again ~");
-            draw_set_alpha(1.0);
+            GameTitleDrawOutlinedText("~ until we meet again ~", _subtitle_anim.x, _subtitle_anim.y, c_white, c_black, _subtitle_anim.alpha);
         } else {
             GameTitleDrawSpriteFit("spr_logo", 82, 56, 84, 84, 1);
         }
