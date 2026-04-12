@@ -222,6 +222,9 @@ function GameStoryQueueRequest(_filename) {
 /// Returns the default story file for a room that auto-starts dialogue.
 function GameStoryDefaultFileGet(_room_id) {
     switch (_room_id) {
+        case rm_ending:
+            return "ending_story.json";
+
         case rm_opening:
             return "opening_story.json";
     }
@@ -229,10 +232,24 @@ function GameStoryDefaultFileGet(_room_id) {
     return "";
 }
 
+/// @func GameStoryRoomComplete(room_id)
+/// Applies room-specific completion side effects before a story transition.
+function GameStoryRoomComplete(_room_id) {
+    switch (_room_id) {
+        case rm_ending:
+            GameRunResultSave();
+            GameRuntimeReset();
+            break;
+    }
+}
+
 /// @func GameStoryNextRoomGet(room_id)
 /// Returns the room that should load after a room's story segment completes.
 function GameStoryNextRoomGet(_room_id) {
     switch (_room_id) {
+        case rm_ending:
+            return rm_title;
+
         case rm_opening:
             return rm_game;
     }
@@ -247,6 +264,7 @@ function GameStoryTransitionRoomGet(_room_id, _was_dialogue_active, _is_dialogue
         return -1;
     }
 
+    GameStoryRoomComplete(_room_id);
     return GameStoryNextRoomGet(_room_id);
 }
 

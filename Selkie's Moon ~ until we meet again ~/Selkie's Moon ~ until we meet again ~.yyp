@@ -17,6 +17,7 @@
   ],
   "ForcedPrefabProjectReferences":[],
   "IncludedFiles":[
+    {"$GMIncludedFile":"","%Name":"ending_story.json","CopyToMask":-1,"filePath":"datafiles","name":"ending_story.json","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
     {"$GMIncludedFile":"","%Name":"opening_story.json","CopyToMask":-1,"filePath":"datafiles","name":"opening_story.json","resourceType":"GMIncludedFile","resourceVersion":"2.0",},
   ],
   "isEcma":false,
