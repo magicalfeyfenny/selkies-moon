@@ -263,6 +263,13 @@ suite(function() {
             expect(_result.character_id).toBe("ship_A");
             expect(_result.character_index).toBe(0);
         });
+
+        test("Title art metadata uses the Sunrise ship preview", function() {
+            var _characters = GameTitleCharactersCreate();
+
+            expect(_characters[0].name).toBe("Sunrise");
+            expect(_characters[0].preview_sprite).toBe("spr_sunrise");
+        });
     });
 
     section("Gameplay", function() {
@@ -407,6 +414,19 @@ suite(function() {
 
             expect(_action).toBe("game_over");
         });
+
+        test("Imported art sprites are registered with the expected sizes", function() {
+            var _logo = asset_get_index("spr_logo");
+            var _sunrise = asset_get_index("spr_sunrise");
+            var _textbox = asset_get_index("spr_textbox");
+
+            expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
+            expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
+            expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
+            expect(sprite_get_width(_sunrise)).toBe(64);
+            expect(sprite_get_width(_textbox)).toBe(640);
+            expect(sprite_get_height(_textbox)).toBe(130);
+        });
     });
 
     section("Story UI", function() {
@@ -480,6 +500,16 @@ suite(function() {
             expect(array_length(_frames)).toBe(3);
             expect(_frames[0].name).toBe("Selkie");
             expect(array_length(_frames[0].portraits)).toBe(2);
+            expect(_frames[1].name).toBe("Moon");
+            expect(_frames[0].portraits[0]).toBe("spr_selkie_portrait");
+        });
+
+        test("Story textbox wrapping never exceeds two lines", function() {
+            draw_set_font(fn_dialogue_speech);
+
+            var _lines = GameStoryTextLinesCreate("Moonlight gathers over the water while Selkie keeps the bow pointed straight into the tide.", 240, 2);
+
+            expect(array_length(_lines)).toBe(2);
         });
 
         test("Opening story completion transitions into rm_game", function() {

@@ -452,39 +452,143 @@ function GameStoryDrawBackground(_frame) {
     }
 }
 
+/// @func GameStoryTextClampToWidth(text, max_width)
+/// Clamps one line of dialogue text to the requested width using an ellipsis.
+function GameStoryTextClampToWidth(_text, _max_width) {
+    var _ellipsis = "...";
+
+    if (string_width(_text) <= _max_width) {
+        return _text;
+    }
+
+    while (string_length(_text) > 0 && string_width(_text + _ellipsis) > _max_width) {
+        _text = string_delete(_text, string_length(_text), 1);
+    }
+
+    while (string_length(_text) > 0 && string_char_at(_text, string_length(_text)) == " ") {
+        _text = string_delete(_text, string_length(_text), 1);
+    }
+
+    return _text + _ellipsis;
+}
+
+/// @func GameStoryTextLinesCreate(text, max_width, max_lines)
+/// Wraps story dialogue into a capped number of display lines.
+function GameStoryTextLinesCreate(_text, _max_width, _max_lines = 2) {
+    var _normalized = string_replace_all(string(_text), "\r", "");
+    _normalized = string_replace_all(_normalized, "\n", " ");
+
+    while (string_pos("  ", _normalized) > 0) {
+        _normalized = string_replace_all(_normalized, "  ", " ");
+    }
+
+    var _words = [];
+    var _word_count = 0;
+    var _word = "";
+    var _length = string_length(_normalized);
+
+    for (var i = 1; i <= _length; i++) {
+        var _character = string_char_at(_normalized, i);
+
+        if (_character == " ") {
+            if (_word != "") {
+                _words[_word_count] = _word;
+                _word_count += 1;
+                _word = "";
+            }
+        } else {
+            _word += _character;
+        }
+    }
+
+    if (_word != "") {
+        _words[_word_count] = _word;
+        _word_count += 1;
+    }
+
+    if (_word_count <= 0) {
+        return [""];
+    }
+
+    var _lines = [];
+    var _line_count = 0;
+    var _current = "";
+
+    for (var j = 0; j < _word_count; j++) {
+        var _candidate = _current;
+
+        if (_candidate == "") {
+            _candidate = _words[j];
+        } else {
+            _candidate += " " + _words[j];
+        }
+
+        if (_current == "" || string_width(_candidate) <= _max_width) {
+            _current = _candidate;
+            continue;
+        }
+
+        _lines[_line_count] = GameStoryTextClampToWidth(_current, _max_width);
+        _line_count += 1;
+        _current = _words[j];
+
+        if (_line_count >= (_max_lines - 1)) {
+            for (var k = j + 1; k < _word_count; k++) {
+                _current += " " + _words[k];
+            }
+
+            _lines[_line_count] = GameStoryTextClampToWidth(_current, _max_width);
+            return _lines;
+        }
+    }
+
+    _lines[_line_count] = GameStoryTextClampToWidth(_current, _max_width);
+    return _lines;
+}
+
 /// @func GameStoryDrawBox(frame)
-/// Draws the semi-transparent dialogue box and current text content.
+/// Draws the dialogue textbox sprite and current text content.
 function GameStoryDrawBox(_frame) {
     var _gui_width = display_get_gui_width();
     var _gui_height = display_get_gui_height();
-    var _box_x = 16;
-    var _box_y = _gui_height - 120;
-    var _box_width = _gui_width - 32;
-    var _box_height = 104;
+    var _box_asset = asset_get_index("spr_textbox");
+    var _box_top = _gui_height - 130;
+    var _text_width = 520;
+    var _lines = [];
 
-    draw_set_alpha(0.72);
+    draw_set_alpha(0.68);
     draw_set_color(c_black);
-    draw_rectangle(_box_x, _box_y, _box_x + _box_width, _box_y + _box_height, false);
+    draw_rectangle(26, _box_top + 10, _gui_width - 26, _gui_height - 10, false);
 
-    draw_set_alpha(1.0);
-    draw_set_color(make_color_rgb(224, 236, 255));
-    draw_rectangle(_box_x, _box_y, _box_x + _box_width, _box_y + _box_height, true);
+    if (_box_asset != -1 && sprite_exists(_box_asset)) {
+        draw_set_alpha(1.0);
+        draw_set_color(c_white);
+        draw_sprite(_box_asset, 0, _gui_width * 0.5, _gui_height);
+    } else {
+        draw_set_alpha(1.0);
+        draw_set_color(make_color_rgb(224, 236, 255));
+        draw_rectangle(16, _box_top, _gui_width - 16, _gui_height - 8, true);
+    }
 
-    draw_set_halign(fa_left);
+    draw_set_halign(fa_center);
     draw_set_valign(fa_top);
     draw_set_font(fn_dialogue_name);
     draw_set_color(make_color_rgb(255, 230, 180));
-    draw_text(_box_x + 16, _box_y + 10, _frame.name);
+    draw_text(_gui_width * 0.5, _box_top + 10, _frame.name);
 
     draw_set_font(fn_dialogue_speech);
     draw_set_color(c_white);
-    draw_text_ext(_box_x + 16, _box_y + 36, _frame.text, 18, _box_width - 32);
+    _lines = GameStoryTextLinesCreate(_frame.text, _text_width, 2);
+
+    for (var i = 0; i < array_length(_lines); i++) {
+        draw_text(_gui_width * 0.5, _box_top + 42 + (i * 22), _lines[i]);
+    }
 
     draw_set_halign(fa_right);
     draw_set_valign(fa_bottom);
     draw_set_font(fn_menu);
     draw_set_color(make_color_rgb(180, 204, 232));
-    draw_text(_box_x + _box_width - 14, _box_y + _box_height - 10, "Z / C / X continue");
+    draw_text(_gui_width - 34, _gui_height - 16, "Z / C / X continue");
 }
 
 /// @func GameStoryDraw(state)

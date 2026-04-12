@@ -31,7 +31,10 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":null,
+  "spriteId":{
+    "name":"spr_sunrise",
+    "path":"sprites/spr_sunrise/spr_sunrise.yy",
+  },
   "spriteMaskId":null,
   "visible":true,
 }

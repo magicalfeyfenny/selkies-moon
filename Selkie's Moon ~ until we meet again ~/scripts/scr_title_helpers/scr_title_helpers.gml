@@ -4,14 +4,17 @@ function GameTitleCharactersCreate() {
     return [
         {
             id: "ship_A",
-            name: "Ship A",
-            subtitle: "Moonlit starter frame",
+            name: "Sunrise",
+            subtitle: "Selkie's seafaring frame",
             accent_color: make_color_rgb(64, 232, 255),
             logo_color: make_color_rgb(255, 96, 196),
+            preview_sprite: "spr_sunrise",
+            pilot_name: "Selkie",
+            support_name: "Moon",
             description_lines: [
-                "A balanced first ship for the opening route.",
-                "Focused fire stays readable and predictable.",
-                "Bomb stock is generous while the roster is tiny."
+                "A balanced ship built for readable, steady pressure.",
+                "Sunrise holds a clean firing lane for first-route play.",
+                "Selkie flies it with Moon guiding the tide ahead."
             ]
         }
     ];
@@ -287,6 +290,24 @@ function GameTitleDrawFrame(_x, _y, _w, _h, _border_color, _fill_color) {
     draw_rectangle(_x, _y, _x + _w, _y + _h, true);
 }
 
+/// @func GameTitleDrawSpriteFit(sprite_name, center_x, center_y, max_width, max_height, scale_cap)
+/// Draws a sprite centered inside a bounding box while preserving aspect ratio.
+function GameTitleDrawSpriteFit(_sprite_name, _center_x, _center_y, _max_width, _max_height, _scale_cap = 1) {
+    var _asset_index = asset_get_index(_sprite_name);
+
+    if (_asset_index == -1 || !sprite_exists(_asset_index)) {
+        return false;
+    }
+
+    var _scale = min(_max_width / sprite_get_width(_asset_index), _max_height / sprite_get_height(_asset_index));
+    _scale = min(_scale, _scale_cap);
+
+    draw_set_alpha(1.0);
+    draw_set_color(c_white);
+    draw_sprite_ext(_asset_index, 0, _center_x, _center_y, _scale, _scale, 0, c_white, 1.0);
+    return true;
+}
+
 /// @func GameTitleDrawBackground()
 /// Draws the title screen background layers.
 function GameTitleDrawBackground() {
@@ -306,6 +327,21 @@ function GameTitleDrawBackground() {
 /// @func GameTitleDrawLogo(state)
 /// Draws the game title card and subtitle banner.
 function GameTitleDrawLogo(_state) {
+    if (asset_get_index("spr_logo") != -1 && sprite_exists(asset_get_index("spr_logo"))) {
+        if (_state.phase == "press_start") {
+            GameTitleDrawSpriteFit("spr_logo", 320, 90, 156, 156, 1);
+            draw_set_halign(fa_center);
+            draw_set_valign(fa_middle);
+            draw_set_color(c_white);
+            draw_set_font(fn_subtitle);
+            draw_text(320, 176, "~ until we meet again ~");
+        } else {
+            GameTitleDrawSpriteFit("spr_logo", 82, 56, 84, 84, 1);
+        }
+
+        return;
+    }
+
     var _character = GameTitleCharacterGet(_state, 0);
 
     GameTitleDrawFrame(120, 56, 400, 88, c_white, _character.logo_color);
@@ -465,26 +501,25 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_text(320, 84, _character.subtitle);
 
     GameTitleDrawFrame(96, 112, 124, 140, c_white, make_color_rgb(24, 34, 66));
-    draw_set_color(_character.accent_color);
-    draw_rectangle(118, 138, 198, 226, false);
+    if (!GameTitleDrawSpriteFit(_character.preview_sprite, 158, 176, 92, 92, 2)) {
+        draw_set_color(_character.accent_color);
+        draw_rectangle(118, 138, 198, 226, false);
+    }
     draw_set_color(c_white);
     draw_set_font(fn_menu);
-    draw_text(158, 242, "Portrait");
+    draw_text(158, 242, _character.name);
 
     GameTitleDrawFrame(252, 112, 292, 140, c_white, make_color_rgb(18, 22, 34));
-    draw_set_color(_character.accent_color);
-    draw_rectangle(314, 170, 330, 194, false);
-    draw_triangle(322, 146, 306, 190, 338, 190, false);
-    draw_set_color(make_color_rgb(255, 224, 96));
-    draw_circle(370, 178, 4, false);
-    draw_circle(392, 178, 4, false);
-    draw_circle(414, 178, 4, false);
-
     draw_set_halign(fa_left);
+    draw_set_color(make_color_rgb(180, 204, 224));
+    draw_set_font(fn_menu);
+    draw_text(266, 130, "Pilot: " + _character.pilot_name);
+    draw_text(266, 152, "Support: " + _character.support_name);
+
     draw_set_color(c_white);
     draw_set_font(fn_menu);
     for (var i = 0; i < _line_count; i++) {
-        draw_text(266, 214 + (i * 18), _character.description_lines[i]);
+        draw_text(266, 186 + (i * 18), _character.description_lines[i]);
     }
 
     draw_set_halign(fa_center);

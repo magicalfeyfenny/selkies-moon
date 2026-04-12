@@ -23,11 +23,16 @@ if (player_state.invuln_timer > 0 && ((player_state.invuln_timer div 6) mod 2) =
     _blink_alpha = 0.35;
 }
 
-draw_set_alpha(_blink_alpha);
-draw_set_color(c_white);
-draw_triangle(x, y - 18, x - 12, y + 14, x + 12, y + 14, false);
-draw_set_color(c_aqua);
-draw_rectangle(x - 10, y - 8, x + 10, y + 12, false);
+if (sprite_index != -1 && sprite_exists(sprite_index)) {
+    draw_sprite_ext(sprite_index, 0, x, y, 1, 1, 0, c_white, _blink_alpha);
+} else {
+    draw_set_alpha(_blink_alpha);
+    draw_set_color(c_white);
+    draw_triangle(x, y - 18, x - 12, y + 14, x + 12, y + 14, false);
+    draw_set_color(c_aqua);
+    draw_rectangle(x - 10, y - 8, x + 10, y + 12, false);
+}
+
+draw_set_alpha(1);
 draw_set_color(c_red);
 draw_rectangle(x - 1, y - 1, x + 1, y + 1, false);
-draw_set_alpha(1);
