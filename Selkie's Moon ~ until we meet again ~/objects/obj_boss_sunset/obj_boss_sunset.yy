@@ -1,18 +1,22 @@
 {
   "$GMObject":"",
-  "%Name":"obj_boss_parent",
+  "%Name":"obj_boss_sunset",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":8,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"obj_boss_parent",
+  "name":"obj_boss_sunset",
   "overriddenProperties":[],
   "parent":{
     "name":"Selkie's Moon ~ until we meet again ~",
     "path":"Selkie's Moon ~ until we meet again ~.yyp",
   },
-  "parentObjectId":null,
+  "parentObjectId":{
+    "name":"obj_boss_parent",
+    "path":"objects/obj_boss_parent/obj_boss_parent.yy",
+  },
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,
@@ -30,7 +34,10 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":null,
+  "spriteId":{
+    "name":"spr_sunset",
+    "path":"sprites/spr_sunset/spr_sunset.yy",
+  },
   "spriteMaskId":null,
   "visible":true,
 }

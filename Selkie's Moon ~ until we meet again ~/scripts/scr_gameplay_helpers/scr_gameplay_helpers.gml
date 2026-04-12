@@ -28,8 +28,17 @@
 #macro TURRET_BULLET_SPEED 3.5
 #macro BEE_MOVE_SPEED 1
 #macro BEE_FIRE_INTERVAL 6
-#macro BEE_BULLET_SPEED 3.5
+#macro BEE_BULLET_SPEED 4
 #macro BEE_BULLET_SPEED_DELTA 0.5
+
+#macro MAYFLY_PATTERN_PERIOD 20
+#macro MAYFLY_SECOND_BURST_DELAY 3
+#macro MAYFLY_BURST_COUNT 12
+#macro MAYFLY_BLADE_TURN_SPEED 12
+#macro MAYFLY_BLADE_RADIAL_SPEED 1.5
+#macro MAYFLY_FLOAT_X_RADIUS 42
+#macro MAYFLY_FLOAT_Y_RADIUS 14
+#macro MAYFLY_FLOAT_RATE 3
 
 #macro SWEEP_RATE 2
 #macro SWEEP_PERIOD_FRAMES 30
@@ -47,7 +56,21 @@
 #macro CONTINUE_OPTION_NO 1
 #macro GAME_OVER_DELAY_FRAMES 90
 
-#macro STAGE_LENGTH_FRAMES 1800
+#macro STAGE_LENGTH_FRAMES 3600
+#macro BOSS_PHASE_COUNT 3
+#macro BOSS_PHASE_HP 300
+#macro BOSS_DESTRUCTION_FRAMES 90
+#macro BOSS_FAST_MAYFLY_TURN_SPEED 16
+#macro BOSS_FAST_MAYFLY_RADIAL_SPEED 2.25
+#macro BOSS_BEE_PATTERN_INTERVAL 30
+#macro BOSS_PHASE2_SCATTER_PERIOD 30
+#macro BOSS_PHASE2_BREAK_FRAMES 10
+#macro BOSS_PHASE2_SHOTS_PER_FRAME 2
+#macro BOSS_PHASE2_BEAD_SPEED 4.25
+#macro BOSS_PHASE3_REDIRECT_INTERVAL 300
+#macro BOSS_PHASE3_FREEZE_FRAMES 5
+#macro BOSS_PHASE3_REDIRECT_SPEED 1.5
+#macro BOSS_PHASE3_REDIRECT_ACCELERATION 0.05
 
 /// @func GameContinueStateCreate()
 /// Creates the runtime state used by the continue prompt.
@@ -173,23 +196,31 @@ function GameSceneStateCreate() {
         scroll_speed: CAMERA_SCROLL_SPEED,
         frame: 0,
         stage_length_frames: STAGE_LENGTH_FRAMES,
+        mode: "scroll",
+        boss_spawned: false,
+        boss_defeated: false,
     };
 }
 
 /// @func GameSceneStageAdvance(state)
-/// Advances the stage scroll and returns the next room when the stage ends.
+/// Advances the stage scroll and returns a scene action when the scroll section ends.
 function GameSceneStageAdvance(_state) {
+    if (_state.mode != "scroll") {
+        return "none";
+    }
+
     _state.frame += 1;
     _state.camera_y -= _state.scroll_speed;
 
     global.game_runtime.stage_frame = _state.frame;
 
     if (_state.frame >= _state.stage_length_frames) {
-        global.game_runtime.stage_complete = true;
-        return rm_ending;
+        _state.mode = "boss_intro";
+        _state.scroll_speed = 0;
+        return "boss_intro";
     }
 
-    return -1;
+    return "none";
 }
 
 /// @func GameSceneFieldRectGet(camera_x, camera_y)
@@ -261,6 +292,48 @@ function GameSceneBeeSpawnPositionGet(_camera_x, _camera_y) {
         x: _field.left + 40,
         y: _field.top + 96,
     };
+}
+
+/// @func GameSceneMayflySpawnPositionGet(camera_x, camera_y)
+/// Returns a visible upper-lane anchor point for the mayfly enemy.
+function GameSceneMayflySpawnPositionGet(_camera_x, _camera_y) {
+    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
+
+    return {
+        x: _camera_x,
+        y: _field.top + 92,
+    };
+}
+
+/// @func GameSceneBossSpawnPositionGet(camera_x, camera_y)
+/// Returns a visible anchor point for the boss encounter.
+function GameSceneBossSpawnPositionGet(_camera_x, _camera_y) {
+    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
+
+    return {
+        x: _camera_x,
+        y: _field.top + 84,
+    };
+}
+
+/// @func GameSceneCombatClear()
+/// Removes active non-player combat actors before the boss encounter begins.
+function GameSceneCombatClear() {
+    with (obj_enemy_parent) {
+        instance_destroy();
+    }
+
+    with (obj_bullet_parent) {
+        instance_destroy();
+    }
+
+    with (obj_medal) {
+        instance_destroy();
+    }
+
+    with (obj_player_shot) {
+        instance_destroy();
+    }
 }
 
 /// @func GameGameplayInputSnapshotCreate()
@@ -724,6 +797,11 @@ function GameGameplayHudLayoutCreate() {
         meter_top: 74,
         meter_width: GAME_VIEW_WIDTH - _playfield_right - 32,
         meter_height: 14,
+        boss_bar_left: _playfield_right + 16,
+        boss_bar_top: 132,
+        boss_bar_width: GAME_VIEW_WIDTH - _playfield_right - 32,
+        boss_bar_height: 12,
+        boss_bar_gap: 8,
         sidebar_color: make_color_rgb(44, 14, 74),
         sidebar_alpha: 0.62,
     };
@@ -781,8 +859,140 @@ function GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, _speed)
 /// Returns the three aligned diamond shots fired by the bee enemy.
 function GameBeeShotSpawnSpecsCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
     return [
-        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, BEE_BULLET_SPEED - BEE_BULLET_SPEED_DELTA),
-        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, BEE_BULLET_SPEED),
-        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, BEE_BULLET_SPEED + BEE_BULLET_SPEED_DELTA),
+        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, 3.5),
+        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, 4.0),
+        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, 4.5),
     ];
+}
+
+/// @func GameMayflyInfinityOffsetCreate(phase)
+/// Returns the current infinity-path offset for the mayfly enemy.
+function GameMayflyInfinityOffsetCreate(_phase) {
+    return {
+        x: dsin(_phase) * MAYFLY_FLOAT_X_RADIUS,
+        y: dsin(_phase * 2) * MAYFLY_FLOAT_Y_RADIUS,
+    };
+}
+
+/// @func GameMayflyBurstStateCreate(timer, clockwise_first)
+/// Returns whether the mayfly should fire this frame and which spiral direction leads.
+function GameMayflyBurstStateCreate(_timer, _clockwise_first) {
+    if (_timer == 0) {
+        return {
+            fire: true,
+            clockwise: _clockwise_first,
+        };
+    }
+
+    if (_timer == MAYFLY_SECOND_BURST_DELAY) {
+        return {
+            fire: true,
+            clockwise: !_clockwise_first,
+        };
+    }
+
+    return {
+        fire: false,
+        clockwise: _clockwise_first,
+    };
+}
+
+/// @func GameMayflyBladeShotSpecCreate(enemy_x, enemy_y, angle, clockwise, turn_speed, radial_speed)
+/// Returns one spiral blade shot specification for the mayfly enemy.
+function GameMayflyBladeShotSpecCreate(_enemy_x, _enemy_y, _angle, _clockwise, _turn_speed = MAYFLY_BLADE_TURN_SPEED, _radial_speed = MAYFLY_BLADE_RADIAL_SPEED) {
+    return {
+        x: _enemy_x,
+        y: _enemy_y,
+        object_index: obj_bullet_blade,
+        spiral_angle: _angle,
+        spiral_direction: _clockwise ? -1 : 1,
+        spiral_turn_speed: _turn_speed,
+        spiral_radial_speed: _radial_speed,
+    };
+}
+
+/// @func GameMayflyShotSpawnSpecsCreate(enemy_x, enemy_y, clockwise, turn_speed, radial_speed)
+/// Returns one twelve-shot mayfly spiral burst.
+function GameMayflyShotSpawnSpecsCreate(_enemy_x, _enemy_y, _clockwise, _turn_speed = MAYFLY_BLADE_TURN_SPEED, _radial_speed = MAYFLY_BLADE_RADIAL_SPEED) {
+    var _shots = array_create(MAYFLY_BURST_COUNT);
+    var _angle_step = 360 / MAYFLY_BURST_COUNT;
+
+    for (var i = 0; i < MAYFLY_BURST_COUNT; i++) {
+        _shots[i] = GameMayflyBladeShotSpecCreate(_enemy_x, _enemy_y, i * _angle_step, _clockwise, _turn_speed, _radial_speed);
+    }
+
+    return _shots;
+}
+
+/// @func GameBladeBulletRedirectMark(bullet_id, freeze_frames, redirect_speed, redirect_acceleration)
+/// Queues a blade bullet to freeze, then relaunch in a random direction with acceleration.
+function GameBladeBulletRedirectMark(_bullet_id, _freeze_frames, _redirect_speed, _redirect_acceleration) {
+    if (!instance_exists(_bullet_id)) {
+        return false;
+    }
+
+    with (_bullet_id) {
+        if (redirected || redirect_pending || freeze_timer > 0) {
+            exit;
+        }
+
+        freeze_timer = _freeze_frames;
+        redirect_pending = true;
+        redirect_speed = _redirect_speed;
+        redirect_acceleration = _redirect_acceleration;
+        redirect_direction = irandom(359);
+        move_speed = 0;
+    }
+
+    return true;
+}
+
+/// @func GameBladeBulletsRedirectAll(freeze_frames, redirect_speed, redirect_acceleration)
+/// Queues every active blade bullet to freeze and relaunch.
+function GameBladeBulletsRedirectAll(_freeze_frames, _redirect_speed, _redirect_acceleration) {
+    with (obj_bullet_blade) {
+        GameBladeBulletRedirectMark(id, _freeze_frames, _redirect_speed, _redirect_acceleration);
+    }
+}
+
+/// @func GameBossBarSegmentsCreate(phase_index, hp, phase_max_hp, phase_count)
+/// Returns the current fill ratio for each segmented boss health bar slice.
+function GameBossBarSegmentsCreate(_phase_index, _hp, _phase_max_hp, _phase_count = BOSS_PHASE_COUNT) {
+    var _segments = array_create(_phase_count, 0);
+
+    for (var i = 0; i < _phase_count; i++) {
+        if (i < _phase_index) {
+            _segments[i] = 0;
+        } else if (i == _phase_index) {
+            _segments[i] = clamp(_hp / max(1, _phase_max_hp), 0, 1);
+        } else {
+            _segments[i] = 1;
+        }
+    }
+
+    return _segments;
+}
+
+/// @func GameBossPhaseTwoScatterActive(frame)
+/// Returns whether the phase-two scatter attack is currently in its firing window.
+function GameBossPhaseTwoScatterActive(_frame) {
+    return (_frame mod BOSS_PHASE2_SCATTER_PERIOD) < (BOSS_PHASE2_SCATTER_PERIOD - BOSS_PHASE2_BREAK_FRAMES);
+}
+
+/// @func GameBossPhaseThreeRedirectDue(frame)
+/// Returns whether the phase-three freeze-and-redirect event should trigger.
+function GameBossPhaseThreeRedirectDue(_frame) {
+    return _frame > 0 && ((_frame mod BOSS_PHASE3_REDIRECT_INTERVAL) == 0);
+}
+
+/// @func GameBossScatterShotSpecCreate(enemy_x, enemy_y)
+/// Returns one random-direction bead shot specification for the boss scatter phase.
+function GameBossScatterShotSpecCreate(_enemy_x, _enemy_y) {
+    return {
+        x: _enemy_x,
+        y: _enemy_y,
+        direction: irandom(359),
+        speed: BOSS_PHASE2_BEAD_SPEED,
+        object_index: obj_bullet_bead,
+    };
 }

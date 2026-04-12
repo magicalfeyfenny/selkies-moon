@@ -28,6 +28,23 @@ draw_set_color(global.game_runtime.is_berserk ? c_yellow : c_aqua);
 draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + ((_layout.meter_width * global.game_runtime.meter) / METER_MAX), _layout.meter_top + _layout.meter_height, false);
 GameUiDrawOutlinedText(global.game_runtime.is_berserk ? "BERSERK" : "Cancel Meter", _layout.meter_left, _layout.meter_top + _layout.meter_height + 6, c_white);
 
+// Draw the boss health bar segments in the right gutter while a boss is active.
+var _boss = instance_find(obj_boss_parent, 0);
+if (_boss != noone) {
+    var _segments = GameBossBarSegmentsCreate(_boss.phase_index, _boss.hp, _boss.phase_max_hp, _boss.phase_count);
+
+    GameUiDrawOutlinedText("Boss", _layout.boss_bar_left, _layout.boss_bar_top - 22, c_white);
+
+    for (var i = 0; i < array_length(_segments); i++) {
+        var _top = _layout.boss_bar_top + (i * (_layout.boss_bar_height + _layout.boss_bar_gap));
+
+        draw_set_color(c_black);
+        draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + _layout.boss_bar_width, _top + _layout.boss_bar_height, false);
+        draw_set_color(make_color_rgb(255, 126, 108));
+        draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + (_layout.boss_bar_width * _segments[i]), _top + _layout.boss_bar_height, false);
+    }
+}
+
 // Draw the continue and game-over overlay over the playable area when requested.
 if (global.game_runtime.signals.continue_request) {
     draw_set_alpha(0.75);

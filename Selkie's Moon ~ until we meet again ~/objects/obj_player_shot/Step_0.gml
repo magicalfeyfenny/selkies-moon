@@ -29,6 +29,10 @@ for (var i = instance_number(obj_boss_parent) - 1; i >= 0; i--) {
         continue;
     }
 
+    if (variable_instance_exists(_boss, "destruction_active") && _boss.destruction_active) {
+        continue;
+    }
+
     if (point_distance(x, y, _boss.x, _boss.y) <= _boss.hit_radius) {
         _boss.hp -= damage;
         instance_destroy();

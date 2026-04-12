@@ -316,7 +316,7 @@ function GameTitleDrawBackground(_state) {
 
     draw_clear_alpha(make_color_rgb(8, 12, 28), 1.0);
 
-    if (_state.phase != "press_start" && _state.page == "main" && _core_asset != -1 && sprite_exists(_core_asset)) {
+    if (_core_asset != -1 && sprite_exists(_core_asset)) {
         draw_set_alpha(1.0);
         draw_set_color(c_white);
         draw_sprite_stretched(_core_asset, 0, 0, 0, display_get_gui_width(), display_get_gui_height());

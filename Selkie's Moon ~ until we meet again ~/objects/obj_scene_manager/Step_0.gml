@@ -18,10 +18,22 @@ if (GamePlayerBerserkDrainStep()) {
     GameBulletsCancelAll(false);
 }
 
-// Advance the stage scroll and hand off to the ending room when the stage is over.
-var _next_room = GameSceneStageAdvance(scene_state);
-if (_next_room != -1) {
-    room_goto(_next_room);
+// Advance the scrolling section, then queue the boss intro once the full stage has passed.
+var _scene_action = GameSceneStageAdvance(scene_state);
+if (_scene_action == "boss_intro") {
+    GameSceneCombatClear();
+    GameStoryQueueRequest("boss_intro_story.json");
+}
+
+if (scene_state.mode == "boss_intro" && !global.game_runtime.signals.dialogue && !scene_state.boss_spawned) {
+    var _boss_spawn = GameSceneBossSpawnPositionGet(scene_state.target_x, scene_state.camera_y);
+    instance_create_layer(_boss_spawn.x, _boss_spawn.y, "Instances", obj_boss_sunset);
+    scene_state.boss_spawned = true;
+    scene_state.mode = "boss_fight";
+}
+
+if (scene_state.boss_defeated) {
+    room_goto(rm_ending);
     exit;
 }
 

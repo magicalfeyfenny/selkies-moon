@@ -1,18 +1,21 @@
 {
   "$GMObject":"",
-  "%Name":"obj_boss_parent",
+  "%Name":"obj_enemy_mayfly",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"obj_boss_parent",
+  "name":"obj_enemy_mayfly",
   "overriddenProperties":[],
   "parent":{
     "name":"Selkie's Moon ~ until we meet again ~",
     "path":"Selkie's Moon ~ until we meet again ~.yyp",
   },
-  "parentObjectId":null,
+  "parentObjectId":{
+    "name":"obj_enemy_parent",
+    "path":"objects/obj_enemy_parent/obj_enemy_parent.yy",
+  },
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,
@@ -30,7 +33,10 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":null,
+  "spriteId":{
+    "name":"spr_mayfly",
+    "path":"sprites/spr_mayfly/spr_mayfly.yy",
+  },
   "spriteMaskId":null,
   "visible":true,
 }

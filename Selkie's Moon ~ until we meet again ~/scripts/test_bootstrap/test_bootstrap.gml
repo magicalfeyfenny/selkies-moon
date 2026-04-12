@@ -329,6 +329,17 @@ suite(function() {
             expect(file_exists(GameSavePathGet())).toBeTruthy();
         });
 
+        test("Stage scroll lasts sixty seconds before it transitions into the boss intro", function() {
+            var _state = GameSceneStateCreate();
+
+            _state.frame = STAGE_LENGTH_FRAMES - 1;
+
+            expect(GameSceneStageAdvance(_state)).toBe("boss_intro");
+            expect(_state.mode).toBe("boss_intro");
+            expect(_state.scroll_speed).toBe(0);
+            expect(_state.stage_length_frames).toBe(3600);
+        });
+
         test("Field clamping and camera drag stay inside the intended gameplay bounds", function() {
             var _clamped = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, 999, 999);
             var _clamped_top = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, -999, -999);
@@ -488,6 +499,142 @@ suite(function() {
             }
         });
 
+        test("Mayfly bursts alternate spiral direction while staying anchored to the camera lane", function() {
+            var _camera = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y, "Instances", obj_camera);
+            var _mayfly_spawn = GameSceneMayflySpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _mayfly = instance_create_layer(_mayfly_spawn.x, _mayfly_spawn.y, "Instances", obj_enemy_mayfly);
+            var _clockwise_count = 0;
+            var _counter_count = 0;
+            var _offset = GameMayflyInfinityOffsetCreate(90);
+            var _primary = GameMayflyBurstStateCreate(0, true);
+            var _secondary = GameMayflyBurstStateCreate(MAYFLY_SECOND_BURST_DELAY, true);
+            var _ring = GameMayflyShotSpawnSpecsCreate(0, 0, true);
+
+            with (_mayfly) {
+                event_perform(ev_create, 0);
+                float_phase = 0;
+                fire_timer = 0;
+                clockwise_first = true;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _mayfly);
+
+            expect(_primary.fire).toBeTruthy();
+            expect(_primary.clockwise).toBeTruthy();
+            expect(_secondary.fire).toBeTruthy();
+            expect(_secondary.clockwise).toBeFalsy();
+            expect(variable_instance_get(_mayfly, "x")).toBe(CAMERA_HOME_X);
+            expect(variable_instance_get(_mayfly, "y")).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 92);
+            expect(variable_instance_get(_mayfly, "float_phase")).toBe(MAYFLY_FLOAT_RATE);
+            expect(instance_number(obj_bullet_blade)).toBe(12);
+            expect(_offset.x).toBe(MAYFLY_FLOAT_X_RADIUS);
+            expect(round(_offset.y)).toBe(0);
+            expect(_ring[0].spiral_angle).toBe(0);
+            expect(_ring[3].spiral_angle).toBe(90);
+            expect(_ring[11].spiral_angle).toBe(330);
+
+            for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
+                var _bullet = instance_find(obj_bullet_blade, i);
+
+                if (variable_instance_get(_bullet, "spiral_direction") < 0) {
+                    _clockwise_count += 1;
+                } else {
+                    _counter_count += 1;
+                }
+            }
+
+            expect(_clockwise_count).toBe(12);
+            expect(_counter_count).toBe(0);
+
+            for (var step = 0; step < MAYFLY_SECOND_BURST_DELAY; step++) {
+                simulateEvent(ev_step, ev_step_normal, _mayfly);
+            }
+
+            _clockwise_count = 0;
+            _counter_count = 0;
+
+            for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
+                var _bullet = instance_find(obj_bullet_blade, i);
+
+                if (variable_instance_get(_bullet, "spiral_direction") < 0) {
+                    _clockwise_count += 1;
+                } else {
+                    _counter_count += 1;
+                }
+            }
+
+            expect(instance_number(obj_bullet_blade)).toBe(24);
+            expect(_clockwise_count).toBe(12);
+            expect(_counter_count).toBe(12);
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            with (_mayfly) {
+                instance_destroy();
+            }
+
+            with (_camera) {
+                instance_destroy();
+            }
+        });
+
+        test("Blade bullets spiral outward from their spawn point in either rotation direction", function() {
+            var _counter = instance_create_layer(0, 0, "Instances", obj_bullet_blade);
+            var _clockwise = instance_create_layer(0, 0, "Instances", obj_bullet_blade);
+
+            with (_counter) {
+                event_perform(ev_create, 0);
+                spiral_origin_x = 0;
+                spiral_origin_y = 0;
+                spiral_radius = 0;
+                spiral_angle = 0;
+                spiral_turn_speed = 90;
+                spiral_radial_speed = 2;
+                spiral_direction = 1;
+            }
+
+            with (_clockwise) {
+                event_perform(ev_create, 0);
+                spiral_origin_x = 0;
+                spiral_origin_y = 0;
+                spiral_radius = 0;
+                spiral_angle = 0;
+                spiral_turn_speed = 90;
+                spiral_radial_speed = 2;
+                spiral_direction = -1;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _counter);
+            simulateEvent(ev_step, ev_step_normal, _clockwise);
+
+            expect(round(variable_instance_get(_counter, "x"))).toBe(0);
+            expect(round(variable_instance_get(_counter, "y"))).toBe(-2);
+            expect(round(variable_instance_get(_clockwise, "x"))).toBe(0);
+            expect(round(variable_instance_get(_clockwise, "y"))).toBe(2);
+
+            with (_counter) {
+                instance_destroy();
+            }
+
+            with (_clockwise) {
+                instance_destroy();
+            }
+        });
+
+        test("Boss helpers expose segmented life bars and timed attack windows", function() {
+            var _segments = GameBossBarSegmentsCreate(1, BOSS_PHASE_HP * 0.5, BOSS_PHASE_HP);
+
+            expect(_segments[0]).toBe(0);
+            expect(_segments[1]).toBe(0.5);
+            expect(_segments[2]).toBe(1);
+            expect(GameBossPhaseTwoScatterActive(19)).toBeTruthy();
+            expect(GameBossPhaseTwoScatterActive(20)).toBeFalsy();
+            expect(GameBossPhaseThreeRedirectDue(300)).toBeTruthy();
+            expect(GameBossPhaseThreeRedirectDue(299)).toBeFalsy();
+        });
+
         test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
             var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
             var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
@@ -601,13 +748,16 @@ suite(function() {
             var _bee = asset_get_index("spr_bee");
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
+            var _bullet_blade = asset_get_index("spr_bullet_blade");
             var _bullet_diamond = asset_get_index("spr_bullet_diamond");
             var _dialogue_bg_core = asset_get_index("spr_dialogue_bg_core");
             var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
             var _logo = asset_get_index("spr_logo");
             var _mayfly = asset_get_index("spr_mayfly");
+            var _medal = asset_get_index("spr_medal");
             var _sunrise = asset_get_index("spr_sunrise");
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
+            var _sunset = asset_get_index("spr_sunset");
             var _sunset_bullet = asset_get_index("spr_sunset_bullet");
             var _textbox = asset_get_index("spr_textbox");
             var _turret = asset_get_index("spr_turret");
@@ -616,30 +766,39 @@ suite(function() {
             expect(_bee != -1 && sprite_exists(_bee)).toBeTruthy();
             expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
             expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
+            expect(_bullet_blade != -1 && sprite_exists(_bullet_blade)).toBeTruthy();
             expect(_bullet_diamond != -1 && sprite_exists(_bullet_diamond)).toBeTruthy();
             expect(_dialogue_bg_core != -1 && sprite_exists(_dialogue_bg_core)).toBeTruthy();
             expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
+            expect(_medal != -1 && sprite_exists(_medal)).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
+            expect(_sunset != -1 && sprite_exists(_sunset)).toBeTruthy();
             expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
             expect(_turret != -1 && sprite_exists(_turret)).toBeTruthy();
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
+            expect(object_exists(obj_boss_sunset)).toBeTruthy();
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
+            expect(object_exists(obj_bullet_blade)).toBeTruthy();
             expect(object_exists(obj_bullet_diamond)).toBeTruthy();
             expect(object_exists(obj_enemy_bee)).toBeTruthy();
+            expect(object_exists(obj_enemy_mayfly)).toBeTruthy();
             expect(object_exists(obj_enemy_turret)).toBeTruthy();
             expect(sprite_get_width(_bee)).toBe(64);
             expect(sprite_get_width(_bullet_bead)).toBe(16);
             expect(sprite_get_width(_bullet_bead_mask)).toBe(16);
+            expect(sprite_get_width(_bullet_blade)).toBe(16);
             expect(sprite_get_width(_bullet_diamond)).toBe(16);
             expect(sprite_get_width(_dialogue_bg_core)).toBe(640);
             expect(sprite_get_height(_dialogue_bg_flower)).toBe(360);
             expect(sprite_get_width(_mayfly)).toBe(64);
+            expect(sprite_get_width(_medal)).toBe(32);
             expect(sprite_get_width(_sunrise)).toBe(64);
             expect(sprite_get_width(_sunrise_bullet)).toBe(8);
+            expect(sprite_get_width(_sunset)).toBe(64);
             expect(sprite_get_height(_sunset_bullet)).toBe(8);
             expect(sprite_get_width(_textbox)).toBe(640);
             expect(sprite_get_height(_textbox)).toBe(130);
@@ -717,13 +876,25 @@ suite(function() {
         test("Opening story included file loads from the project datafiles", function() {
             var _frames = GameStoryLoadFramesFromFile("opening_story.json");
 
-            expect(array_length(_frames)).toBe(3);
-            expect(_frames[0].name).toBe("Selkie");
-            expect(array_length(_frames[0].portraits)).toBe(2);
-            expect(_frames[1].name).toBe("Moon");
-            expect(_frames[0].portraits[0]).toBe("spr_selkie_portrait");
+            expect(array_length(_frames)).toBe(12);
+            expect(_frames[0].name).toBe("Moon");
+            expect(array_length(_frames[0].portraits)).toBe(1);
+            expect(_frames[0].portraits[0]).toBe("spr_moon_portrait");
             expect(array_length(_frames[0].backgrounds)).toBe(1);
             expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
+            expect(_frames[4].name).toBe("");
+            expect(array_length(_frames[9].portraits)).toBe(0);
+        });
+
+        test("Boss intro story stays in rm_game without any dialogue background art", function() {
+            var _frames = GameStoryLoadFramesFromFile("boss_intro_story.json");
+
+            expect(array_length(_frames)).toBe(20);
+            expect(_frames[0].name).toBe("Moon");
+            expect(array_length(_frames[0].backgrounds)).toBe(0);
+            expect(_frames[3].name).toBe("???");
+            expect(array_length(_frames[4].portraits)).toBe(2);
+            expect(_frames[19].name).toBe("Selkie");
         });
 
         test("Story textbox wrapping never exceeds two lines", function() {
@@ -737,10 +908,13 @@ suite(function() {
         test("Ending story keeps flower in front of core but behind portraits", function() {
             var _frames = GameStoryLoadFramesFromFile("ending_story.json");
 
-            expect(array_length(_frames)).toBe(3);
+            expect(array_length(_frames)).toBe(7);
             expect(array_length(_frames[0].backgrounds)).toBe(2);
             expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
             expect(_frames[0].backgrounds[1]).toBe("spr_dialogue_bg_flower");
+            expect(_frames[0].name).toBe("");
+            expect(array_length(_frames[0].portraits)).toBe(0);
+            expect(array_length(_frames[4].portraits)).toBe(2);
         });
 
         test("Opening story completion transitions into rm_game", function() {

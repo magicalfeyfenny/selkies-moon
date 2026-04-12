@@ -1,18 +1,21 @@
 {
   "$GMObject":"",
-  "%Name":"obj_boss_parent",
+  "%Name":"obj_bullet_blade",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"obj_boss_parent",
+  "name":"obj_bullet_blade",
   "overriddenProperties":[],
   "parent":{
     "name":"Selkie's Moon ~ until we meet again ~",
     "path":"Selkie's Moon ~ until we meet again ~.yyp",
   },
-  "parentObjectId":null,
+  "parentObjectId":{
+    "name":"obj_bullet_parent",
+    "path":"objects/obj_bullet_parent/obj_bullet_parent.yy",
+  },
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,
@@ -30,7 +33,10 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":null,
+  "spriteId":{
+    "name":"spr_bullet_blade",
+    "path":"sprites/spr_bullet_blade/spr_bullet_blade.yy",
+  },
   "spriteMaskId":null,
   "visible":true,
 }

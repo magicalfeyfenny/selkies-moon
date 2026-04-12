@@ -38,7 +38,7 @@ if (!instance_exists(obj_UI_gameplay)) {
     instance_create_layer(0, 0, "Instances", obj_UI_gameplay);
 }
 
-// Spawn one turret and one bee so rm_game always has live targets and enemy fire sources.
+// Spawn one turret, one bee, and one mayfly so rm_game always has live targets and enemy fire sources.
 if (!instance_exists(obj_enemy_turret)) {
     var _enemy_spawn = GameSceneTurretSpawnPositionGet(scene_state.camera_x, scene_state.camera_y);
     instance_create_layer(_enemy_spawn.x, _enemy_spawn.y, "Instances", obj_enemy_turret);
@@ -47,4 +47,9 @@ if (!instance_exists(obj_enemy_turret)) {
 if (!instance_exists(obj_enemy_bee)) {
     var _bee_spawn = GameSceneBeeSpawnPositionGet(scene_state.camera_x, scene_state.camera_y);
     instance_create_layer(_bee_spawn.x, _bee_spawn.y, "Instances", obj_enemy_bee);
+}
+
+if (!instance_exists(obj_enemy_mayfly)) {
+    var _mayfly_spawn = GameSceneMayflySpawnPositionGet(scene_state.camera_x, scene_state.camera_y);
+    instance_create_layer(_mayfly_spawn.x, _mayfly_spawn.y, "Instances", obj_enemy_mayfly);
 }
