@@ -396,6 +396,62 @@ suite(function() {
             expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 72);
         });
 
+        test("Inherited child bullets keep parent defaults and child enemies keep parent step behavior", function() {
+            var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_sample);
+
+            with (_bead) {
+                event_perform(ev_create, 0);
+            }
+
+            with (_enemy) {
+                event_perform(ev_create, 0);
+            }
+
+            expect(variable_instance_get(_bead, "cancelled")).toBeFalsy();
+            expect(variable_instance_get(_bead, "medal_score_value")).toBe(CANCEL_BONUS);
+            expect(variable_instance_get(_bead, "move_speed")).toBe(SAMPLE_ENEMY_BULLET_SPEED);
+            expect(variable_instance_get(_bead, "collision_radius")).toBe(4);
+
+            global.game_runtime.score = 0;
+
+            with (_enemy) {
+                x = 10;
+                y = 12;
+                move_direction = 0;
+                move_speed = 3;
+                health = 5;
+                points = 750;
+                fire_interval = 999;
+                fire_timer = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _enemy);
+
+            expect(variable_instance_get(_enemy, "x")).toBe(13);
+            expect(variable_instance_get(_enemy, "y")).toBe(12);
+            expect(variable_instance_get(_enemy, "fire_timer")).toBe(1);
+
+            with (_enemy) {
+                health = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _enemy);
+
+            expect(global.game_runtime.score).toBe(750);
+            expect(instance_exists(_enemy)).toBeFalsy();
+
+            with (_bead) {
+                instance_destroy();
+            }
+
+            if (instance_exists(_enemy)) {
+                with (_enemy) {
+                    instance_destroy();
+                }
+            }
+        });
+
         test("Cancel meter rewards trigger berserk at one thousand", function() {
             global.game_runtime.meter = 999;
 

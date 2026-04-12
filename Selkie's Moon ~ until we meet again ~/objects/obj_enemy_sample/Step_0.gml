@@ -1,12 +1,10 @@
-// Resolve defeat before the enemy can fire or linger in the room.
-if (health <= 0) {
-    global.game_runtime.score += points;
-    instance_destroy();
-    exit;
-}
+// Run the parent enemy step first so defeat, freeze, and movement stay centralized.
+event_inherited();
 
-// Suspend fire and motion while dialogue or continue overlays are active.
-if (GameGameplayIsFrozen()) {
+// Remove the sample enemy once it drifts well below the camera.
+var _camera = instance_find(obj_camera, 0);
+if (_camera != noone && y > _camera.y + GAME_VIEW_HALF_HEIGHT + 64) {
+    instance_destroy();
     exit;
 }
 
@@ -23,15 +21,4 @@ if (fire_timer >= fire_interval) {
         _bullet.move_direction = _shot.direction;
         _bullet.move_speed = _shot.speed;
     }
-}
-
-// Keep the enemy bound to the stage until it drifts well below the camera.
-if (move_speed != 0) {
-    x += lengthdir_x(move_speed, move_direction);
-    y += lengthdir_y(move_speed, move_direction);
-}
-
-var _camera = instance_find(obj_camera, 0);
-if (_camera != noone && y > _camera.y + GAME_VIEW_HALF_HEIGHT + 64) {
-    instance_destroy();
 }
