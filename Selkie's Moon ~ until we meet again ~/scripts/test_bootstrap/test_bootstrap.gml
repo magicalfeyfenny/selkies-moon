@@ -271,6 +271,16 @@ suite(function() {
             expect(_characters[0].preview_sprite).toBe("spr_sunrise");
         });
 
+        test("Sunrise character metadata matches Moon's story role", function() {
+            var _characters = GameTitleCharactersCreate();
+
+            expect(_characters[0].pilot_name).toBe("Moon");
+            expect(_characters[0].support_name).toBe("");
+            expect(_characters[0].description_lines[0]).toBe("A ship that carries on the wishes of a former companion.");
+            expect(_characters[0].description_lines[1]).toBe("As she chases her companion around the world,");
+            expect(_characters[0].description_lines[2]).toBe("her companion chases her in kind");
+        });
+
         test("Press-start subtitle fades in over one second while sliding left", function() {
             var _start = GameTitlePressStartSubtitleAnimCreate(0);
             var _halfway = GameTitlePressStartSubtitleAnimCreate(30);

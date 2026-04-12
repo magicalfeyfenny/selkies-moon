@@ -9,12 +9,12 @@ function GameTitleCharactersCreate() {
             accent_color: make_color_rgb(64, 232, 255),
             logo_color: make_color_rgb(255, 96, 196),
             preview_sprite: "spr_sunrise",
-            pilot_name: "Selkie",
-            support_name: "Moon",
+            pilot_name: "Moon",
+            support_name: "",
             description_lines: [
-                "A balanced ship built for readable, steady pressure.",
-                "Sunrise holds a clean firing lane for first-route play.",
-                "Selkie flies it with Moon guiding the tide ahead."
+                "A ship that carries on the wishes of a former companion.",
+                "As she chases her companion around the world,",
+                "her companion chases her in kind"
             ]
         }
     ];
@@ -528,6 +528,7 @@ function GameTitleDrawScoresPage(_state) {
 function GameTitleDrawCharacterSelectPage(_state) {
     var _character = GameTitleCharacterGet(_state, _state.select_character_index);
     var _line_count = array_length(_character.description_lines);
+    var _description_start_y = 186;
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
@@ -550,11 +551,16 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_set_halign(fa_left);
     draw_set_font(fn_menu);
     GameUiDrawOutlinedText("Pilot: " + _character.pilot_name, 266, 130, make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText("Support: " + _character.support_name, 266, 152, make_color_rgb(180, 204, 224));
+
+    if (_character.support_name != "") {
+        GameUiDrawOutlinedText("Support: " + _character.support_name, 266, 152, make_color_rgb(180, 204, 224));
+    } else {
+        _description_start_y = 162;
+    }
 
     draw_set_font(fn_menu);
     for (var i = 0; i < _line_count; i++) {
-        GameUiDrawOutlinedText(_character.description_lines[i], 266, 186 + (i * 18), c_white);
+        GameUiDrawOutlinedText(_character.description_lines[i], 266, _description_start_y + (i * 18), c_white);
     }
 
     draw_set_halign(fa_center);
