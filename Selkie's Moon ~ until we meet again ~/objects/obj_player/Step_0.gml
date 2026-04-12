@@ -71,6 +71,11 @@ if (_scene != noone) {
     _scene.scene_state.target_x = GameSceneCameraTargetXGet(_scene.scene_state.home_x, _scene.scene_state.target_x, x);
 }
 
+// Start one bomb animation when the bomb verb is pressed and stock is available.
+if (_input.bomb_pressed) {
+    GamePlayerBombTryStart(player_state);
+}
+
 // Consume volley shots and sword sweeps from the current fire state.
 var _fire = GamePlayerFireStep(player_state, _input);
 if (_fire.spawn_shots) {
@@ -124,27 +129,32 @@ if (_fire.sword_active) {
 }
 
 // Resolve the 2x2 hitbox collision against active bullets.
-for (var i = instance_number(obj_bullet_parent) - 1; i >= 0; i--) {
-    var _bullet = instance_find(obj_bullet_parent, i);
-    var _collision_radius = 0;
+if (!GamePlayerIsInvulnerable(player_state)) {
+    for (var i = instance_number(obj_bullet_parent) - 1; i >= 0; i--) {
+        var _bullet = instance_find(obj_bullet_parent, i);
+        var _collision_radius = 0;
 
-    if (variable_instance_exists(_bullet, "collision_radius")) {
-        _collision_radius = _bullet.collision_radius;
-    }
+        if (variable_instance_exists(_bullet, "collision_radius")) {
+            _collision_radius = _bullet.collision_radius;
+        }
 
-    if (!GamePlayerBulletHitCheck(x, y, _bullet.x, _bullet.y, _collision_radius)) {
-        continue;
-    }
+        if (!GamePlayerBulletHitCheck(x, y, _bullet.x, _bullet.y, _collision_radius)) {
+            continue;
+        }
 
-    with (_bullet) {
-        instance_destroy();
-    }
+        with (_bullet) {
+            instance_destroy();
+        }
 
-    if (player_state.invuln_timer <= 0) {
-        GamePlayerDeathBegin(player_state);
-        break;
+        if (!GamePlayerIsInvulnerable(player_state)) {
+            GamePlayerDeathBegin(player_state);
+            break;
+        }
     }
 }
+
+// Keep the bomb active for its full animation and clear bullets for the whole window.
+GamePlayerBombStep(player_state);
 
 if (player_state.invuln_timer > 0) {
     player_state.invuln_timer -= 1;

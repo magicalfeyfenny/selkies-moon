@@ -20,6 +20,8 @@
 #macro PLAYER_MOVE_SPEED 4
 #macro PLAYER_RESPAWN_OFFSET_Y 120
 #macro PLAYER_DEATH_ANIMATION_FRAMES 45
+#macro BOMB_DURATION_FRAMES 60
+#macro BOMB_VISUAL_MAX_RADIUS 220
 
 #macro SHOT_SPEED 13
 #macro PLAYER_SHOT_DAMAGE 1
@@ -45,6 +47,8 @@
 #macro MAYFLY_FLOAT_X_RADIUS 42
 #macro MAYFLY_FLOAT_Y_RADIUS 14
 #macro MAYFLY_FLOAT_RATE 3
+#macro MAYFLY_VISIBLE_Y 100
+#macro MAYFLY_DROP_SPEED 3
 
 #macro SWEEP_RATE 2
 #macro SWEEP_PERIOD_FRAMES 30
@@ -131,6 +135,14 @@ function GameRuntimeGameplayEnsure() {
         global.game_runtime.run_started_recorded = false;
     }
 
+    if (!struct_exists(global.game_runtime, "bomb_active")) {
+        global.game_runtime.bomb_active = false;
+    }
+
+    if (!struct_exists(global.game_runtime, "bomb_timer")) {
+        global.game_runtime.bomb_timer = 0;
+    }
+
     return true;
 }
 
@@ -165,6 +177,8 @@ function GameRunStartInitialize() {
     global.game_runtime.stage_complete = false;
     global.game_runtime.meter = clamp(global.game_runtime.meter, 0, METER_MAX);
     global.game_runtime.is_berserk = false;
+    global.game_runtime.bomb_active = false;
+    global.game_runtime.bomb_timer = 0;
 
     if (!global.game_runtime.run_started_recorded) {
         var _ship_id = GameRunShipIdGet();
@@ -307,7 +321,7 @@ function GameSceneMayflySpawnPositionGet(_camera_x, _camera_y) {
 
     return {
         x: _camera_x,
-        y: _field.top + 92,
+        y: _field.top + MAYFLY_VISIBLE_Y,
     };
 }
 
@@ -478,6 +492,7 @@ function GamePlayerStateCreate() {
         hit: false,
         death_timer: 0,
         invuln_timer: INVULN_TIME,
+        bomb_timer: 0,
         fire_hold_frames: 0,
         volley_queue: 0,
         volley_timer: 0,
@@ -485,6 +500,12 @@ function GamePlayerStateCreate() {
         sword_pose: undefined,
         sword_sweep_id: 0,
     };
+}
+
+/// @func GameMayflyTargetAnchorOffsetYGet()
+/// Returns the camera-relative anchor offset that keeps mayflies near y=100 in view.
+function GameMayflyTargetAnchorOffsetYGet() {
+    return -PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y;
 }
 
 /// @func GameShotSpecCreate(x, y, direction, speed, sprite_id)
@@ -736,18 +757,21 @@ function GamePlayerRespawnStateApply(_state) {
     _state.hit = false;
     _state.death_timer = 0;
     _state.invuln_timer = INVULN_TIME;
+    _state.bomb_timer = 0;
     _state.fire_hold_frames = 0;
     _state.volley_queue = 0;
     _state.volley_timer = 0;
     _state.sweep_frame = 0;
     _state.sword_pose = GamePlayerSwordPoseCreate(0, false);
     _state.sword_sweep_id = 0;
+
+    GamePlayerBombStateSync(_state);
 }
 
 /// @func GamePlayerDeathBegin(state)
 /// Starts the player death state and subtracts one life.
 function GamePlayerDeathBegin(_state) {
-    if (_state.hit || _state.invuln_timer > 0) {
+    if (_state.hit || GamePlayerIsInvulnerable(_state)) {
         return false;
     }
 
@@ -757,6 +781,85 @@ function GamePlayerDeathBegin(_state) {
     global.game_runtime.lives = max(0, global.game_runtime.lives - 1);
 
     return true;
+}
+
+/// @func GamePlayerBombStateSync(state)
+/// Mirrors the local bomb timer onto the shared runtime state.
+function GamePlayerBombStateSync(_state) {
+    if (!GameRuntimeGameplayEnsure()) {
+        return false;
+    }
+
+    global.game_runtime.bomb_timer = max(0, _state.bomb_timer);
+    global.game_runtime.bomb_active = (_state.bomb_timer > 0);
+    return global.game_runtime.bomb_active;
+}
+
+/// @func GamePlayerBombActiveGet()
+/// Returns whether a player bomb is currently active.
+function GamePlayerBombActiveGet() {
+    if (!GameRuntimeGameplayEnsure()) {
+        return false;
+    }
+
+    return global.game_runtime.bomb_active;
+}
+
+/// @func GamePlayerBombIsActive(state)
+/// Returns whether the local player state is inside an active bomb animation.
+function GamePlayerBombIsActive(_state) {
+    return _state.bomb_timer > 0;
+}
+
+/// @func GamePlayerIsInvulnerable(state)
+/// Returns whether the player should ignore bullet hits this frame.
+function GamePlayerIsInvulnerable(_state) {
+    return _state.invuln_timer > 0 || GamePlayerBombIsActive(_state);
+}
+
+/// @func GamePlayerBombTryStart(state)
+/// Starts a player bomb when stock is available and no bomb is already active.
+function GamePlayerBombTryStart(_state) {
+    GameRuntimeGameplayEnsure();
+
+    if (_state.hit || GamePlayerBombIsActive(_state) || global.game_runtime.bombs <= 0) {
+        return false;
+    }
+
+    global.game_runtime.bombs -= 1;
+    _state.bomb_timer = BOMB_DURATION_FRAMES;
+    GamePlayerBombStateSync(_state);
+    GameBulletsCancelAll(global.game_runtime.is_berserk);
+    return true;
+}
+
+/// @func GamePlayerBombStep(state)
+/// Advances the bomb timer and keeps cancelling bullets while it remains active.
+function GamePlayerBombStep(_state) {
+    if (!GamePlayerBombIsActive(_state)) {
+        GamePlayerBombStateSync(_state);
+        return false;
+    }
+
+    GameBulletsCancelAll(global.game_runtime.is_berserk);
+    _state.bomb_timer = max(0, _state.bomb_timer - 1);
+    GamePlayerBombStateSync(_state);
+    return GamePlayerBombIsActive(_state);
+}
+
+/// @func GamePlayerBombVisualCreate(timer)
+/// Returns simple expanding ring parameters for the active bomb animation.
+function GamePlayerBombVisualCreate(_timer) {
+    var _progress = 1 - (max(0, _timer) / max(1, BOMB_DURATION_FRAMES));
+    var _outer_radius = lerp(28, BOMB_VISUAL_MAX_RADIUS, _progress);
+    var _inner_radius = max(12, _outer_radius - 40);
+
+    return {
+        outer_radius: _outer_radius,
+        inner_radius: _inner_radius,
+        fill_alpha: lerp(0.32, 0.08, _progress),
+        ring_alpha: lerp(0.9, 0.25, _progress),
+    };
 }
 
 /// @func GamePlayerContinueRequestBegin()

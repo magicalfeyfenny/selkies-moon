@@ -8,6 +8,21 @@ if (player_state.sword_pose != undefined && (global.game_runtime.is_berserk || p
     draw_line_width(x, y, x + lengthdir_x(_sword_length, _sword_angle), y + lengthdir_y(_sword_length, _sword_angle), 3);
 }
 
+// Draw a simple expanding bomb ring while the bomb animation is active.
+if (GamePlayerBombIsActive(player_state)) {
+    var _bomb_visual = GamePlayerBombVisualCreate(player_state.bomb_timer);
+
+    draw_set_alpha(_bomb_visual.fill_alpha);
+    draw_set_color(make_color_rgb(116, 48, 170));
+    draw_circle(x, y, _bomb_visual.outer_radius, false);
+
+    draw_set_alpha(_bomb_visual.ring_alpha);
+    draw_set_color(make_color_rgb(160, 244, 255));
+    draw_circle(x, y, _bomb_visual.outer_radius, true);
+    draw_set_color(make_color_rgb(255, 202, 246));
+    draw_circle(x, y, _bomb_visual.inner_radius, true);
+}
+
 // Draw either the death burst or the live player ship body.
 if (player_state.hit) {
     draw_set_alpha(0.9);
@@ -19,7 +34,7 @@ if (player_state.hit) {
 }
 
 var _blink_alpha = 1;
-if (player_state.invuln_timer > 0 && ((player_state.invuln_timer div 6) mod 2) == 0) {
+if (player_state.invuln_timer > 0 && !GamePlayerBombIsActive(player_state) && ((player_state.invuln_timer div 6) mod 2) == 0) {
     _blink_alpha = 0.35;
 }
 

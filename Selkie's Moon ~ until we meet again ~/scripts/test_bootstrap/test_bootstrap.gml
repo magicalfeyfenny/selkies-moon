@@ -290,6 +290,16 @@ suite(function() {
             expect(_clamped.x).toBe(240);
             expect(_clamped.alpha).toBe(1);
         });
+
+        test("Title submenu panels share the same 75 percent purple styling", function() {
+            var _normal = GameTitlePanelStyleCreate(false);
+            var _selected = GameTitlePanelStyleCreate(true);
+
+            expect(_normal.fill_alpha).toBe(0.75);
+            expect(_normal.fill_color).toBe(make_color_rgb(58, 18, 92));
+            expect(_selected.fill_alpha).toBe(0.75);
+            expect(_selected.fill_color).toBe(make_color_rgb(78, 28, 116));
+        });
     });
 
     section("Gameplay", function() {
@@ -316,6 +326,8 @@ suite(function() {
             expect(_runtime.continue_screen.mode).toBe("prompt");
             expect(_runtime.meter).toBe(0);
             expect(_runtime.is_berserk).toBeFalsy();
+            expect(_runtime.bomb_active).toBeFalsy();
+            expect(_runtime.bomb_timer).toBe(0);
             expect(_runtime.stage_frame).toBe(0);
         });
 
@@ -574,7 +586,7 @@ suite(function() {
             }
         });
 
-        test("Mayfly bursts alternate spiral direction while staying anchored to the camera lane", function() {
+        test("Mayfly bursts alternate spiral direction while dropping into the y=100 camera lane", function() {
             var _camera = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y, "Instances", obj_camera);
             var _mayfly_spawn = GameSceneMayflySpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
             var _mayfly = instance_create_layer(_mayfly_spawn.x, _mayfly_spawn.y, "Instances", obj_enemy_mayfly);
@@ -584,12 +596,20 @@ suite(function() {
             var _primary = GameMayflyBurstStateCreate(0, true);
             var _secondary = GameMayflyBurstStateCreate(MAYFLY_SECOND_BURST_DELAY, true);
             var _ring = GameMayflyShotSpawnSpecsCreate(0, 0, true);
+            var _stage_spawn = GameStageMayflySpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _dropping_mayfly = instance_create_layer(_stage_spawn.x, _stage_spawn.y, "Instances", obj_enemy_mayfly);
 
             with (_mayfly) {
                 event_perform(ev_create, 0);
                 float_phase = 0;
                 fire_timer = 0;
                 clockwise_first = true;
+            }
+
+            with (_dropping_mayfly) {
+                event_perform(ev_create, 0);
+                float_phase = 0;
+                fire_timer = 1;
             }
 
             simulateEvent(ev_step, ev_step_normal, _mayfly);
@@ -599,7 +619,7 @@ suite(function() {
             expect(_secondary.fire).toBeTruthy();
             expect(_secondary.clockwise).toBeFalsy();
             expect(variable_instance_get(_mayfly, "x")).toBe(CAMERA_HOME_X);
-            expect(variable_instance_get(_mayfly, "y")).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 92);
+            expect(variable_instance_get(_mayfly, "y")).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y);
             expect(variable_instance_get(_mayfly, "float_phase")).toBe(MAYFLY_FLOAT_RATE);
             expect(instance_number(obj_bullet_blade)).toBe(12);
             expect(_offset.x).toBe(MAYFLY_FLOAT_X_RADIUS);
@@ -607,6 +627,7 @@ suite(function() {
             expect(_ring[0].spiral_angle).toBe(0);
             expect(_ring[3].spiral_angle).toBe(90);
             expect(_ring[11].spiral_angle).toBe(330);
+            expect(GameMayflyTargetAnchorOffsetYGet()).toBe(-PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y);
 
             for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
                 var _bullet = instance_find(obj_bullet_blade, i);
@@ -647,6 +668,20 @@ suite(function() {
             }
 
             with (_mayfly) {
+                instance_destroy();
+            }
+
+            for (var drop_step = 0; drop_step < 80; drop_step++) {
+                simulateEvent(ev_step, ev_step_normal, _dropping_mayfly);
+            }
+
+            expect(variable_instance_get(_dropping_mayfly, "anchor_offset_y")).toBe(GameMayflyTargetAnchorOffsetYGet());
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            with (_dropping_mayfly) {
                 instance_destroy();
             }
 
@@ -827,6 +862,42 @@ suite(function() {
             expect(_state.invuln_timer).toBe(INVULN_TIME);
             expect(_respawn.x).toBe(CAMERA_HOME_X);
             expect(_respawn.y).toBe(CAMERA_HOME_Y + PLAYER_RESPAWN_OFFSET_Y);
+        });
+
+        test("Bombs consume stock, stay active for their animation, and cancel bullets while they run", function() {
+            var _state = GamePlayerStateCreate();
+            var _bullet = noone;
+
+            global.game_runtime.bombs = 1;
+            _state.invuln_timer = 0;
+
+            expect(GamePlayerBombTryStart(_state)).toBeTruthy();
+            expect(global.game_runtime.bombs).toBe(0);
+            expect(GamePlayerBombActiveGet()).toBeTruthy();
+            expect(GamePlayerIsInvulnerable(_state)).toBeTruthy();
+            expect(GamePlayerBombTryStart(_state)).toBeFalsy();
+
+            _bullet = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
+            with (_bullet) {
+                event_perform(ev_create, 0);
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _bullet);
+
+            expect(instance_exists(_bullet)).toBeFalsy();
+            expect(instance_number(obj_medal)).toBe(1);
+
+            for (var i = 0; i < BOMB_DURATION_FRAMES; i++) {
+                GamePlayerBombStep(_state);
+            }
+
+            expect(GamePlayerBombActiveGet()).toBeFalsy();
+            expect(GamePlayerIsInvulnerable(_state)).toBeFalsy();
+            expect(GamePlayerBombTryStart(_state)).toBeFalsy();
+
+            with (obj_medal) {
+                instance_destroy();
+            }
         });
 
         test("Continue decline enters game over and finishes after its delay", function() {

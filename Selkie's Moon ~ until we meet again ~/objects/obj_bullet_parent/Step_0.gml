@@ -1,3 +1,8 @@
+// Bombs cancel every active bullet before any normal bullet processing.
+if (GamePlayerBombActiveGet()) {
+    GameBulletCancelMark(id, global.game_runtime.is_berserk);
+}
+
 // Resolve delayed cancellation into an actual medal drop before normal motion.
 if (cancelled) {
     var _medal = instance_create_layer(x, y, "Instances", obj_medal);

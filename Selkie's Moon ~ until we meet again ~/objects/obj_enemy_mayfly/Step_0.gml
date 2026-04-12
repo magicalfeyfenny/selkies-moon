@@ -4,6 +4,12 @@ event_inherited();
 // Keep the mayfly anchored in the visible area while it drifts in a slow infinity pattern.
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone) {
+    if (anchor_offset_y < anchor_target_offset_y) {
+        anchor_offset_y = min(anchor_target_offset_y, anchor_offset_y + MAYFLY_DROP_SPEED);
+    } else if (anchor_offset_y > anchor_target_offset_y) {
+        anchor_offset_y = max(anchor_target_offset_y, anchor_offset_y - MAYFLY_DROP_SPEED);
+    }
+
     var _offset = GameMayflyInfinityOffsetCreate(float_phase);
     x = _camera.x + anchor_offset_x + _offset.x;
     y = _camera.y + anchor_offset_y + _offset.y;

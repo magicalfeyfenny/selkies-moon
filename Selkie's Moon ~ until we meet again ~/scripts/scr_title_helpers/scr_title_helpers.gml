@@ -367,6 +367,25 @@ function GameUiDrawOutlinedText(_text, _x, _y, _text_color = c_white, _outline_c
     draw_set_alpha(1.0);
 }
 
+/// @func GameTitlePanelStyleCreate(selected)
+/// Returns the shared purple panel styling used across title-menu pages.
+function GameTitlePanelStyleCreate(_selected = false) {
+    var _style = {
+        fill_color: make_color_rgb(58, 18, 92),
+        border_color: make_color_rgb(96, 124, 180),
+        text_color: c_white,
+        fill_alpha: 0.75,
+    };
+
+    if (_selected) {
+        _style.fill_color = make_color_rgb(78, 28, 116);
+        _style.border_color = make_color_rgb(144, 236, 255);
+        _style.text_color = make_color_rgb(255, 255, 160);
+    }
+
+    return _style;
+}
+
 /// @func GameTitleDrawLogo(state)
 /// Draws the game title card and subtitle banner.
 function GameTitleDrawLogo(_state) {
@@ -422,21 +441,13 @@ function GameTitleDrawPrompt(_state) {
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
 /// Draws one selectable main-menu item with highlight styling.
 function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
-    var _fill_color = make_color_rgb(58, 18, 92);
-    var _border_color = make_color_rgb(96, 124, 180);
-    var _text_color = c_white;
+    var _style = GameTitlePanelStyleCreate(_selected);
 
-    if (_selected) {
-        _fill_color = make_color_rgb(78, 28, 116);
-        _border_color = make_color_rgb(144, 236, 255);
-        _text_color = make_color_rgb(255, 255, 160);
-    }
-
-    GameTitleDrawFrame(_x, _y, 220, 28, _border_color, _fill_color, 0.75);
+    GameTitleDrawFrame(_x, _y, 220, 28, _style.border_color, _style.fill_color, _style.fill_alpha);
     draw_set_halign(fa_left);
     draw_set_valign(fa_middle);
     draw_set_font(fn_menu);
-    GameUiDrawOutlinedText(_label, _x + 12, _y + 15, _text_color);
+    GameUiDrawOutlinedText(_label, _x + 12, _y + 15, _style.text_color);
 }
 
 /// @func GameTitleDrawMainMenu(state)
@@ -466,24 +477,14 @@ function GameTitleDrawOptionsPage(_state) {
 
     for (var i = 0; i < _entry_count; i++) {
         var _entry = _entries[i];
-        var _fill_color = make_color_rgb(20, 24, 40);
-        var _border_color = make_color_rgb(96, 124, 180);
-        var _text_color = c_white;
-        var _value_color = c_white;
+        var _style = GameTitlePanelStyleCreate(i == _state.options_index);
 
-        if (i == _state.options_index) {
-            _fill_color = make_color_rgb(36, 74, 124);
-            _border_color = make_color_rgb(144, 236, 255);
-            _text_color = make_color_rgb(255, 255, 160);
-            _value_color = make_color_rgb(255, 255, 160);
-        }
-
-        GameTitleDrawFrame(136, 96 + (i * 36), 368, 28, _border_color, _fill_color);
+        GameTitleDrawFrame(136, 96 + (i * 36), 368, 28, _style.border_color, _style.fill_color, _style.fill_alpha);
         draw_set_halign(fa_left);
         draw_set_font(fn_menu);
-        GameUiDrawOutlinedText(_entry.label, 148, 111 + (i * 36), _text_color);
+        GameUiDrawOutlinedText(_entry.label, 148, 111 + (i * 36), _style.text_color);
         draw_set_halign(fa_right);
-        GameUiDrawOutlinedText(_entry.value, 492, 111 + (i * 36), _value_color);
+        GameUiDrawOutlinedText(_entry.value, 492, 111 + (i * 36), _style.text_color);
     }
 
     draw_set_halign(fa_center);
@@ -505,7 +506,9 @@ function GameTitleDrawScoresPage(_state) {
     GameUiDrawOutlinedText(_character.name, 320, 60, _character.accent_color);
 
     for (var i = 0; i < _score_count; i++) {
-        GameTitleDrawFrame(180, 92 + (i * 22), 280, 18, make_color_rgb(88, 108, 156), make_color_rgb(20, 24, 40));
+        var _style = GameTitlePanelStyleCreate(false);
+
+        GameTitleDrawFrame(180, 92 + (i * 22), 280, 18, _style.border_color, _style.fill_color, _style.fill_alpha);
 
         draw_set_halign(fa_left);
         draw_set_font(fn_menu);
@@ -533,7 +536,9 @@ function GameTitleDrawCharacterSelectPage(_state) {
     GameUiDrawOutlinedText(_character.name, 320, 62, _character.accent_color);
     GameUiDrawOutlinedText(_character.subtitle, 320, 84, make_color_rgb(180, 204, 224));
 
-    GameTitleDrawFrame(96, 112, 124, 140, c_white, make_color_rgb(24, 34, 66));
+    var _panel_style = GameTitlePanelStyleCreate(false);
+
+    GameTitleDrawFrame(96, 112, 124, 140, _panel_style.border_color, _panel_style.fill_color, _panel_style.fill_alpha);
     if (!GameTitleDrawSpriteFit(_character.preview_sprite, 158, 176, 92, 92, 2)) {
         draw_set_color(_character.accent_color);
         draw_rectangle(118, 138, 198, 226, false);
@@ -541,7 +546,7 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_set_font(fn_menu);
     GameUiDrawOutlinedText(_character.name, 158, 242, c_white);
 
-    GameTitleDrawFrame(252, 112, 292, 140, c_white, make_color_rgb(18, 22, 34));
+    GameTitleDrawFrame(252, 112, 292, 140, _panel_style.border_color, _panel_style.fill_color, _panel_style.fill_alpha);
     draw_set_halign(fa_left);
     draw_set_font(fn_menu);
     GameUiDrawOutlinedText("Pilot: " + _character.pilot_name, 266, 130, make_color_rgb(180, 204, 224));

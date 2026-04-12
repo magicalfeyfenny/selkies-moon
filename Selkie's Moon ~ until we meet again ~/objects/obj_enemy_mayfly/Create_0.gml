@@ -10,6 +10,7 @@ fire_timer = 0;
 clockwise_first = true;
 anchor_offset_x = 0;
 anchor_offset_y = -88;
+anchor_target_offset_y = GameMayflyTargetAnchorOffsetYGet();
 
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone) {

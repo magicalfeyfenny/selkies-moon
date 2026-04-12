@@ -61,6 +61,8 @@ function GameRuntimeDataCreateDefault() {
         continues_used: 0,
         meter: 0,
         is_berserk: false,
+        bomb_active: false,
+        bomb_timer: 0,
         stage_frame: 0,
         stage_complete: false,
         run_started_recorded: false,

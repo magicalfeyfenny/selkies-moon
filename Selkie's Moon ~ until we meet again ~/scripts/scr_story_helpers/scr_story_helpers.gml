@@ -588,10 +588,6 @@ function GameStoryDrawBox(_frame) {
     var _text_width = 520;
     var _lines = [];
 
-    draw_set_alpha(0.68);
-    draw_set_color(c_black);
-    draw_rectangle(26, _box_top + 10, _gui_width - 26, _gui_height - 10, false);
-
     if (_box_asset != -1 && sprite_exists(_box_asset)) {
         draw_set_alpha(1.0);
         draw_set_color(c_white);
