@@ -1,5 +1,5 @@
 // Destroy defeated enemies and award their score before any motion update.
-if (health <= 0) {
+if (hp <= 0) {
     global.game_runtime.score += points;
     instance_destroy();
     exit;

@@ -440,7 +440,7 @@ suite(function() {
                 y = 12;
                 move_direction = 0;
                 move_speed = 3;
-                health = 5;
+                hp = 5;
                 points = 750;
                 fire_interval = 999;
                 fire_timer = 0;
@@ -453,7 +453,7 @@ suite(function() {
             expect(variable_instance_get(_enemy, "fire_timer")).toBe(1);
 
             with (_enemy) {
-                health = 0;
+                hp = 0;
             }
 
             simulateEvent(ev_step, ev_step_normal, _enemy);
