@@ -76,6 +76,10 @@
     {"$GMMoment":"","%Name":"","evnt":{"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":3570,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},"moment":3570,"name":"","resourceType":"GMMoment","resourceVersion":"2.0",}
   ],
   "name":"tml_stage",
+  "parent":{
+    "name":"stage",
+    "path":"folders/stage.yy",
+  },
   "resourceType":"GMTimeline",
   "resourceVersion":"2.0",
 }

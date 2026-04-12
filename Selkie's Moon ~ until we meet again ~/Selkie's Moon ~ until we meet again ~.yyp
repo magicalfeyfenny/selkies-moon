@@ -14,6 +14,7 @@
     {"$GMFolder":"","%Name":"GMTL","folderPath":"folders/Libraries/GMTL.yy","name":"GMTL","resourceType":"GMFolder","resourceVersion":"2.0",},
     {"$GMFolder":"","%Name":"Core","folderPath":"folders/Libraries/GMTL/Core.yy","name":"Core","resourceType":"GMFolder","resourceVersion":"2.0",},
     {"$GMFolder":"","%Name":"Setup","folderPath":"folders/Libraries/GMTL/Setup.yy","name":"Setup","resourceType":"GMFolder","resourceVersion":"2.0",},
+    {"$GMFolder":"","%Name":"stage","folderPath":"folders/stage.yy","name":"stage","resourceType":"GMFolder","resourceVersion":"2.0",},
   ],
   "ForcedPrefabProjectReferences":[],
   "IncludedFiles":[
