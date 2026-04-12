@@ -327,14 +327,18 @@ function GameTitleDrawBackground() {
 /// @func GameTitleDrawLogo(state)
 /// Draws the game title card and subtitle banner.
 function GameTitleDrawLogo(_state) {
-    if (asset_get_index("spr_logo") != -1 && sprite_exists(asset_get_index("spr_logo"))) {
+    var _logo_asset = asset_get_index("spr_logo");
+
+    if (_logo_asset != -1 && sprite_exists(_logo_asset)) {
         if (_state.phase == "press_start") {
-            GameTitleDrawSpriteFit("spr_logo", 320, 90, 156, 156, 1);
+            draw_set_alpha(1.0);
+            draw_set_color(c_white);
+            draw_sprite(_logo_asset, 0, 200, 160);
             draw_set_halign(fa_center);
             draw_set_valign(fa_middle);
             draw_set_color(c_white);
             draw_set_font(fn_subtitle);
-            draw_text(320, 176, "~ until we meet again ~");
+            draw_text(200, 322, "~ until we meet again ~");
         } else {
             GameTitleDrawSpriteFit("spr_logo", 82, 56, 84, 84, 1);
         }
@@ -363,14 +367,14 @@ function GameTitleDrawPrompt(_state) {
         draw_set_valign(fa_middle);
         draw_set_color(c_white);
         draw_set_font(fn_menu);
-        draw_text(320, 260, "Press [FIRE] to start");
+        draw_text(470, 190, "Press [FIRE] to start");
     }
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_color(make_color_rgb(140, 210, 255));
     draw_set_font(fn_menu);
-    draw_text(320, 310, "Arrow Keys move  Z fire  X back/bomb");
+    draw_text(470, 232, "Arrow Keys move  Z fire  X back/bomb");
 }
 
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
