@@ -98,8 +98,13 @@ if (_fire.sword_active) {
 // Resolve the 2x2 hitbox collision against active bullets.
 for (var i = instance_number(obj_bullet_parent) - 1; i >= 0; i--) {
     var _bullet = instance_find(obj_bullet_parent, i);
+    var _collision_radius = 0;
 
-    if (abs(_bullet.x - x) > 1 || abs(_bullet.y - y) > 1) {
+    if (variable_instance_exists(_bullet, "collision_radius")) {
+        _collision_radius = _bullet.collision_radius;
+    }
+
+    if (!GamePlayerBulletHitCheck(x, y, _bullet.x, _bullet.y, _collision_radius)) {
         continue;
     }
 

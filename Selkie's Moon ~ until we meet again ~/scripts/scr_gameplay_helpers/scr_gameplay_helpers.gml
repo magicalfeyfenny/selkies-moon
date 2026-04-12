@@ -6,6 +6,7 @@
 #macro PLAYFIELD_WIDTH 202
 #macro PLAYFIELD_HALF_WIDTH 101
 #macro PLAYFIELD_HALF_HEIGHT 180
+#macro PLAYFIELD_VERTICAL_PADDING 10
 
 #macro CAMERA_HOME_X 320
 #macro CAMERA_HOME_Y 180
@@ -23,11 +24,13 @@
 #macro FIRE_HOLD_FRAMES 60
 #macro SHOT_SPRITE_FRONT spr_sunrise_bullet
 #macro SHOT_SPRITE_SIDE spr_sunset_bullet
+#macro SAMPLE_ENEMY_FIRE_INTERVAL 60
+#macro SAMPLE_ENEMY_BULLET_SPEED 3.5
 
 #macro SWEEP_RATE 2
 #macro SWEEP_PERIOD_FRAMES 30
 #macro SWORD_START_ANGLE 315
-#macro SWORD_END_ANGLE 405
+#macro SWORD_END_ANGLE 585
 #macro SWORD_LENGTH 128
 #macro BERSERK_SWORD_MULTIPLIER 1.5
 
@@ -203,7 +206,7 @@ function GameScenePlayerClampPosition(_camera_x, _camera_y, _x, _y) {
 
     return {
         x: clamp(_x, _field.left, _field.right),
-        y: clamp(_y, _field.top, _field.bottom),
+        y: clamp(_y, _field.top + PLAYFIELD_VERTICAL_PADDING, _field.bottom - PLAYFIELD_VERTICAL_PADDING),
     };
 }
 
@@ -231,6 +234,17 @@ function GameScenePlayerRespawnPositionGet(_camera_x, _camera_y) {
     return {
         x: _camera_x,
         y: _camera_y + PLAYER_RESPAWN_OFFSET_Y,
+    };
+}
+
+/// @func GameSceneSampleEnemySpawnPositionGet(camera_x, camera_y)
+/// Returns a visible top-lane spawn point for the sample enemy.
+function GameSceneSampleEnemySpawnPositionGet(_camera_x, _camera_y) {
+    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
+
+    return {
+        x: _camera_x,
+        y: _field.top + 72,
     };
 }
 
@@ -409,11 +423,18 @@ function GamePlayerSwordShouldCancelBullet(_player_x, _player_y, _bullet_x, _bul
     }
 
     var _bullet_angle = point_direction(_player_x, _player_y, _bullet_x, _bullet_y);
-    var _start_angle = _previous_pose.angle;
-    var _end_angle = GameAngleNormalizeAround(_current_pose.angle, _start_angle);
-    _bullet_angle = GameAngleNormalizeAround(_bullet_angle, _start_angle);
+    var _range_min = min(_previous_pose.angle, _current_pose.angle);
+    var _range_max = max(_previous_pose.angle, _current_pose.angle);
 
-    return _bullet_angle >= min(_start_angle, _end_angle) && _bullet_angle <= max(_start_angle, _end_angle);
+    while (_bullet_angle < _range_min) {
+        _bullet_angle += 360;
+    }
+
+    while (_bullet_angle > _range_max) {
+        _bullet_angle -= 360;
+    }
+
+    return _bullet_angle >= _range_min && _bullet_angle <= _range_max;
 }
 
 /// @func GameMedalRewardCreate(is_berserk)
@@ -669,6 +690,30 @@ function GameCameraViewApply(_x, _y) {
     return true;
 }
 
+/// @func GameGameplayHudLayoutCreate()
+/// Returns the GUI-space playfield gutters and HUD anchor positions.
+function GameGameplayHudLayoutCreate() {
+    var _playfield_left = GAME_VIEW_HALF_WIDTH - PLAYFIELD_HALF_WIDTH;
+    var _playfield_right = GAME_VIEW_HALF_WIDTH + PLAYFIELD_HALF_WIDTH;
+
+    return {
+        playfield_left: _playfield_left,
+        playfield_right: _playfield_right,
+        left_panel_left: 0,
+        left_panel_right: _playfield_left,
+        right_panel_left: _playfield_right,
+        right_panel_right: GAME_VIEW_WIDTH,
+        panel_padding: 16,
+        line_height: 20,
+        meter_left: _playfield_right + 16,
+        meter_top: 74,
+        meter_width: GAME_VIEW_WIDTH - _playfield_right - 32,
+        meter_height: 14,
+        sidebar_color: make_color_rgb(44, 14, 74),
+        sidebar_alpha: 0.62,
+    };
+}
+
 /// @func GameGameplayHudLinesCreate()
 /// Returns the current HUD label strings for lives, bombs, score, and meter.
 function GameGameplayHudLinesCreate() {
@@ -685,4 +730,22 @@ function GameGameplayHudLinesCreate() {
         "Score: " + string(global.game_runtime.score),
         _meter_label,
     ];
+}
+
+/// @func GamePlayerBulletHitCheck(player_x, player_y, bullet_x, bullet_y, bullet_collision_radius)
+/// Returns whether a bullet collision circle overlaps the player's 2x2 center hitbox.
+function GamePlayerBulletHitCheck(_player_x, _player_y, _bullet_x, _bullet_y, _bullet_collision_radius) {
+    return point_distance(_player_x, _player_y, _bullet_x, _bullet_y) <= (_bullet_collision_radius + 1);
+}
+
+/// @func GameSampleEnemyShotSpecCreate(enemy_x, enemy_y, player_x, player_y)
+/// Returns the direct-fire bead shot spawned by the sample enemy.
+function GameSampleEnemyShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
+    return {
+        x: _enemy_x,
+        y: _enemy_y,
+        direction: point_direction(_enemy_x, _enemy_y, _player_x, _player_y),
+        speed: SAMPLE_ENEMY_BULLET_SPEED,
+        object_index: obj_bullet_bead,
+    };
 }

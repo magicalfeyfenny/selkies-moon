@@ -311,11 +311,17 @@ suite(function() {
 
         test("Field clamping and camera drag stay inside the intended gameplay bounds", function() {
             var _clamped = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, 999, 999);
+            var _clamped_top = GameScenePlayerClampPosition(CAMERA_HOME_X, CAMERA_HOME_Y, -999, -999);
             var _drag_target = GameSceneCameraTargetXGet(CAMERA_HOME_X, CAMERA_HOME_X, 999);
+            var _layout = GameGameplayHudLayoutCreate();
 
             expect(_clamped.x).toBe(CAMERA_HOME_X + PLAYFIELD_HALF_WIDTH);
-            expect(_clamped.y).toBe(CAMERA_HOME_Y + PLAYFIELD_HALF_HEIGHT);
+            expect(_clamped.y).toBe(CAMERA_HOME_Y + PLAYFIELD_HALF_HEIGHT - PLAYFIELD_VERTICAL_PADDING);
+            expect(_clamped_top.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + PLAYFIELD_VERTICAL_PADDING);
             expect(_drag_target).toBe(CAMERA_HOME_X + CAMERA_DRAG_LIMIT);
+            expect(_layout.left_panel_right).toBe(_layout.playfield_left);
+            expect(_layout.right_panel_left).toBe(_layout.playfield_right);
+            expect(_layout.meter_left).toBeGreaterThan(_layout.playfield_right);
         });
 
         test("One volley tick creates twelve player shots with the intended direction and sprite split", function() {
@@ -374,6 +380,20 @@ suite(function() {
             expect(_result.spawn_shots).toBeFalsy();
             expect(_result.current_pose.moving || _result.current_pose.angle == SWORD_START_ANGLE
                 || _result.current_pose.angle == SWORD_END_ANGLE).toBeTruthy();
+            expect(GamePlayerSwordPoseCreate(SWEEP_PERIOD_FRAMES * 0.5, false).angle mod 360).toBe(225);
+        });
+
+        test("Sample enemy bead shots aim at the player and use the centered 8 px hit circle", function() {
+            var _shot = GameSampleEnemyShotSpecCreate(100, 120, 100, 220);
+            var _spawn = GameSceneSampleEnemySpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+
+            expect(_shot.object_index).toBe(obj_bullet_bead);
+            expect(_shot.direction).toBe(270);
+            expect(_shot.speed).toBe(SAMPLE_ENEMY_BULLET_SPEED);
+            expect(GamePlayerBulletHitCheck(100, 100, 105, 100, 4)).toBeTruthy();
+            expect(GamePlayerBulletHitCheck(100, 100, 106, 100, 4)).toBeFalsy();
+            expect(_spawn.x).toBe(CAMERA_HOME_X);
+            expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 72);
         });
 
         test("Cancel meter rewards trigger berserk at one thousand", function() {
@@ -430,6 +450,8 @@ suite(function() {
         });
 
         test("Imported art sprites are registered with the expected sizes", function() {
+            var _bullet_bead = asset_get_index("spr_bullet_bead");
+            var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
             var _logo = asset_get_index("spr_logo");
             var _sunrise = asset_get_index("spr_sunrise");
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
@@ -437,12 +459,18 @@ suite(function() {
             var _textbox = asset_get_index("spr_textbox");
             var _violet_tiles = asset_get_index("spr_violet_tiles");
 
+            expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
+            expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
             expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
+            expect(object_exists(obj_bullet_bead)).toBeTruthy();
+            expect(object_exists(obj_enemy_sample)).toBeTruthy();
+            expect(sprite_get_width(_bullet_bead)).toBe(12);
+            expect(sprite_get_width(_bullet_bead_mask)).toBe(12);
             expect(sprite_get_width(_sunrise)).toBe(64);
             expect(sprite_get_width(_sunrise_bullet)).toBe(8);
             expect(sprite_get_height(_sunset_bullet)).toBe(8);

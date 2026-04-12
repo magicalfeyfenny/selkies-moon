@@ -1,21 +1,34 @@
-// Draw the top-left gameplay HUD with the current run stats.
+// Draw the gutter masks and HUD entirely outside the playable field.
 var _lines = GameGameplayHudLinesCreate();
+var _layout = GameGameplayHudLayoutCreate();
+
+draw_set_alpha(_layout.sidebar_alpha);
+draw_set_color(_layout.sidebar_color);
+draw_rectangle(_layout.left_panel_left, 0, _layout.left_panel_right, GAME_VIEW_HEIGHT, false);
+draw_rectangle(_layout.right_panel_left, 0, _layout.right_panel_right, GAME_VIEW_HEIGHT, false);
+draw_set_alpha(1);
+
+draw_set_color(c_white);
+draw_line(_layout.playfield_left, 0, _layout.playfield_left, GAME_VIEW_HEIGHT);
+draw_line(_layout.playfield_right, 0, _layout.playfield_right, GAME_VIEW_HEIGHT);
 
 draw_set_font(fn_menu);
 draw_set_halign(fa_left);
 draw_set_valign(fa_top);
 draw_set_color(c_white);
 
-for (var i = 0; i < array_length(_lines); i++) {
-    draw_text(16, 16 + (i * 20), _lines[i]);
-}
+draw_text(_layout.left_panel_left + _layout.panel_padding, _layout.panel_padding, _lines[0]);
+draw_text(_layout.left_panel_left + _layout.panel_padding, _layout.panel_padding + _layout.line_height, _lines[1]);
+draw_text(_layout.right_panel_left + _layout.panel_padding, _layout.panel_padding, _lines[2]);
+draw_text(_layout.right_panel_left + _layout.panel_padding, _layout.panel_padding + _layout.line_height, _lines[3]);
 
+// Draw the meter bar beneath the right-side score block.
 draw_set_color(c_black);
-draw_rectangle(16, 98, 224, 112, false);
+draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + _layout.meter_width, _layout.meter_top + _layout.meter_height, false);
 draw_set_color(global.game_runtime.is_berserk ? c_yellow : c_aqua);
-draw_rectangle(16, 98, 16 + ((208 * global.game_runtime.meter) / METER_MAX), 112, false);
+draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + ((_layout.meter_width * global.game_runtime.meter) / METER_MAX), _layout.meter_top + _layout.meter_height, false);
 draw_set_color(c_white);
-draw_text(16, 116, global.game_runtime.is_berserk ? "BERSERK" : "Cancel Meter");
+draw_text(_layout.meter_left, _layout.meter_top + _layout.meter_height + 6, global.game_runtime.is_berserk ? "BERSERK" : "Cancel Meter");
 
 // Draw the continue and game-over overlay over the playable area when requested.
 if (global.game_runtime.signals.continue_request) {
