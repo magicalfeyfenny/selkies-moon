@@ -416,6 +416,78 @@ suite(function() {
             expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 72);
         });
 
+        test("Bee enemies drift toward the player and fire three aligned diamond shots every six frames", function() {
+            var _player = instance_create_layer(0, 0, "Instances", obj_player);
+            var _bee = instance_create_layer(0, 0, "Instances", obj_enemy_bee);
+            var _spawn = GameSceneBeeSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+            var _slow_count = 0;
+            var _mid_count = 0;
+            var _fast_count = 0;
+
+            with (_player) {
+                event_perform(ev_create, 0);
+                x = 140;
+                y = 100;
+            }
+
+            with (_bee) {
+                event_perform(ev_create, 0);
+                x = 100;
+                y = 100;
+                move_direction = 0;
+                move_speed = BEE_MOVE_SPEED;
+                fire_interval = BEE_FIRE_INTERVAL;
+                fire_timer = BEE_FIRE_INTERVAL - 1;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _bee);
+
+            expect(variable_instance_get(_bee, "sprite_index")).toBe(spr_bee);
+            expect(variable_instance_get(_bee, "x")).toBe(101);
+            expect(variable_instance_get(_bee, "y")).toBe(100);
+            expect(variable_instance_get(_bee, "move_direction")).toBe(0);
+            expect(variable_instance_get(_bee, "image_angle")).toBe(0);
+            expect(instance_number(obj_bullet_diamond)).toBe(3);
+            expect(_spawn.x).toBe(CAMERA_HOME_X - PLAYFIELD_HALF_WIDTH + 40);
+            expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 96);
+
+            for (var i = 0; i < instance_number(obj_bullet_diamond); i++) {
+                var _bullet = instance_find(obj_bullet_diamond, i);
+                var _speed = variable_instance_get(_bullet, "move_speed");
+                var _direction = variable_instance_get(_bullet, "move_direction");
+
+                expect(_direction).toBe(0);
+
+                if (_speed == BEE_BULLET_SPEED - BEE_BULLET_SPEED_DELTA) {
+                    _slow_count += 1;
+                }
+
+                if (_speed == BEE_BULLET_SPEED) {
+                    _mid_count += 1;
+                }
+
+                if (_speed == BEE_BULLET_SPEED + BEE_BULLET_SPEED_DELTA) {
+                    _fast_count += 1;
+                }
+            }
+
+            expect(_slow_count).toBe(1);
+            expect(_mid_count).toBe(1);
+            expect(_fast_count).toBe(1);
+
+            with (obj_bullet_diamond) {
+                instance_destroy();
+            }
+
+            with (_bee) {
+                instance_destroy();
+            }
+
+            with (_player) {
+                instance_destroy();
+            }
+        });
+
         test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
             var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
             var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
@@ -529,6 +601,7 @@ suite(function() {
             var _bee = asset_get_index("spr_bee");
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
+            var _bullet_diamond = asset_get_index("spr_bullet_diamond");
             var _dialogue_bg_core = asset_get_index("spr_dialogue_bg_core");
             var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
             var _logo = asset_get_index("spr_logo");
@@ -543,6 +616,7 @@ suite(function() {
             expect(_bee != -1 && sprite_exists(_bee)).toBeTruthy();
             expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
             expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
+            expect(_bullet_diamond != -1 && sprite_exists(_bullet_diamond)).toBeTruthy();
             expect(_dialogue_bg_core != -1 && sprite_exists(_dialogue_bg_core)).toBeTruthy();
             expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
@@ -554,10 +628,13 @@ suite(function() {
             expect(_turret != -1 && sprite_exists(_turret)).toBeTruthy();
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
+            expect(object_exists(obj_bullet_diamond)).toBeTruthy();
+            expect(object_exists(obj_enemy_bee)).toBeTruthy();
             expect(object_exists(obj_enemy_turret)).toBeTruthy();
             expect(sprite_get_width(_bee)).toBe(64);
             expect(sprite_get_width(_bullet_bead)).toBe(16);
             expect(sprite_get_width(_bullet_bead_mask)).toBe(16);
+            expect(sprite_get_width(_bullet_diamond)).toBe(16);
             expect(sprite_get_width(_dialogue_bg_core)).toBe(640);
             expect(sprite_get_height(_dialogue_bg_flower)).toBe(360);
             expect(sprite_get_width(_mayfly)).toBe(64);

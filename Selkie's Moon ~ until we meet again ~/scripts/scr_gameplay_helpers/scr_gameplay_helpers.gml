@@ -26,6 +26,10 @@
 #macro SHOT_SPRITE_SIDE spr_sunset_bullet
 #macro TURRET_FIRE_INTERVAL 60
 #macro TURRET_BULLET_SPEED 3.5
+#macro BEE_MOVE_SPEED 1
+#macro BEE_FIRE_INTERVAL 6
+#macro BEE_BULLET_SPEED 3.5
+#macro BEE_BULLET_SPEED_DELTA 0.5
 
 #macro SWEEP_RATE 2
 #macro SWEEP_PERIOD_FRAMES 30
@@ -245,6 +249,17 @@ function GameSceneTurretSpawnPositionGet(_camera_x, _camera_y) {
     return {
         x: _camera_x,
         y: _field.top + 72,
+    };
+}
+
+/// @func GameSceneBeeSpawnPositionGet(camera_x, camera_y)
+/// Returns a visible upper-lane spawn point for the starter bee enemy.
+function GameSceneBeeSpawnPositionGet(_camera_x, _camera_y) {
+    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
+
+    return {
+        x: _field.left + 40,
+        y: _field.top + 96,
     };
 }
 
@@ -748,4 +763,26 @@ function GameTurretShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
         speed: TURRET_BULLET_SPEED,
         object_index: obj_bullet_bead,
     };
+}
+
+/// @func GameBeeShotSpecCreate(enemy_x, enemy_y, player_x, player_y, speed)
+/// Returns one direct-fire diamond shot specification for the bee enemy.
+function GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, _speed) {
+    return {
+        x: _enemy_x,
+        y: _enemy_y,
+        direction: point_direction(_enemy_x, _enemy_y, _player_x, _player_y),
+        speed: _speed,
+        object_index: obj_bullet_diamond,
+    };
+}
+
+/// @func GameBeeShotSpawnSpecsCreate(enemy_x, enemy_y, player_x, player_y)
+/// Returns the three aligned diamond shots fired by the bee enemy.
+function GameBeeShotSpawnSpecsCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
+    return [
+        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, BEE_BULLET_SPEED - BEE_BULLET_SPEED_DELTA),
+        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, BEE_BULLET_SPEED),
+        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, BEE_BULLET_SPEED + BEE_BULLET_SPEED_DELTA),
+    ];
 }
