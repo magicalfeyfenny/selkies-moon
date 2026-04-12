@@ -158,47 +158,54 @@ function GameSaveShipEntriesEnsure(_ship_id) {
     }
 }
 
-/// @func GameValueArrayPushFront(values, value)
-/// Returns a fixed-length array with a new value inserted at the front.
-function GameValueArrayPushFront(_values, _value) {
+/// @func GameValueArrayInsertAt(values, index, value)
+/// Returns a fixed-length array with a new value inserted at the requested index.
+function GameValueArrayInsertAt(_values, _index, _value) {
     var _count = array_length(_values);
     var _result = array_create(_count, 0);
+    var _source_index = 0;
 
     if (_count <= 0) {
         return _result;
     }
 
-    _result[0] = _value;
+    _index = clamp(_index, 0, _count - 1);
 
-    for (var i = 1; i < _count; i++) {
-        _result[i] = _values[i - 1];
+    for (var i = 0; i < _count; i++) {
+        if (i == _index) {
+            _result[i] = _value;
+            continue;
+        }
+
+        _result[i] = _values[_source_index];
+        _source_index += 1;
     }
 
     return _result;
 }
 
-/// @func GameValueArrayInsertDescending(values, value)
-/// Returns a fixed-length array with a value inserted into descending order.
-function GameValueArrayInsertDescending(_values, _value) {
+/// @func GameValueArrayInsertDescendingIndex(values, value)
+/// Returns the index where a descending score chart should insert a value.
+function GameValueArrayInsertDescendingIndex(_values, _value) {
     var _count = array_length(_values);
-    var _result = array_create(_count, 0);
-    var _source_index = 0;
-    var _did_insert = false;
+
+    if (_count <= 0) {
+        return 0;
+    }
 
     for (var i = 0; i < _count; i++) {
-        if (!_did_insert && (_source_index >= _count || _value >= _values[_source_index])) {
-            _result[i] = _value;
-            _did_insert = true;
-            continue;
-        }
-
-        if (_source_index < _count) {
-            _result[i] = _values[_source_index];
-            _source_index += 1;
+        if (_value >= _values[i]) {
+            return i;
         }
     }
 
-    return _result;
+    return _count - 1;
+}
+
+/// @func GameValueArrayInsertDescending(values, value)
+/// Returns a fixed-length array with a value inserted into descending order.
+function GameValueArrayInsertDescending(_values, _value) {
+    return GameValueArrayInsertAt(_values, GameValueArrayInsertDescendingIndex(_values, _value), _value);
 }
 
 /// @func GameRunResultSave()
@@ -215,9 +222,10 @@ function GameRunResultSave() {
     var _high_scores = global.game_save.high_score[$ _ship_id];
     var _continues_used = global.game_save.continues_used[$ _ship_id];
     var _runs_finished = global.game_save.runs_finished[$ _ship_id];
+    var _score_index = GameValueArrayInsertDescendingIndex(_high_scores, global.game_runtime.score);
 
-    global.game_save.high_score[$ _ship_id] = GameValueArrayInsertDescending(_high_scores, global.game_runtime.score);
-    global.game_save.continues_used[$ _ship_id] = GameValueArrayPushFront(_continues_used, global.game_runtime.continues_used);
+    global.game_save.high_score[$ _ship_id] = GameValueArrayInsertAt(_high_scores, _score_index, global.game_runtime.score);
+    global.game_save.continues_used[$ _ship_id] = GameValueArrayInsertAt(_continues_used, _score_index, global.game_runtime.continues_used);
 
     _runs_finished[0] += 1;
     global.game_save.runs_finished[$ _ship_id] = _runs_finished;

@@ -344,7 +344,9 @@ suite(function() {
             expect(GameStoryTransitionRoomGet(rm_game, true, false)).toBe(-1);
         });
 
-        test("Ending story completion stores results, saves, resets runtime, and returns to title", function() {
+        test("Ending story completion stores aligned score and continue entries, saves, resets runtime, and returns to title", function() {
+            global.game_save.high_score.ship_A = [90000, 70000, 50000, 30000, 10000, 8000, 6000, 4000, 2000, 1000];
+            global.game_save.continues_used.ship_A = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
             global.game_runtime.selected_ship_id = "ship_A";
             global.game_runtime.selected_ship_index = 0;
             global.game_runtime.score = 42000;
@@ -354,8 +356,14 @@ suite(function() {
             var _next_room = GameStoryTransitionRoomGet(rm_ending, true, false);
 
             expect(_next_room).toBe(rm_title);
-            expect(global.game_save.high_score.ship_A[0]).toBe(42000);
-            expect(global.game_save.continues_used.ship_A[0]).toBe(2);
+            expect(global.game_save.high_score.ship_A[0]).toBe(90000);
+            expect(global.game_save.high_score.ship_A[1]).toBe(70000);
+            expect(global.game_save.high_score.ship_A[2]).toBe(50000);
+            expect(global.game_save.high_score.ship_A[3]).toBe(42000);
+            expect(global.game_save.high_score.ship_A[4]).toBe(30000);
+            expect(global.game_save.continues_used.ship_A[2]).toBe(2);
+            expect(global.game_save.continues_used.ship_A[3]).toBe(2);
+            expect(global.game_save.continues_used.ship_A[4]).toBe(3);
             expect(global.game_save.runs_finished.ship_A[0]).toBe(1);
             expect(file_exists(GameSavePathGet())).toBeTruthy();
             expect(global.game_runtime.score).toBe(0);
@@ -368,8 +376,8 @@ suite(function() {
             file_text_close(_file);
 
             var _save = json_parse(_json_string);
-            expect(_save.high_score.ship_A[0]).toBe(42000);
-            expect(_save.continues_used.ship_A[0]).toBe(2);
+            expect(_save.high_score.ship_A[3]).toBe(42000);
+            expect(_save.continues_used.ship_A[3]).toBe(2);
             expect(_save.runs_finished.ship_A[0]).toBe(1);
         });
     });
