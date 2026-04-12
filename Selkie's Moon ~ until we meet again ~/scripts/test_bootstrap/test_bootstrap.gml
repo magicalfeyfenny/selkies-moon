@@ -453,6 +453,13 @@ suite(function() {
             }
         });
 
+        test("Stage music is only marked to play during the run rooms", function() {
+            expect(GameRunMusicShouldPlay(rm_title)).toBeFalsy();
+            expect(GameRunMusicShouldPlay(rm_opening)).toBeTruthy();
+            expect(GameRunMusicShouldPlay(rm_game)).toBeTruthy();
+            expect(GameRunMusicShouldPlay(rm_ending)).toBeTruthy();
+        });
+
         test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
             var _shot = GameTurretShotSpecCreate(100, 120, 100, 220);
             var _spawn = GameSceneTurretSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
@@ -794,6 +801,7 @@ suite(function() {
             var _logo = asset_get_index("spr_logo");
             var _mayfly = asset_get_index("spr_mayfly");
             var _medal = asset_get_index("spr_medal");
+            var _stage_music = asset_get_index("snd_stage_music");
             var _sunrise = asset_get_index("spr_sunrise");
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
             var _sunset = asset_get_index("spr_sunset");
@@ -812,6 +820,7 @@ suite(function() {
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
             expect(_medal != -1 && sprite_exists(_medal)).toBeTruthy();
+            expect(_stage_music != -1).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
             expect(_sunset != -1 && sprite_exists(_sunset)).toBeTruthy();

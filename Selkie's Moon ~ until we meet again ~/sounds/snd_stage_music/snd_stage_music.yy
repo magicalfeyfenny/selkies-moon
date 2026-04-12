@@ -1,0 +1,26 @@
+{
+  "$GMSound":"v2",
+  "%Name":"snd_stage_music",
+  "audioGroupId":{
+    "name":"audiogroup_default",
+    "path":"audiogroups/audiogroup_default",
+  },
+  "bitDepth":1,
+  "channelFormat":0,
+  "compression":0,
+  "compressionQuality":4,
+  "conversionMode":0,
+  "duration":23.9375,
+  "exportDir":"",
+  "name":"snd_stage_music",
+  "parent":{
+    "name":"Selkie's Moon ~ until we meet again ~",
+    "path":"Selkie's Moon ~ until we meet again ~.yyp",
+  },
+  "preload":false,
+  "resourceType":"GMSound",
+  "resourceVersion":"2.0",
+  "sampleRate":48000,
+  "soundFile":"stage_music.wav",
+  "volume":1.0,
+}
