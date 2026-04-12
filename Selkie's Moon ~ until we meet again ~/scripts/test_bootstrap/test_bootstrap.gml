@@ -270,6 +270,26 @@ suite(function() {
             expect(_characters[0].name).toBe("Sunrise");
             expect(_characters[0].preview_sprite).toBe("spr_sunrise");
         });
+
+        test("Press-start subtitle fades in over one second while sliding left", function() {
+            var _start = GameTitlePressStartSubtitleAnimCreate(0);
+            var _halfway = GameTitlePressStartSubtitleAnimCreate(30);
+            var _finish = GameTitlePressStartSubtitleAnimCreate(60);
+            var _clamped = GameTitlePressStartSubtitleAnimCreate(90);
+
+            expect(_start.x).toBe(300);
+            expect(_start.y).toBe(160);
+            expect(_start.alpha).toBe(0);
+
+            expect(_halfway.x).toBe(270);
+            expect(_halfway.alpha).toBe(0.5);
+
+            expect(_finish.x).toBe(240);
+            expect(_finish.alpha).toBe(1);
+
+            expect(_clamped.x).toBe(240);
+            expect(_clamped.alpha).toBe(1);
+        });
     });
 
     section("Gameplay", function() {

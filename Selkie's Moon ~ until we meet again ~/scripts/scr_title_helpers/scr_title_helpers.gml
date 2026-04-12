@@ -339,6 +339,19 @@ function GameTitleDrawBackground(_state) {
     draw_rectangle(32, 24, 608, 28, false);
 }
 
+/// @func GameTitlePressStartSubtitleAnimCreate(timer)
+/// Returns the animated press-start subtitle position and fade state.
+function GameTitlePressStartSubtitleAnimCreate(_timer) {
+    var _duration = max(1, game_get_speed(gamespeed_fps));
+    var _frame = clamp(_timer, 0, _duration);
+
+    return {
+        x: 300 - _frame,
+        y: 160,
+        alpha: _frame / _duration
+    };
+}
+
 /// @func GameTitleDrawLogo(state)
 /// Draws the game title card and subtitle banner.
 function GameTitleDrawLogo(_state) {
@@ -346,14 +359,19 @@ function GameTitleDrawLogo(_state) {
 
     if (_logo_asset != -1 && sprite_exists(_logo_asset)) {
         if (_state.phase == "press_start") {
+            var _subtitle_anim = GameTitlePressStartSubtitleAnimCreate(_state.flash_timer);
+
             draw_set_alpha(1.0);
             draw_set_color(c_white);
             draw_sprite(_logo_asset, 0, 200, 160);
+
             draw_set_halign(fa_center);
             draw_set_valign(fa_middle);
             draw_set_color(c_white);
             draw_set_font(fn_subtitle);
-            draw_text(200, 322, "~ until we meet again ~");
+            draw_set_alpha(_subtitle_anim.alpha);
+            draw_text(_subtitle_anim.x, _subtitle_anim.y, "~ until we meet again ~");
+            draw_set_alpha(1.0);
         } else {
             GameTitleDrawSpriteFit("spr_logo", 82, 56, 84, 84, 1);
         }
