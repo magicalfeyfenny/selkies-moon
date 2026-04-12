@@ -38,8 +38,8 @@ if (!instance_exists(obj_UI_gameplay)) {
     instance_create_layer(0, 0, "Instances", obj_UI_gameplay);
 }
 
-// Spawn one sample enemy so rm_game always has a live target and bullet source.
-if (!instance_exists(obj_enemy_sample)) {
-    var _enemy_spawn = GameSceneSampleEnemySpawnPositionGet(scene_state.camera_x, scene_state.camera_y);
-    instance_create_layer(_enemy_spawn.x, _enemy_spawn.y, "Instances", obj_enemy_sample);
+// Spawn one turret enemy so rm_game always has a live target and bullet source.
+if (!instance_exists(obj_enemy_turret)) {
+    var _enemy_spawn = GameSceneTurretSpawnPositionGet(scene_state.camera_x, scene_state.camera_y);
+    instance_create_layer(_enemy_spawn.x, _enemy_spawn.y, "Instances", obj_enemy_turret);
 }

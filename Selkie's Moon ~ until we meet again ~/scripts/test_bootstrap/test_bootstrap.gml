@@ -403,22 +403,22 @@ suite(function() {
             expect(GamePlayerSwordPoseCreate(SWEEP_PERIOD_FRAMES * 0.5, false).angle mod 360).toBe(225);
         });
 
-        test("Sample enemy bead shots aim at the player and use the centered 8 px hit circle", function() {
-            var _shot = GameSampleEnemyShotSpecCreate(100, 120, 100, 220);
-            var _spawn = GameSceneSampleEnemySpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
+        test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
+            var _shot = GameTurretShotSpecCreate(100, 120, 100, 220);
+            var _spawn = GameSceneTurretSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
 
             expect(_shot.object_index).toBe(obj_bullet_bead);
             expect(_shot.direction).toBe(270);
-            expect(_shot.speed).toBe(SAMPLE_ENEMY_BULLET_SPEED);
+            expect(_shot.speed).toBe(TURRET_BULLET_SPEED);
             expect(GamePlayerBulletHitCheck(100, 100, 105, 100, 4)).toBeTruthy();
             expect(GamePlayerBulletHitCheck(100, 100, 106, 100, 4)).toBeFalsy();
             expect(_spawn.x).toBe(CAMERA_HOME_X);
             expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 72);
         });
 
-        test("Inherited child bullets keep parent defaults and child enemies keep parent step behavior", function() {
+        test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
             var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
-            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_sample);
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
 
             with (_bead) {
                 event_perform(ev_create, 0);
@@ -430,7 +430,7 @@ suite(function() {
 
             expect(variable_instance_get(_bead, "cancelled")).toBeFalsy();
             expect(variable_instance_get(_bead, "medal_score_value")).toBe(CANCEL_BONUS);
-            expect(variable_instance_get(_bead, "move_speed")).toBe(SAMPLE_ENEMY_BULLET_SPEED);
+            expect(variable_instance_get(_bead, "move_speed")).toBe(TURRET_BULLET_SPEED);
             expect(variable_instance_get(_bead, "collision_radius")).toBe(4);
 
             global.game_runtime.score = 0;
@@ -526,38 +526,47 @@ suite(function() {
         });
 
         test("Imported art sprites are registered with the expected sizes", function() {
+            var _bee = asset_get_index("spr_bee");
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
             var _dialogue_bg_core = asset_get_index("spr_dialogue_bg_core");
             var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
             var _logo = asset_get_index("spr_logo");
+            var _mayfly = asset_get_index("spr_mayfly");
             var _sunrise = asset_get_index("spr_sunrise");
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
             var _sunset_bullet = asset_get_index("spr_sunset_bullet");
             var _textbox = asset_get_index("spr_textbox");
+            var _turret = asset_get_index("spr_turret");
             var _violet_tiles = asset_get_index("spr_violet_tiles");
 
+            expect(_bee != -1 && sprite_exists(_bee)).toBeTruthy();
             expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
             expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
             expect(_dialogue_bg_core != -1 && sprite_exists(_dialogue_bg_core)).toBeTruthy();
             expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
+            expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
             expect(_sunrise != -1 && sprite_exists(_sunrise)).toBeTruthy();
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
             expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
+            expect(_turret != -1 && sprite_exists(_turret)).toBeTruthy();
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
-            expect(object_exists(obj_enemy_sample)).toBeTruthy();
-            expect(sprite_get_width(_bullet_bead)).toBe(12);
-            expect(sprite_get_width(_bullet_bead_mask)).toBe(12);
+            expect(object_exists(obj_enemy_turret)).toBeTruthy();
+            expect(sprite_get_width(_bee)).toBe(64);
+            expect(sprite_get_width(_bullet_bead)).toBe(16);
+            expect(sprite_get_width(_bullet_bead_mask)).toBe(16);
             expect(sprite_get_width(_dialogue_bg_core)).toBe(640);
             expect(sprite_get_height(_dialogue_bg_flower)).toBe(360);
+            expect(sprite_get_width(_mayfly)).toBe(64);
             expect(sprite_get_width(_sunrise)).toBe(64);
             expect(sprite_get_width(_sunrise_bullet)).toBe(8);
             expect(sprite_get_height(_sunset_bullet)).toBe(8);
             expect(sprite_get_width(_textbox)).toBe(640);
             expect(sprite_get_height(_textbox)).toBe(130);
+            expect(sprite_get_width(_turret)).toBe(32);
             expect(sprite_get_width(_violet_tiles)).toBe(128);
             expect(sprite_get_height(_violet_tiles)).toBe(128);
         });

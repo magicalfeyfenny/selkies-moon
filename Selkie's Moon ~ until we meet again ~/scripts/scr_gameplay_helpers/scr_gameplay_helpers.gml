@@ -24,8 +24,8 @@
 #macro FIRE_HOLD_FRAMES 60
 #macro SHOT_SPRITE_FRONT spr_sunrise_bullet
 #macro SHOT_SPRITE_SIDE spr_sunset_bullet
-#macro SAMPLE_ENEMY_FIRE_INTERVAL 60
-#macro SAMPLE_ENEMY_BULLET_SPEED 3.5
+#macro TURRET_FIRE_INTERVAL 60
+#macro TURRET_BULLET_SPEED 3.5
 
 #macro SWEEP_RATE 2
 #macro SWEEP_PERIOD_FRAMES 30
@@ -237,9 +237,9 @@ function GameScenePlayerRespawnPositionGet(_camera_x, _camera_y) {
     };
 }
 
-/// @func GameSceneSampleEnemySpawnPositionGet(camera_x, camera_y)
-/// Returns a visible top-lane spawn point for the sample enemy.
-function GameSceneSampleEnemySpawnPositionGet(_camera_x, _camera_y) {
+/// @func GameSceneTurretSpawnPositionGet(camera_x, camera_y)
+/// Returns a visible top-lane spawn point for the starter turret enemy.
+function GameSceneTurretSpawnPositionGet(_camera_x, _camera_y) {
     var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
 
     return {
@@ -738,14 +738,14 @@ function GamePlayerBulletHitCheck(_player_x, _player_y, _bullet_x, _bullet_y, _b
     return point_distance(_player_x, _player_y, _bullet_x, _bullet_y) <= (_bullet_collision_radius + 1);
 }
 
-/// @func GameSampleEnemyShotSpecCreate(enemy_x, enemy_y, player_x, player_y)
-/// Returns the direct-fire bead shot spawned by the sample enemy.
-function GameSampleEnemyShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
+/// @func GameTurretShotSpecCreate(enemy_x, enemy_y, player_x, player_y)
+/// Returns the direct-fire bead shot spawned by the turret enemy.
+function GameTurretShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
     return {
         x: _enemy_x,
         y: _enemy_y,
         direction: point_direction(_enemy_x, _enemy_y, _player_x, _player_y),
-        speed: SAMPLE_ENEMY_BULLET_SPEED,
+        speed: TURRET_BULLET_SPEED,
         object_index: obj_bullet_bead,
     };
 }
