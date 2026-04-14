@@ -120,8 +120,8 @@
   "maintainGms1Font":false,
   "name":"fn_menu",
   "parent":{
-    "name":"Selkies Moon",
-    "path":"Selkies Moon.yyp",
+    "name":"Selkie's Moon ~ until we meet again ~",
+    "path":"Selkie's Moon ~ until we meet again ~.yyp",
   },
   "pointRounding":0,
   "ranges":[

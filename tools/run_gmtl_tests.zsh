@@ -5,12 +5,12 @@ set -euo pipefail
 script_dir=$(cd -- "$(dirname "$0")" && pwd)
 repo_root=$(cd -- "$script_dir/.." && pwd)
 project_dir="$repo_root/Selkie's Moon ~ until we meet again ~"
-project_file="$project_dir/Selkie's Moon ~ until we meet again ~.yyp"
+project_file="$project_dir/Selkies Moon.yyp"
 output_dir="$repo_root/output/Selkie's Moon ~ until we meet again ~"
 marker_file="$output_dir/.run-gmtl-tests.txt"
 results_dir="$repo_root/test-results"
 run_log="$results_dir/gmtl-run.log"
-remote_install_dir="$HOME/gamemakerstudio2/GM_MAC/Selkie_s_Moon_~_until_we_meet_again_~"
+remote_install_dir="$HOME/gamemakerstudio2/GM_MAC/Selkies_Moon"
 
 runtime_dir=""
 for candidate in /Users/Shared/GameMakerStudio2/Cache/runtimes/runtime-*; do

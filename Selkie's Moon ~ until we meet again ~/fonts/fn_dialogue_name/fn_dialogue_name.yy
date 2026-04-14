@@ -119,8 +119,8 @@
   "maintainGms1Font":false,
   "name":"fn_dialogue_name",
   "parent":{
-    "name":"Selkie's Moon ~ until we meet again ~",
-    "path":"Selkie's Moon ~ until we meet again ~.yyp",
+    "name":"Selkies Moon",
+    "path":"Selkies Moon.yyp",
   },
   "pointRounding":0,
   "ranges":[

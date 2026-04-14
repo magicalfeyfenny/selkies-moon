@@ -9,8 +9,8 @@
   "name":"obj_bullet_blade",
   "overriddenProperties":[],
   "parent":{
-    "name":"Selkie's Moon ~ until we meet again ~",
-    "path":"Selkie's Moon ~ until we meet again ~.yyp",
+    "name":"Selkies Moon",
+    "path":"Selkies Moon.yyp",
   },
   "parentObjectId":{
     "name":"obj_bullet_parent",

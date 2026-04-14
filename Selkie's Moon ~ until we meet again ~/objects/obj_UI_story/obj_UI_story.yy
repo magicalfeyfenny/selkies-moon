@@ -10,8 +10,8 @@
   "name":"obj_UI_story",
   "overriddenProperties":[],
   "parent":{
-    "name":"Selkie's Moon ~ until we meet again ~",
-    "path":"Selkie's Moon ~ until we meet again ~.yyp",
+    "name":"Selkies Moon",
+    "path":"Selkies Moon.yyp",
   },
   "parentObjectId":null,
   "persistent":false,
