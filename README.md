@@ -3,6 +3,10 @@ Hello, this is Fenny. I'm doing a solo game development project for the ACM's Bi
 
 Since AI use is allowed if credited, my main goal with this project is to experiment with using agentic AI with GameMaker, since I haven't really gotten the opportunity to use them much and want to see what they can do in the game engine I'm most familiar with. 
 
+## Download
+Compiled binaries for the game are available at https://magicalfeyfenny.itch.io/selkies-moon  
+Currently, there is a Mac (arm64) build and a Linux (amd64) build
+
 ## Gameplay
 This is a 2D vertical scrolling shooter, similar to games like Touhou or Dodonpachi.
 
