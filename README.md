@@ -29,7 +29,7 @@ Bombs do not recover between lives.
 Enemies are worth an amount of points based on the enemy type: 
 - Turrets (flower bushes): 750
 - Popcorn (bees): 500
-- Commaanders (mayflies): 1200
+- Commanders (mayflies): 1200
 - Boss: 30000
 
 When you cancel a bullet, it turns into a medal that vacuums towards the player.  
