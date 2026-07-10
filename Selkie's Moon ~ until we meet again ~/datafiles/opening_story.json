@@ -1,1 +1,72 @@
-[{"name":"Moon","text":"It's been months since I've seen her...","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"Moon","text":"I asked her, for the sake of both of us, to live on...","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"Moon","text":"I knew that our chase could never end.","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"Moon","text":"The sunrise would never stop chasing me, even after our sins outgrew our home.","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"","text":"She had lost the world and the sunrise she loved.","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"","text":"She was once told that she could help bring salvation to the world,","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"","text":"but all she could bring was the cold of the night...","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"No matter how irredeemable you think you are, Moon, I'll find you again!","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"If you keep chasing after me, you'll never escape!","backgrounds":["spr_dialogue_bg_core"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"","text":"Selkie had gotten lost in the vines created by Moon's sin.","backgrounds":["spr_dialogue_bg_core"],"portraits":[],"positions":[]},{"name":"","text":"The sunrise must chase her sunset, wrapping them both in an endless cycle...","backgrounds":["spr_dialogue_bg_core"],"portraits":[],"positions":[]},{"name":"","text":"Tonight, as every night, the chase begins again...","backgrounds":["spr_dialogue_bg_core"],"portraits":[],"positions":[]}]
+[
+  {
+    "name": "",
+    "text": "Moon and Selkie were bound by a promise made at the Core of the Moon.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "If the tide takes me first, keep flying.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": ["spr_moon_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Only if you promise to keep chasing me.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": ["spr_selkie_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "",
+    "text": "The promise survived. The world around it did not.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "",
+    "text": "Flowers of impossible light spread over the sea, and every wish left a thorn.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "I named my ship Sunset because it carries every ending I could not accept.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": ["spr_moon_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then Sunrise will be the answer. I will bring you back from the dark.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": ["spr_selkie_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "",
+    "text": "Neither pilot could tell who was fleeing and who was following.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "",
+    "text": "Across ten moonlit stages, the chase tightens toward the place it began.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "",
+    "text": "Tonight, the pilot you choose will decide which heart must be faced.",
+    "backgrounds": ["spr_dialogue_bg_core"],
+    "portraits": [],
+    "positions": []
+  }
+]

@@ -60,8 +60,9 @@ if (player_state.hit) {
 }
 
 // Apply stage scroll and directional movement before clamping to the field.
-var _move_x = (_input.right_down - _input.left_down) * PLAYER_MOVE_SPEED;
-var _move_y = (_input.down_down - _input.up_down) * PLAYER_MOVE_SPEED;
+var _move_speed = PLAYER_MOVE_SPEED * (_input.autofire_down ? PLAYER_FOCUS_SPEED_MULTIPLIER : 1);
+var _move_x = (_input.right_down - _input.left_down) * _move_speed;
+var _move_y = (_input.down_down - _input.up_down) * _move_speed;
 var _clamped = GameScenePlayerClampPosition(_camera_x, _camera_y, x + _move_x, y + _move_y - _scroll_speed);
 
 x = _clamped.x;
@@ -79,18 +80,32 @@ if (_input.bomb_pressed) {
 // Consume volley shots and sword sweeps from the current fire state.
 var _fire = GamePlayerFireStep(player_state, _input);
 if (_fire.spawn_shots) {
-    var _shots = GamePlayerShotSpawnSpecsCreate(x, y);
+    var _ship_id = GameRunShipIdGet();
+    var _power = GamePlayerPowerGet();
+    var _shots = GamePlayerShotSpawnSpecsCreate(x, y, _ship_id, _fire.focused_attack, _power);
     var _shot_total = array_length(_shots);
+
+    GamePlayerShotSoundPlay(_ship_id, _fire.focused_attack, _power);
 
     for (var i = 0; i < _shot_total; i++) {
         var _shot = instance_create_layer(_shots[i].x, _shots[i].y, "Instances", obj_player_shot);
         _shot.move_direction = _shots[i].direction;
         _shot.move_speed = _shots[i].speed;
         _shot.shot_sprite = _shots[i].sprite_id;
+        _shot.damage = _shots[i].damage;
+        _shot.shot_scale = _shots[i].scale;
+        _shot.shot_color = _shots[i].color;
+        _shot.shot_accent_color = _shots[i].accent_color;
+        _shot.shot_power = _shots[i].power;
+        _shot.shot_focused = _shots[i].focused;
     }
 }
 
 if (_fire.sword_active) {
+    if (_fire.current_pose.moving && !_fire.previous_pose.moving) {
+        GamePlayerSwordSoundPlay(GameRunShipIdGet());
+    }
+
     for (var i = instance_number(obj_bullet_parent) - 1; i >= 0; i--) {
         var _bullet = instance_find(obj_bullet_parent, i);
 
