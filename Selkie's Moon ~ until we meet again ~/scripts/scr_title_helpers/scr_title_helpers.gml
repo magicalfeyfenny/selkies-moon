@@ -3,22 +3,72 @@
 function GameTitleCharactersCreate() {
     return [
         {
-            id: "ship_A",
-            name: "Sunrise",
-            subtitle: "Moonlight reflects a warm sunshine",
+            id: SHIP_SUNRISE,
+            name: "Sunset",
+            subtitle: "Moon carries twilight back toward the sea",
             accent_color: make_color_rgb(64, 232, 255),
             logo_color: make_color_rgb(255, 96, 196),
             preview_sprite: "spr_sunrise",
             pilot_name: "Moon",
             support_name: "",
             description_lines: [
-                "A ship that carries on",
-                "the wishes of a former companion.",
-                "As she chases her companion",
-                "around the world, her companion",
-                "chases her in kind"
+                "A balanced craft built for",
+                "Moon's long pursuit through",
+                "the violet tide. Wide volleys",
+                "turn blue heat into orange",
+                "as her resolve rises"
+            ]
+        },
+        {
+            id: SHIP_SELKIE,
+            name: "Sunrise",
+            subtitle: "Selkie returns in the first light",
+            accent_color: make_color_rgb(255, 174, 234),
+            logo_color: make_color_rgb(255, 198, 112),
+            preview_sprite: "spr_sunset",
+            pilot_name: "Selkie",
+            support_name: "Moon",
+            description_lines: [
+                "A heavier ship with crescent",
+                "spread shots and narrow focus",
+                "lances. Her focused sweep is",
+                "wide, close, and made for",
+                "breaking dense bullet curtains"
             ]
         }
+    ];
+}
+
+/// @func GameTitleGalleryItemsCreate()
+/// Creates the CG gallery entries shown on the title screen.
+function GameTitleGalleryItemsCreate() {
+    return [
+        { name: "Core of the Moon", sprite: "spr_dialogue_bg_core", caption: "The place where the promise began." },
+        { name: "Flowering Memory", sprite: "spr_dialogue_bg_flower", caption: "A bloom that refuses to fade." },
+        { name: "Moon", sprite: "spr_moon_portrait", caption: "Pilot of Sunset." },
+        { name: "Selkie", sprite: "spr_selkie_portrait", caption: "Pilot of Sunrise." },
+        { name: "Sunset", sprite: "spr_sunrise", caption: "Moon's balanced shot type." },
+        { name: "Sunrise", sprite: "spr_sunset", caption: "Selkie's crescent shot type." },
+    ];
+}
+
+/// @func GameTitleMusicItemsCreate()
+/// Creates the music-room track list.
+function GameTitleMusicItemsCreate() {
+    return [
+        { name: "Moonlit Launch", subtitle: "title / opening", sound_id: snd_music_title },
+        { name: "Tideglass", subtitle: "stage 1", sound_id: snd_music_stage_01 },
+        { name: "Lanterns Underwater", subtitle: "stage 2", sound_id: snd_music_stage_02 },
+        { name: "Saltwind Corridor", subtitle: "stage 3", sound_id: snd_music_stage_03 },
+        { name: "Kelp Chase", subtitle: "stage 4", sound_id: snd_music_stage_04 },
+        { name: "Moonwake", subtitle: "stage 5", sound_id: snd_music_stage_05 },
+        { name: "Glassreef", subtitle: "stage 6", sound_id: snd_music_stage_06 },
+        { name: "Starfall Break", subtitle: "stage 7", sound_id: snd_music_stage_07 },
+        { name: "Bloodtide", subtitle: "stage 8", sound_id: snd_music_stage_08 },
+        { name: "Crescent Gate", subtitle: "stage 9", sound_id: snd_music_stage_09 },
+        { name: "Selkie Eclipse", subtitle: "stage 10", sound_id: snd_music_stage_10 },
+        { name: "Soft Bloom", subtitle: "ending", sound_id: snd_music_ending },
+        { name: "Moonlit Return", subtitle: "credits", sound_id: snd_music_credits },
     ];
 }
 
@@ -27,8 +77,10 @@ function GameTitleCharactersCreate() {
 function GameTitleMainItemsCreate() {
     return [
         { id: "start_game", label: "Start Game" },
-        { id: "options", label: "Options" },
         { id: "scores", label: "Scores" },
+        { id: "cg_gallery", label: "CG Gallery" },
+        { id: "music_room", label: "Music Room" },
+        { id: "options", label: "Options" },
         { id: "quit", label: "Quit" }
     ];
 }
@@ -44,7 +96,12 @@ function GameTitleStateCreate() {
         options_index: 0,
         score_character_index: 0,
         select_character_index: 0,
+        gallery_index: 0,
+        music_index: 0,
+        music_preview_id: -1,
         characters: GameTitleCharactersCreate(),
+        gallery_items: GameTitleGalleryItemsCreate(),
+        music_items: GameTitleMusicItemsCreate(),
         main_items: GameTitleMainItemsCreate()
     };
 }
@@ -160,6 +217,41 @@ function GameTitleConfigEntryAdjust(_entry_id, _delta) {
     return _did_change;
 }
 
+/// @func GameTitleMusicPreviewStop(state)
+/// Stops the currently playing music-room preview.
+function GameTitleMusicPreviewStop(_state) {
+    if (_state.music_preview_id != -1) {
+        audio_stop_sound(_state.music_preview_id);
+        _state.music_preview_id = -1;
+    }
+
+    GameStageMusicSync();
+}
+
+/// @func GameTitleMusicPreviewToggle(state)
+/// Toggles the selected music-room preview track.
+function GameTitleMusicPreviewToggle(_state) {
+    if (_state.music_preview_id != -1) {
+        GameTitleMusicPreviewStop(_state);
+        return false;
+    }
+
+    if (GameShouldQuitAfterTests()) {
+        return false;
+    }
+
+    GameAudioStateEnsure();
+    if (global.game_audio.current_music_id != -1) {
+        audio_stop_sound(global.game_audio.current_music_id);
+        global.game_audio.current_music_id = -1;
+        global.game_audio.stage_music_playing = false;
+    }
+
+    var _track = _state.music_items[_state.music_index];
+    _state.music_preview_id = audio_play_sound(_track.sound_id, 0, true);
+    return true;
+}
+
 /// @func GameTitleStateStep(state, input)
 /// Advances the title state machine by one input snapshot.
 function GameTitleStateStep(_state, _input) {
@@ -209,7 +301,18 @@ function GameTitleStateStep(_state, _input) {
                         _state.page = "scores";
                         break;
 
+                    case "cg_gallery":
+                        _state.page = "cg_gallery";
+                        _state.gallery_index = 0;
+                        break;
+
+                    case "music_room":
+                        _state.page = "music_room";
+                        _state.music_index = 0;
+                        break;
+
                     case "quit":
+                        GameTitleMusicPreviewStop(_state);
                         _result.action = "quit";
                         break;
                 }
@@ -226,6 +329,39 @@ function GameTitleStateStep(_state, _input) {
             }
 
             if (_input.bomb) {
+                _state.page = "main";
+            }
+            break;
+
+        case "cg_gallery":
+            if (_input.left) {
+                _state.gallery_index = GameTitleWrapIndex(_state.gallery_index, -1, array_length(_state.gallery_items));
+            }
+
+            if (_input.right) {
+                _state.gallery_index = GameTitleWrapIndex(_state.gallery_index, 1, array_length(_state.gallery_items));
+            }
+
+            if (_input.bomb) {
+                _state.page = "main";
+            }
+            break;
+
+        case "music_room":
+            if (_input.up) {
+                _state.music_index = GameTitleWrapIndex(_state.music_index, -1, array_length(_state.music_items));
+            }
+
+            if (_input.down) {
+                _state.music_index = GameTitleWrapIndex(_state.music_index, 1, array_length(_state.music_items));
+            }
+
+            if (_input.fire) {
+                GameTitleMusicPreviewToggle(_state);
+            }
+
+            if (_input.bomb) {
+                GameTitleMusicPreviewStop(_state);
                 _state.page = "main";
             }
             break;
@@ -271,6 +407,7 @@ function GameTitleStateStep(_state, _input) {
             } else if (_input.fire) {
                 var _character = GameTitleCharacterGet(_state, _state.select_character_index);
 
+                GameTitleMusicPreviewStop(_state);
                 _result.action = "goto_room";
                 _result.room_name = "rm_opening";
                 _result.character_id = _character.id;
@@ -525,6 +662,51 @@ function GameTitleDrawScoresPage(_state) {
     GameUiDrawOutlinedText("Press [LEFT]/[RIGHT] to change ship, [BOMB] to go back", 320, 322, make_color_rgb(160, 188, 220));
 }
 
+/// @func GameTitleDrawGalleryPage(state)
+/// Draws the CG gallery page for existing story and ship art.
+function GameTitleDrawGalleryPage(_state) {
+    var _item = _state.gallery_items[_state.gallery_index];
+    var _style = GameTitlePanelStyleCreate(false);
+
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fn_menu);
+    GameUiDrawOutlinedText("CG Gallery", 320, 36, c_white);
+    GameUiDrawOutlinedText(string(_state.gallery_index + 1) + "/" + string(array_length(_state.gallery_items)), 320, 58, make_color_rgb(160, 188, 220));
+
+    GameTitleDrawFrame(94, 78, 452, 202, _style.border_color, _style.fill_color, 0.48);
+    GameTitleDrawSpriteFit(_item.sprite, 320, 174, 410, 172, 3);
+
+    GameUiDrawOutlinedText(_item.name, 320, 296, c_white);
+    GameUiDrawOutlinedText(_item.caption, 320, 316, make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText("[LEFT]/[RIGHT] browse  [BOMB] back", 320, 342, make_color_rgb(160, 188, 220));
+}
+
+/// @func GameTitleDrawMusicRoomPage(state)
+/// Draws the music room page and playback state.
+function GameTitleDrawMusicRoomPage(_state) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fn_menu);
+    GameUiDrawOutlinedText("Music Room", 320, 42, c_white);
+
+    var _track_count = array_length(_state.music_items);
+    for (var i = 0; i < _track_count; i++) {
+        var _track = _state.music_items[i];
+        var _style = GameTitlePanelStyleCreate(i == _state.music_index);
+
+        GameTitleDrawFrame(136, 104 + (i * 44), 368, 34, _style.border_color, _style.fill_color, _style.fill_alpha);
+        draw_set_halign(fa_left);
+        GameUiDrawOutlinedText(_track.name, 150, 116 + (i * 44), _style.text_color);
+        GameUiDrawOutlinedText(_track.subtitle, 150, 130 + (i * 44), make_color_rgb(180, 204, 224));
+    }
+
+    draw_set_halign(fa_center);
+    var _status = (_state.music_preview_id != -1) ? "Playing" : "Stopped";
+    GameUiDrawOutlinedText(_status, 320, 236, (_state.music_preview_id != -1) ? c_yellow : make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText("[FIRE] play/stop  [BOMB] back", 320, 322, make_color_rgb(160, 188, 220));
+}
+
 /// @func GameTitleDrawCharacterSelectPage(state)
 /// Draws the character select page for the active ship.
 function GameTitleDrawCharacterSelectPage(_state) {
@@ -592,6 +774,14 @@ function GameTitleDraw(_state) {
 
         case "scores":
             GameTitleDrawScoresPage(_state);
+            break;
+
+        case "cg_gallery":
+            GameTitleDrawGalleryPage(_state);
+            break;
+
+        case "music_room":
+            GameTitleDrawMusicRoomPage(_state);
             break;
 
         case "character_select":

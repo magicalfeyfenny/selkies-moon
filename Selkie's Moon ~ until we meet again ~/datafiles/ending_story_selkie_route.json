@@ -1,0 +1,51 @@
+[
+  {
+    "name": "",
+    "text": "Sunset fell through the flowered dark, its wings flashing orange against the Core.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Selkie",
+    "text": "Moon!",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Moon",
+    "text": "You caught me. I wish I knew what that proves.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "It proves you were never beyond reach.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "And if I run again?",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then Sunrise follows. But this time, I will ask you to fly beside me first.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "",
+    "text": "The Core dimmed. Moon and Selkie left by the same path, neither ahead, neither behind.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  }
+]

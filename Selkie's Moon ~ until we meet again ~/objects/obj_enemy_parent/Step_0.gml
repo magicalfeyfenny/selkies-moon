@@ -2,6 +2,7 @@
 if (hp <= 0) {
     GameEnemyDestroySoundPlay();
     global.game_runtime.score += points;
+    GameEnemyPowerupDropTry(x, y, points);
     instance_destroy();
     exit;
 }

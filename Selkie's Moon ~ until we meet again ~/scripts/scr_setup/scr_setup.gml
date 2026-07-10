@@ -1,7 +1,7 @@
 //increment config and save versions when needed
 #macro CONFIG_VERSION 3
 #macro SAVE_VERSION 2
-#macro RUNTIME_VERSION 5
+#macro RUNTIME_VERSION 6
 
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
@@ -26,16 +26,20 @@ function GameSaveDataCreateDefault() {
     return {
         version: SAVE_VERSION,
         high_score: {
-            ship_A: [0,0,0,0,0,0,0,0,0,0]
+            ship_A: [0,0,0,0,0,0,0,0,0,0],
+            ship_selkie: [0,0,0,0,0,0,0,0,0,0]
         },
         runs_started: {
-            ship_A: [0,0,0,0,0,0,0,0,0,0]
+            ship_A: [0,0,0,0,0,0,0,0,0,0],
+            ship_selkie: [0,0,0,0,0,0,0,0,0,0]
         },
         runs_finished: {
-            ship_A: [0,0,0,0,0,0,0,0,0,0]
+            ship_A: [0,0,0,0,0,0,0,0,0,0],
+            ship_selkie: [0,0,0,0,0,0,0,0,0,0]
         },
         continues_used: {
-            ship_A: [0,0,0,0,0,0,0,0,0,0]
+            ship_A: [0,0,0,0,0,0,0,0,0,0],
+            ship_selkie: [0,0,0,0,0,0,0,0,0,0]
         },
     };
 }
@@ -63,8 +67,13 @@ function GameRuntimeDataCreateDefault() {
         is_berserk: false,
         bomb_active: false,
         bomb_timer: 0,
+        current_stage: 1,
+        stage_count: 10,
+        stage_notice_timer: 0,
         stage_frame: 0,
         stage_complete: false,
+        power: 0,
+        powerup_drop_counter: 0,
         run_started_recorded: false,
         lives: DEFAULT_LIVES,
         bombs: DEFAULT_BOMBS,

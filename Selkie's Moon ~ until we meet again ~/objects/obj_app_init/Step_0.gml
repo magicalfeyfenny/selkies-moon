@@ -6,7 +6,13 @@ if (!GameShouldQuitAfterTests()) {
     exit;
 }
 
+test_quit_frames++;
+
 // Close the runner once GMTL has fully finished when launched by the test harness.
-if (gmtl_has_finished) {
+if (gmtl_has_finished || test_quit_frames >= test_quit_timeout_frames) {
+    if (test_quit_frames >= test_quit_timeout_frames) {
+        show_debug_message("GMTL test run timeout reached; closing runner.");
+    }
+
     game_end();
 }

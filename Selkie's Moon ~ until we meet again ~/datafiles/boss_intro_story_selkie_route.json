@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Selkie",
+    "text": "Stage ten... Sunset, I know you are here.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "",
+    "text": "The Memory Cores fell silent. Moon's wake cut through the flowered tide.",
+    "backgrounds": [],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "You should have turned back before the last gate.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "I did turn back. Every stage was me turning back toward you.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "I named this ship Sunset so no one would have to follow it into night.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then I named mine Sunrise because I refuse to leave you there.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "If you catch me, you will have to see what I became.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "I already see you. That is why I am still here.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "Words will not stop Sunset.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then Sunrise will.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  }
+]

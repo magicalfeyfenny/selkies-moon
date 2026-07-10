@@ -41,6 +41,7 @@ if (phase_index < (phase_count - 1)) {
     }
 
     GameBulletsCancelAll(false);
+    GameBossPhaseSoundPlay();
     exit;
 }
 
@@ -48,3 +49,4 @@ destruction_active = true;
 destruction_timer = BOSS_DESTRUCTION_FRAMES;
 hit_radius = 0;
 GameBulletsCancelAll(false);
+GameBossPhaseSoundPlay();

@@ -1,1 +1,51 @@
-[{"name":"","text":"The sunset saw her sunrise's ship bloom into a twisted flower of flames.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":[],"positions":[]},{"name":"","text":"A light from the flower's core shot into her own fuselage.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":[],"positions":[]},{"name":"","text":"The sunrise saw her desperate shot clip the feathers of her eternal lover.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":[],"positions":[]},{"name":"","text":"She ran through the vines. The violets appeared to spread for miles.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":[],"positions":[]},{"name":"","text":"As the sunset gave chase, the flowers of her sins spread into the horizon.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"","text":"There is no rest for the wicked. The day will always chase the night.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"","text":"All we can do is watch their little game.","backgrounds":["spr_dialogue_bg_core","spr_dialogue_bg_flower"],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]}]
+[
+  {
+    "name": "",
+    "text": "Sunrise broke apart in a flower of pale fire, then steadied before the sea could take her.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "Selkie!",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_moon_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Selkie",
+    "text": "I am here. You finally stopped before passing me.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "I thought catching you meant ending the chase.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "No. It means choosing where we fly next.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "",
+    "text": "The violet tide drew back. Sunset and Sunrise turned from the Core together.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "",
+    "text": "The sea kept their sins, but not their silence.",
+    "backgrounds": ["spr_dialogue_bg_core", "spr_dialogue_bg_flower"],
+    "portraits": [],
+    "positions": []
+  }
+]

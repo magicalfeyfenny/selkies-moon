@@ -1,6 +1,8 @@
-// Draw the Sunset boss normally until it enters its destruction pulse.
+// Draw the boss normally until it enters its destruction pulse.
+var _draw_y_scale = variable_instance_exists(id, "boss_draw_y_scale") ? boss_draw_y_scale : 1;
+
 if (!destruction_active) {
-    draw_self();
+    draw_sprite_ext(sprite_index, image_index, x, y, 1, _draw_y_scale, image_angle, image_blend, image_alpha);
     exit;
 }
 
@@ -9,7 +11,7 @@ var _alpha = 0.35 + (0.65 * abs(dsin(destruction_timer * 32)));
 
 draw_set_alpha(_alpha);
 draw_set_color(c_white);
-draw_sprite_ext(sprite_index, 0, x, y, _pulse, _pulse, 0, c_white, _alpha);
+draw_sprite_ext(sprite_index, 0, x, y, _pulse, _pulse * _draw_y_scale, 0, c_white, _alpha);
 
 draw_set_alpha(0.45);
 draw_set_color(make_color_rgb(255, 164, 112));

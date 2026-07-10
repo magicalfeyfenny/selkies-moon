@@ -1,1 +1,72 @@
-[{"name":"Moon","text":"I could have sworn she had returned here...","backgrounds":[],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"Moon","text":"It was the place where I had hurt her... where our chase began...","backgrounds":[],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"Moon","text":"From the very beginning, all I wanted was to see her smiling forever...","backgrounds":[],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"???","text":"What was that about seeing me smiling?","backgrounds":[],"portraits":["spr_moon_portrait"],"positions":["center"]},{"name":"Selkie","text":"I didn't stop smiling because of you. It wasn't your fault.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"You did everything for me. I know how hard it is for you to refuse to help","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"Selkie...","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"I pushed you past your limits... It's why you keep running...","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"I'm running to catch up to you! To reach you!","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"And now that we've found each other again, what are you going to do?","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"We can't keep this game up forever.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"Eventually, my sins will catch up with me. Eventually, you'll slip.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"Eventually, you'll finally see fit to end my despair.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"Our mutual despair, dearest sunset...","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"And you know that I'll never let that be mutual.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"Why wouldn't it be? Everything else is.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"It's not despair to chase you, sunrise.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"It's the only thing that keeps me going.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Moon","text":"So, I'll keep going.","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]},{"name":"Selkie","text":"Very well...","backgrounds":[],"portraits":["spr_selkie_portrait","spr_moon_portrait"],"positions":["left","right"]}]
+[
+  {
+    "name": "Moon",
+    "text": "Stage ten... so this is where Sunrise kept leading me.",
+    "backgrounds": [],
+    "portraits": ["spr_moon_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "",
+    "text": "The Memory Cores fell silent. No more decoys answered from the tide.",
+    "backgrounds": [],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Selkie",
+    "text": "You always make it sound like I was the one running.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "You left before I could ask you to stay.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "And you turned every apology into another battlefield.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "I thought if Sunset reached you, I could undo the night I made.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "You cannot undo it. You can only choose what follows.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "Then I choose to stop letting the sea decide for us.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Good. Sunrise will not move aside for words alone.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "Then let this be the last time we confuse chasing with leaving.",
+    "backgrounds": [],
+    "portraits": ["spr_selkie_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  }
+]
