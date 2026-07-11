@@ -19,7 +19,7 @@ draw_set_color(c_white);
 draw_line(_layout.playfield_left, 0, _layout.playfield_left, GAME_VIEW_HEIGHT);
 draw_line(_layout.playfield_right, 0, _layout.playfield_right, GAME_VIEW_HEIGHT);
 
-draw_set_font(fn_menu);
+draw_set_font(fn_dialogue_speech);
 draw_set_halign(fa_left);
 draw_set_valign(fa_top);
 
@@ -44,19 +44,28 @@ if (_boss != noone) {
     var _segments = GameBossBarSegmentsCreate(_boss.phase_index, _boss.hp, _boss.phase_max_hp, _boss.phase_count);
     var _boss_label = variable_instance_exists(_boss, "boss_display_name") ? _boss.boss_display_name : "Boss";
     var _segment_count = array_length(_segments);
-    var _boss_gap = (_segment_count > 9) ? 2 : _layout.boss_bar_gap;
+    var _boss_gap = (_segment_count > 9) ? 3 : _layout.boss_bar_gap;
     var _boss_available_height = GAME_VIEW_HEIGHT - _layout.boss_bar_top - 16;
-    var _boss_bar_height = max(3, min(_layout.boss_bar_height,
+    var _boss_max_height = (_segment_count > 9) ? 5 : _layout.boss_bar_height;
+    var _boss_bar_height = max(3, min(_boss_max_height,
         floor((_boss_available_height - ((_segment_count - 1) * _boss_gap)) / max(1, _segment_count))));
 
+    draw_set_font(fn_dialogue_speech);
     GameUiDrawOutlinedText(_boss_label, _layout.boss_bar_left, _layout.boss_bar_top - 22, c_white);
 
     for (var i = 0; i < _segment_count; i++) {
         var _top = _layout.boss_bar_top + (i * (_boss_bar_height + _boss_gap));
+        var _fill_color = make_color_rgb(96, 54, 86);
 
-        draw_set_color(c_black);
+        if (_segments[i] > 0 && _segments[i] < 1) {
+            _fill_color = make_color_rgb(255, 210, 122);
+        } else if (_segments[i] >= 1) {
+            _fill_color = make_color_rgb(255, 126, 108);
+        }
+
+        draw_set_color(make_color_rgb(12, 8, 24));
         draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + _layout.boss_bar_width, _top + _boss_bar_height, false);
-        draw_set_color(make_color_rgb(255, 126, 108));
+        draw_set_color(_fill_color);
         draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + (_layout.boss_bar_width * _segments[i]), _top + _boss_bar_height, false);
     }
 }
@@ -66,14 +75,18 @@ if (global.game_runtime.stage_notice_timer > 0) {
     var _alpha = clamp(global.game_runtime.stage_notice_timer / STAGE_NOTICE_FRAMES, 0, 1);
 
     draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
+    draw_set_valign(fa_top);
     draw_set_alpha(0.62 * _alpha);
     draw_set_color(c_black);
-    draw_rectangle(_layout.playfield_left + 10, 110, _layout.playfield_right - 10, 188, false);
+    draw_rectangle(_layout.playfield_left + 12, 108, _layout.playfield_right - 12, 192, false);
     draw_set_alpha(1);
-    GameUiDrawOutlinedText("Stage " + string(GameCurrentStageGet()), GAME_VIEW_HALF_WIDTH, 130, _stage_info.accent, c_black, _alpha);
-    GameUiDrawOutlinedText(_stage_info.name, GAME_VIEW_HALF_WIDTH, 154, c_white, c_black, _alpha);
-    GameUiDrawOutlinedText(_stage_info.subtitle, GAME_VIEW_HALF_WIDTH, 176, make_color_rgb(180, 204, 224), c_black, _alpha);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Stage " + string(GameCurrentStageGet()), GAME_VIEW_HALF_WIDTH, 120, _stage_info.accent, c_black, _alpha);
+    draw_set_font(fn_menu);
+    GameUiDrawOutlinedText(_stage_info.name, GAME_VIEW_HALF_WIDTH, 144, c_white, c_black, _alpha);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedTextExt(_stage_info.subtitle, GAME_VIEW_HALF_WIDTH, 166, 16,
+        (_layout.playfield_right - _layout.playfield_left) - 40, make_color_rgb(180, 204, 224), c_black, _alpha);
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
 }

@@ -469,6 +469,19 @@ function GameStoryDrawBackgroundSprite(_background_id) {
 
     draw_set_alpha(1.0);
     draw_set_color(c_white);
+
+    if (_background_id == "spr_dialogue_bg_flower") {
+        var _scale = min(0.54, min(360 / sprite_get_width(_asset_index), 196 / sprite_get_height(_asset_index)));
+        var _draw_width = sprite_get_width(_asset_index) * _scale;
+        var _draw_height = sprite_get_height(_asset_index) * _scale;
+        draw_sprite_stretched(_asset_index, 0,
+            (display_get_gui_width() - _draw_width) * 0.5,
+            28,
+            _draw_width,
+            _draw_height);
+        return true;
+    }
+
     draw_sprite_stretched(_asset_index, 0, 0, 0, display_get_gui_width(), display_get_gui_height());
     return true;
 }
