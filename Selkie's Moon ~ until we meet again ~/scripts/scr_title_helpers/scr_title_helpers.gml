@@ -441,10 +441,12 @@ function GameTitleDrawSpriteFit(_sprite_name, _center_x, _center_y, _max_width, 
 
     var _scale = min(_max_width / sprite_get_width(_asset_index), _max_height / sprite_get_height(_asset_index));
     _scale = min(_scale, _scale_cap);
+    var _draw_width = sprite_get_width(_asset_index) * _scale;
+    var _draw_height = sprite_get_height(_asset_index) * _scale;
 
     draw_set_alpha(1.0);
     draw_set_color(c_white);
-    draw_sprite_ext(_asset_index, 0, _center_x, _center_y, _scale, _scale, 0, c_white, 1.0);
+    draw_sprite_stretched(_asset_index, 0, _center_x - (_draw_width * 0.5), _center_y - (_draw_height * 0.5), _draw_width, _draw_height);
     return true;
 }
 
@@ -485,8 +487,8 @@ function GameTitlePressStartSubtitleAnimCreate(_timer) {
     var _frame = clamp(_timer, 0, _duration);
 
     return {
-        x: 300 - _frame,
-        y: 160,
+        x: 258 - (_frame * 0.3),
+        y: 236,
         alpha: _frame / _duration
     };
 }
@@ -503,6 +505,21 @@ function GameUiDrawOutlinedText(_text, _x, _y, _text_color = c_white, _outline_c
 
     draw_set_color(_text_color);
     draw_text(_x, _y, _text);
+    draw_set_alpha(1.0);
+}
+
+/// @func GameUiDrawOutlinedTextExt(text, x, y, sep, width, text_color, outline_color, alpha)
+/// Draws wrapped UI text with the same outline style as single-line text.
+function GameUiDrawOutlinedTextExt(_text, _x, _y, _sep, _width, _text_color = c_white, _outline_color = c_black, _alpha = 1.0) {
+    draw_set_alpha(_alpha);
+    draw_set_color(_outline_color);
+    draw_text_ext(_x - 1, _y, _text, _sep, _width);
+    draw_text_ext(_x + 1, _y, _text, _sep, _width);
+    draw_text_ext(_x, _y - 1, _text, _sep, _width);
+    draw_text_ext(_x, _y + 1, _text, _sep, _width);
+
+    draw_set_color(_text_color);
+    draw_text_ext(_x, _y, _text, _sep, _width);
     draw_set_alpha(1.0);
 }
 
@@ -534,9 +551,7 @@ function GameTitleDrawLogo(_state) {
         if (_state.phase == "press_start") {
             var _subtitle_anim = GameTitlePressStartSubtitleAnimCreate(_state.flash_timer);
 
-            draw_set_alpha(1.0);
-            draw_set_color(c_white);
-            draw_sprite(_logo_asset, 0, 200, 160);
+            GameTitleDrawSpriteFit("spr_logo", 220, 134, 300, 210, 1);
 
             draw_set_halign(fa_center);
             draw_set_valign(fa_middle);
@@ -564,17 +579,17 @@ function GameTitleDrawLogo(_state) {
 /// @func GameTitleDrawPrompt(state)
 /// Draws the press-start prompt and input hint text.
 function GameTitleDrawPrompt(_state) {
-    if (((_state.flash_timer div 20) mod 2) == 0) {
-        draw_set_halign(fa_center);
-        draw_set_valign(fa_middle);
-        draw_set_font(fn_menu);
-        GameUiDrawOutlinedText("Press [FIRE] to start", 470, 190, c_white);
-    }
+    var _prompt_alpha = (((_state.flash_timer div 20) mod 2) == 0) ? 1.0 : 0.42;
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Arrow Keys move  Z fire  X back/bomb", 470, 232, make_color_rgb(140, 210, 255));
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Press Z to start", 452, 188, c_white, c_black, _prompt_alpha);
+
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Arrows move   Z fire   X bomb/back", 452, 222, make_color_rgb(140, 210, 255));
 }
 
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
@@ -658,8 +673,8 @@ function GameTitleDrawScoresPage(_state) {
     }
 
     draw_set_halign(fa_center);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Press [LEFT]/[RIGHT] to change ship, [BOMB] to go back", 320, 322, make_color_rgb(160, 188, 220));
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Left/Right change ship   X back", 320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawGalleryPage(state)
@@ -674,12 +689,13 @@ function GameTitleDrawGalleryPage(_state) {
     GameUiDrawOutlinedText("CG Gallery", 320, 36, c_white);
     GameUiDrawOutlinedText(string(_state.gallery_index + 1) + "/" + string(array_length(_state.gallery_items)), 320, 58, make_color_rgb(160, 188, 220));
 
-    GameTitleDrawFrame(94, 78, 452, 202, _style.border_color, _style.fill_color, 0.48);
-    GameTitleDrawSpriteFit(_item.sprite, 320, 174, 410, 172, 3);
+    GameTitleDrawFrame(104, 76, 432, 182, _style.border_color, _style.fill_color, 0.52);
+    GameTitleDrawSpriteFit(_item.sprite, 320, 164, 340, 138, 1.0);
 
-    GameUiDrawOutlinedText(_item.name, 320, 296, c_white);
-    GameUiDrawOutlinedText(_item.caption, 320, 316, make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText("[LEFT]/[RIGHT] browse  [BOMB] back", 320, 342, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText(_item.name, 320, 282, c_white);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText(_item.caption, 320, 304, make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText("Left/Right browse   X back", 320, 332, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawMusicRoomPage(state)
@@ -691,20 +707,27 @@ function GameTitleDrawMusicRoomPage(_state) {
     GameUiDrawOutlinedText("Music Room", 320, 42, c_white);
 
     var _track_count = array_length(_state.music_items);
-    for (var i = 0; i < _track_count; i++) {
-        var _track = _state.music_items[i];
-        var _style = GameTitlePanelStyleCreate(i == _state.music_index);
+    var _visible_count = min(5, _track_count);
+    var _first_track = clamp(_state.music_index - 2, 0, max(0, _track_count - _visible_count));
 
-        GameTitleDrawFrame(136, 104 + (i * 44), 368, 34, _style.border_color, _style.fill_color, _style.fill_alpha);
+    for (var i = 0; i < _visible_count; i++) {
+        var _track_index = _first_track + i;
+        var _track = _state.music_items[_track_index];
+        var _style = GameTitlePanelStyleCreate(_track_index == _state.music_index);
+
+        GameTitleDrawFrame(128, 88 + (i * 38), 384, 30, _style.border_color, _style.fill_color, _style.fill_alpha);
         draw_set_halign(fa_left);
-        GameUiDrawOutlinedText(_track.name, 150, 116 + (i * 44), _style.text_color);
-        GameUiDrawOutlinedText(_track.subtitle, 150, 130 + (i * 44), make_color_rgb(180, 204, 224));
+        draw_set_font(fn_menu);
+        GameUiDrawOutlinedText(_track.name, 142, 100 + (i * 38), _style.text_color);
+        draw_set_font(fn_dialogue_speech);
+        GameUiDrawOutlinedText(_track.subtitle, 142, 114 + (i * 38), make_color_rgb(180, 204, 224));
     }
 
     draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
     var _status = (_state.music_preview_id != -1) ? "Playing" : "Stopped";
-    GameUiDrawOutlinedText(_status, 320, 236, (_state.music_preview_id != -1) ? c_yellow : make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText("[FIRE] play/stop  [BOMB] back", 320, 322, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText(_status, 320, 290, (_state.music_preview_id != -1) ? c_yellow : make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText("Z play/stop   X back", 320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawCharacterSelectPage(state)
@@ -712,7 +735,7 @@ function GameTitleDrawMusicRoomPage(_state) {
 function GameTitleDrawCharacterSelectPage(_state) {
     var _character = GameTitleCharacterGet(_state, _state.select_character_index);
     var _line_count = array_length(_character.description_lines);
-    var _description_start_y = 186;
+    var _description_start_y = 178;
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
@@ -731,25 +754,25 @@ function GameTitleDrawCharacterSelectPage(_state) {
     draw_set_font(fn_menu);
     GameUiDrawOutlinedText(_character.name, 158, 242, c_white);
 
-    GameTitleDrawFrame(252, 112, 292, 140, _panel_style.border_color, _panel_style.fill_color, _panel_style.fill_alpha);
+    GameTitleDrawFrame(252, 108, 292, 154, _panel_style.border_color, _panel_style.fill_color, _panel_style.fill_alpha);
     draw_set_halign(fa_left);
     draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Pilot: " + _character.pilot_name, 266, 130, make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText("Pilot: " + _character.pilot_name, 266, 126, make_color_rgb(180, 204, 224));
 
     if (_character.support_name != "") {
-        GameUiDrawOutlinedText("Support: " + _character.support_name, 266, 152, make_color_rgb(180, 204, 224));
+        GameUiDrawOutlinedText("Support: " + _character.support_name, 266, 148, make_color_rgb(180, 204, 224));
     } else {
         _description_start_y = 162;
     }
 
-    draw_set_font(fn_menu);
+    draw_set_font(fn_dialogue_speech);
     for (var i = 0; i < _line_count; i++) {
-        GameUiDrawOutlinedText(_character.description_lines[i], 266, _description_start_y + (i * 18), c_white);
+        GameUiDrawOutlinedText(_character.description_lines[i], 266, _description_start_y + (i * 15), c_white);
     }
 
     draw_set_halign(fa_center);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Press [FIRE] to begin, [LEFT]/[RIGHT] to switch, [BOMB] to go back", 320, 322, make_color_rgb(160, 188, 220));
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Z begin   Left/Right switch   X back", 320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDraw(state)

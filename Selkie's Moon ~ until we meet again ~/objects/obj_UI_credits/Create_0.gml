@@ -1,6 +1,6 @@
 // Cache the final run values before credits eventually reset runtime.
 credits_timer = 0;
-credits_scroll_y = GAME_VIEW_HEIGHT + 24;
+credits_scroll_y = GAME_VIEW_HEIGHT - 112;
 credits_line_height = 20;
 credits_final_score = 0;
 credits_ship_name = "Moon";
