@@ -589,7 +589,7 @@ function GameTitleDrawPrompt(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Arrows move   Z fire   X bomb/back", 452, 222, make_color_rgb(140, 210, 255));
+    GameUiDrawOutlinedText("Arrows move  Z shot/sword  C focus  X bomb", 452, 222, make_color_rgb(140, 210, 255));
 }
 
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
