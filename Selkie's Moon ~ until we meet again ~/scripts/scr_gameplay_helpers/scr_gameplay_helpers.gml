@@ -387,6 +387,25 @@ function GameScenePlayerClampPosition(_camera_x, _camera_y, _x, _y) {
     };
 }
 
+/// @func GamePlayerMovementDeltaCreate(input)
+/// Returns one frame of player movement with diagonal input normalized.
+function GamePlayerMovementDeltaCreate(_input) {
+    var _axis_x = _input.right_down - _input.left_down;
+    var _axis_y = _input.down_down - _input.up_down;
+    var _speed = PLAYER_MOVE_SPEED * (_input.autofire_down ? PLAYER_FOCUS_SPEED_MULTIPLIER : 1);
+
+    if (_axis_x != 0 && _axis_y != 0) {
+        var _diagonal_scale = 1 / sqrt(2);
+        _axis_x *= _diagonal_scale;
+        _axis_y *= _diagonal_scale;
+    }
+
+    return {
+        x: _axis_x * _speed,
+        y: _axis_y * _speed,
+    };
+}
+
 /// @func GameSceneCameraTargetXGet(home_x, camera_x, player_x)
 /// Returns the horizontal camera target after applying edge drag rules.
 function GameSceneCameraTargetXGet(_home_x, _camera_x, _player_x) {
@@ -1865,13 +1884,14 @@ function GamePlayerFireStep(_state, _input) {
 
     if (global.game_runtime.is_berserk) {
         _state.fire_hold_frames = FIRE_HOLD_FRAMES + 1;
-    } else if (_input.fire_down) {
+    } else if (_input.fire_down && !_input.autofire_down) {
         _state.fire_hold_frames += 1;
     } else {
         _state.fire_hold_frames = 0;
     }
 
-    _use_sword = global.game_runtime.is_berserk || (_input.fire_down && _state.fire_hold_frames > FIRE_HOLD_FRAMES);
+    _use_sword = global.game_runtime.is_berserk
+        || (_input.fire_down && !_input.autofire_down && _state.fire_hold_frames > FIRE_HOLD_FRAMES);
 
     if (_use_sword) {
         var _period = GamePlayerSwordPeriodFramesGet(global.game_runtime.is_berserk);
@@ -1891,7 +1911,8 @@ function GamePlayerFireStep(_state, _input) {
     _state.sweep_frame = 0;
     _state.sword_pose = GamePlayerSwordPoseCreate(0, false, _ship_id);
 
-    if (_input.fire_pressed || _input.autofire_down || _input.autofire_pressed) {
+    if ((_input.fire_down || _input.fire_pressed || _input.autofire_down || _input.autofire_pressed)
+        && _state.volley_queue <= 0) {
         _state.volley_queue = SHOT_VOLLEY_SIZE;
     }
 

@@ -60,10 +60,8 @@ if (player_state.hit) {
 }
 
 // Apply stage scroll and directional movement before clamping to the field.
-var _move_speed = PLAYER_MOVE_SPEED * (_input.autofire_down ? PLAYER_FOCUS_SPEED_MULTIPLIER : 1);
-var _move_x = (_input.right_down - _input.left_down) * _move_speed;
-var _move_y = (_input.down_down - _input.up_down) * _move_speed;
-var _clamped = GameScenePlayerClampPosition(_camera_x, _camera_y, x + _move_x, y + _move_y - _scroll_speed);
+var _movement = GamePlayerMovementDeltaCreate(_input);
+var _clamped = GameScenePlayerClampPosition(_camera_x, _camera_y, x + _movement.x, y + _movement.y - _scroll_speed);
 
 x = _clamped.x;
 y = _clamped.y;

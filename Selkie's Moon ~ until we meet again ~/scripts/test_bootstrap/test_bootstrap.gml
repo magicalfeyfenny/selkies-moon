@@ -500,6 +500,30 @@ suite(function() {
             expect(_layout.meter_left).toBeGreaterThan(_layout.playfield_right);
         });
 
+        test("Player movement keeps diagonal and focus speeds controlled", function() {
+            var _straight_input = GameGameplayInputSnapshotCreate();
+            var _diagonal_input = GameGameplayInputSnapshotCreate();
+            var _focus_input = GameGameplayInputSnapshotCreate();
+
+            _straight_input.right_down = true;
+            _diagonal_input.right_down = true;
+            _diagonal_input.down_down = true;
+            _focus_input.right_down = true;
+            _focus_input.down_down = true;
+            _focus_input.autofire_down = true;
+
+            var _straight = GamePlayerMovementDeltaCreate(_straight_input);
+            var _diagonal = GamePlayerMovementDeltaCreate(_diagonal_input);
+            var _focused_diagonal = GamePlayerMovementDeltaCreate(_focus_input);
+
+            expect(_straight.x).toBe(PLAYER_MOVE_SPEED);
+            expect(_straight.y).toBe(0);
+            expect(point_distance(0, 0, _diagonal.x, _diagonal.y)).toBeLessThan(PLAYER_MOVE_SPEED + 0.01);
+            expect(point_distance(0, 0, _diagonal.x, _diagonal.y)).toBeGreaterThan(PLAYER_MOVE_SPEED - 0.01);
+            expect(point_distance(0, 0, _focused_diagonal.x, _focused_diagonal.y)).toBeLessThan((PLAYER_MOVE_SPEED * PLAYER_FOCUS_SPEED_MULTIPLIER) + 0.01);
+            expect(point_distance(0, 0, _focused_diagonal.x, _focused_diagonal.y)).toBeGreaterThan((PLAYER_MOVE_SPEED * PLAYER_FOCUS_SPEED_MULTIPLIER) - 0.01);
+        });
+
         test("One volley tick creates twelve player shots with the intended direction and sprite split", function() {
             var _shots = GamePlayerShotSpawnSpecsCreate(100, 100, SHIP_SUNRISE, false, 0);
             var _count_80 = 0;
@@ -609,6 +633,67 @@ suite(function() {
             expect(_result.spawn_shots).toBeTruthy();
             expect(_result.focused_attack).toBeTruthy();
             expect(_state.volley_queue).toBe(SHOT_VOLLEY_SIZE - 1);
+        });
+
+        test("Held fire sustains volleys until the sword wind-up takes over", function() {
+            var _state = GamePlayerStateCreate();
+            var _input = GameGameplayInputSnapshotCreate();
+            var _shot_count = 0;
+            var _last_shot_frame = -1;
+            var _max_shot_gap = 0;
+            var _sword_frame = -1;
+
+            for (var frame = 0; frame < FIRE_HOLD_FRAMES + 8; frame++) {
+                _input.fire_down = true;
+                _input.fire_pressed = (frame == 0);
+
+                var _result = GamePlayerFireStep(_state, _input);
+
+                if (_result.spawn_shots) {
+                    if (_last_shot_frame >= 0) {
+                        _max_shot_gap = max(_max_shot_gap, frame - _last_shot_frame);
+                    }
+
+                    _last_shot_frame = frame;
+                    _shot_count += 1;
+                }
+
+                if (_result.sword_active && _sword_frame < 0) {
+                    _sword_frame = frame;
+                }
+            }
+
+            expect(_shot_count).toBeGreaterThan(10);
+            expect(_max_shot_gap).toBeLessThan(SHOT_VOLLEY_INTERVAL + 1);
+            expect(_sword_frame).toBe(FIRE_HOLD_FRAMES);
+        });
+
+        test("Focused autofire does not accidentally charge the sword", function() {
+            var _state = GamePlayerStateCreate();
+            var _input = GameGameplayInputSnapshotCreate();
+            var _shot_count = 0;
+            var _sword_count = 0;
+
+            for (var frame = 0; frame < FIRE_HOLD_FRAMES + 20; frame++) {
+                _input.fire_down = true;
+                _input.fire_pressed = (frame == 0);
+                _input.autofire_down = true;
+
+                var _result = GamePlayerFireStep(_state, _input);
+
+                if (_result.spawn_shots) {
+                    _shot_count += 1;
+                    expect(_result.focused_attack).toBeTruthy();
+                }
+
+                if (_result.sword_active) {
+                    _sword_count += 1;
+                }
+            }
+
+            expect(_shot_count).toBeGreaterThan(10);
+            expect(_sword_count).toBe(0);
+            expect(_state.fire_hold_frames).toBe(0);
         });
 
         test("Power-up rewards apply stock, power, score, and meter effects", function() {
