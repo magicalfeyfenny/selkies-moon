@@ -68,6 +68,23 @@ function GameShouldRunTests() {
     return GameShouldQuitAfterTests();
 }
 
+/// @func GameTestPersistenceFilesDelete()
+/// Removes only automation-namespaced persistence and recovery artifacts.
+function GameTestPersistenceFilesDelete() {
+    var _paths = [
+        GameSavePathGet(),
+        GameConfigPathGet(),
+        GamePersistenceBackupPathGet(GameSavePathGet()),
+        GamePersistenceBackupPathGet(GameConfigPathGet()),
+    ];
+
+    for (var i = 0; i < array_length(_paths); i++) {
+        if (file_exists(_paths[i])) {
+            file_delete(_paths[i]);
+        }
+    }
+}
+
 /// @func GameVisualTourMarkerPathGet()
 /// Returns the marker file path used by local visual QA capture runs.
 function GameVisualTourMarkerPathGet() {
@@ -81,9 +98,9 @@ function GameShouldRunVisualTour() {
 }
 
 /// @func GameVisualTourOutputDirectoryGet()
-/// Returns the normalized screenshot output directory for visual QA captures.
+/// Returns the runner-sandbox screenshot directory reported by working_directory.
 function GameVisualTourOutputDirectoryGet() {
-    return GameWorkingDirectoryGet() + "visual-tour/";
+    return "visual-tour/";
 }
 
 /// @func GameVisualTourStateEnsure()
@@ -97,8 +114,16 @@ function GameVisualTourStateEnsure() {
             step: 0,
             wait: 18,
             prepared: false,
-            output_dir: _output_dir
+            output_dir: _output_dir,
+            pending_capture_name: "",
+            pending_capture_path: "",
+            capture_count: 0,
+            expected_capture_count: 27,
+            completion_wait_logged: false,
         };
+
+        show_debug_message("VISUAL_TOUR_OUTPUT_SANDBOX " + _output_dir);
+        show_debug_message("VISUAL_TOUR_OUTPUT_NOTE Relative paths are stored in the runner's GameMaker save sandbox.");
     }
 
     return global.visual_tour;
@@ -112,12 +137,45 @@ function GameVisualTourAdvance() {
     global.visual_tour.wait = 10;
 }
 
-/// @func GameVisualTourCapture(name)
-/// Saves the currently rendered screen to the visual QA output directory.
-function GameVisualTourCapture(_name) {
-    var _path = global.visual_tour.output_dir + _name + ".png";
-    screen_save(_path);
-    show_debug_message("VISUAL_TOUR_CAPTURE " + _path);
+/// @func GameVisualTourCaptureQueue(name)
+/// Queues one capture for Draw GUI End, after all world and GUI layers render.
+function GameVisualTourCaptureQueue(_name) {
+    if (global.visual_tour.pending_capture_name != "") {
+        return false;
+    }
+
+    global.visual_tour.pending_capture_name = _name;
+    global.visual_tour.pending_capture_path = global.visual_tour.output_dir + _name + ".png";
+    show_debug_message("VISUAL_TOUR_CAPTURE_QUEUED " + global.visual_tour.pending_capture_path);
+    return true;
+}
+
+/// @func GameVisualTourCapturePendingDrawGuiEnd()
+/// Writes the queued frame from Draw GUI End, then and only then advances the tour.
+function GameVisualTourCapturePendingDrawGuiEnd() {
+    if (!GameShouldRunVisualTour() || !variable_global_exists("visual_tour")) {
+        return false;
+    }
+
+    var _tour = global.visual_tour;
+    if (_tour.pending_capture_name == "") {
+        return false;
+    }
+
+    var _capture_name = _tour.pending_capture_name;
+    var _capture_path = _tour.pending_capture_path;
+
+    screen_save(_capture_path);
+    _tour.capture_count += 1;
+    _tour.pending_capture_name = "";
+    _tour.pending_capture_path = "";
+
+    show_debug_message("VISUAL_TOUR_CAPTURE_SANDBOX " + _capture_path);
+    show_debug_message("VISUAL_TOUR_CAPTURE_COMPLETE " + string(_tour.capture_count)
+        + "/" + string(_tour.expected_capture_count) + " " + _capture_name);
+
+    GameVisualTourAdvance();
+    return true;
 }
 
 /// @func GameVisualTourTitlePrepare(page, main_index)
@@ -140,6 +198,60 @@ function GameVisualTourTitlePrepare(_page, _main_index) {
     _title.title_state.gallery_index = 1;
     _title.title_state.music_index = 9;
 
+    if (_page == "practice") {
+        _title.title_state.practice_config = GamePracticeConfigNormalize({
+            ship_id: SHIP_SELKIE,
+            ship_index: 1,
+            stage: 8,
+            segment: PRACTICE_SEGMENT_BOSS,
+            power: PLAYER_POWER_MAX,
+            rank: 80,
+            dynamic_rank: false,
+            lives: 5,
+            bombs: 4,
+            meter: 700,
+        });
+        _title.title_state.practice_index = 4;
+    }
+
+    return true;
+}
+
+/// @func GameVisualTourPausePrepare(page)
+/// Starts a deterministic practice room and exposes one dedicated pause page.
+function GameVisualTourPausePrepare(_page) {
+    if (room != rm_game || !GameRunIsPractice()) {
+        var _practice = GamePracticeConfigCreateDefault();
+        _practice.ship_id = SHIP_SELKIE;
+        _practice.ship_index = 1;
+        _practice.stage = 8;
+        _practice.segment = PRACTICE_SEGMENT_BOSS;
+        _practice.power = PLAYER_POWER_MAX;
+        _practice.rank = 80;
+        _practice.dynamic_rank = false;
+        _practice.lives = 5;
+        _practice.bombs = 4;
+        _practice.meter = 700;
+        GamePracticeRunRequestConfigure(_practice);
+        room_goto(rm_game);
+        return false;
+    }
+
+    var _pause = instance_find(obj_UI_menu, 0);
+    if (_pause == noone) {
+        return false;
+    }
+
+    global.game_runtime.signals.dialogue = false;
+    global.game_runtime.signals.continue_request = false;
+    global.game_runtime.signals.paused = true;
+    _pause.pause_state.active = true;
+    _pause.pause_state.close_requested = false;
+    _pause.pause_state.page = _page;
+    _pause.pause_state.main_index = 2;
+    _pause.pause_state.options_index = 1;
+    _pause.pause_state.practice_index = 1;
+    _pause.pause_state.quit_index = 1;
     return true;
 }
 
@@ -153,6 +265,26 @@ function GameVisualTourStoryPrepare(_room_id) {
 
     var _story = instance_find(obj_UI_story, 0);
     return _story != noone && global.game_runtime.signals.dialogue;
+}
+
+/// @func GameVisualTourCreditsPrepare()
+/// Holds the credits at a representative, fully readable scroll position.
+function GameVisualTourCreditsPrepare() {
+    if (room != rm_credits) {
+        room_goto(rm_credits);
+        return false;
+    }
+
+    var _credits = instance_find(obj_UI_credits, 0);
+    if (_credits == noone) {
+        return false;
+    }
+
+    if (!global.visual_tour.prepared) {
+        _credits.credits_scroll_y = 112;
+    }
+
+    return true;
 }
 
 /// @func GameVisualTourGameplayPrepare(stage, mode)
@@ -169,6 +301,13 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
     var _player = instance_find(obj_player, 0);
     if (_scene == noone || _player == noone) {
         return false;
+    }
+
+    // Once the scene has settled, leave its instances intact through the draw
+    // that captures it. Rebuilding a boss on the capture frame can leave a
+    // partially composed GUI surface in the macOS runner.
+    if (variable_global_exists("visual_tour") && global.visual_tour.prepared) {
+        return true;
     }
 
     GameSceneCombatClear();
@@ -254,8 +393,10 @@ function GameVisualTourPrepareAndCapture(_name, _ready) {
         return true;
     }
 
-    GameVisualTourCapture(_name);
-    GameVisualTourAdvance();
+    if (global.visual_tour.pending_capture_name == "") {
+        GameVisualTourCaptureQueue(_name);
+    }
+
     return true;
 }
 
@@ -317,15 +458,34 @@ function GameVisualTourStep() {
             return GameVisualTourPrepareAndCapture("20_ending_story",
                 GameVisualTourStoryPrepare(rm_ending));
         case 21:
-            if (room != rm_credits) {
-                room_goto(rm_credits);
-                _tour.wait = 16;
-                return true;
-            }
-            return GameVisualTourPrepareAndCapture("21_credits", true);
+            return GameVisualTourPrepareAndCapture("21_credits", GameVisualTourCreditsPrepare());
+        case 22:
+            return GameVisualTourPrepareAndCapture("22_title_practice",
+                GameVisualTourTitlePrepare("practice", 5));
+        case 23:
+            return GameVisualTourPrepareAndCapture("23_pause_main",
+                GameVisualTourPausePrepare("main"));
+        case 24:
+            return GameVisualTourPrepareAndCapture("24_pause_settings",
+                GameVisualTourPausePrepare("options"));
+        case 25:
+            return GameVisualTourPrepareAndCapture("25_pause_practice_tuning",
+                GameVisualTourPausePrepare("practice"));
+        case 26:
+            return GameVisualTourPrepareAndCapture("26_pause_quit_confirm",
+                GameVisualTourPausePrepare("quit_confirm"));
     }
 
-    show_debug_message("VISUAL_TOUR_DONE " + _tour.output_dir);
+    if (_tour.pending_capture_name != "" || _tour.capture_count < _tour.expected_capture_count) {
+        if (!_tour.completion_wait_logged) {
+            show_debug_message("VISUAL_TOUR_WAITING_FOR_CAPTURES " + string(_tour.capture_count)
+                + "/" + string(_tour.expected_capture_count));
+            _tour.completion_wait_logged = true;
+        }
+        return true;
+    }
+
+    show_debug_message("VISUAL_TOUR_DONE_SANDBOX " + _tour.output_dir);
     file_delete(GameVisualTourMarkerPathGet());
     game_end();
     return true;

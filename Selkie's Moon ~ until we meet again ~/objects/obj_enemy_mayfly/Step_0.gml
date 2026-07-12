@@ -1,6 +1,10 @@
 // Run the parent enemy step first so defeat and pause behavior stay centralized.
 event_inherited();
 
+if (combat_step_blocked) {
+    exit;
+}
+
 // Keep the mayfly anchored in the visible area while it drifts in a slow infinity pattern.
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone) {
@@ -38,7 +42,7 @@ if (_burst.fire) {
 }
 
 fire_timer += 1;
-if (fire_timer >= MAYFLY_PATTERN_PERIOD) {
+if (fire_timer >= GameRankFireIntervalGet(MAYFLY_PATTERN_PERIOD, 12)) {
     fire_timer = 0;
     clockwise_first = !clockwise_first;
 }

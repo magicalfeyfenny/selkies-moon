@@ -7,6 +7,7 @@ if (instance_number(obj_scene_manager) > 1) {
 // Initialize the run state and reusable stage scroll state.
 GameRunStartInitialize();
 scene_state = GameSceneStateCreate();
+GamePracticeSceneStateApply(scene_state);
 
 timeline_index = tml_stage;
 timeline_running = false;
@@ -37,4 +38,8 @@ GamePlayerRespawnStateApply(_player.player_state);
 
 if (!instance_exists(obj_UI_gameplay)) {
     instance_create_layer(0, 0, "Instances", obj_UI_gameplay);
+}
+
+if (!instance_exists(obj_UI_menu)) {
+    instance_create_layer(0, 0, "Instances", obj_UI_menu);
 }

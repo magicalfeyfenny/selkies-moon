@@ -4,3 +4,4 @@ points = 100;
 hit_radius = 16;
 move_direction = 270;
 move_speed = 0;
+combat_step_blocked = false;

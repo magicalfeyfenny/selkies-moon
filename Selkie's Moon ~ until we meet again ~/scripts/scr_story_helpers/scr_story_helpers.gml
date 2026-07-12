@@ -611,6 +611,95 @@ function GameStoryTextLinesCreate(_text, _max_width, _max_lines = 2) {
     return _lines;
 }
 
+/// @func GameUiStoryFramePaletteCreate(selected)
+/// Returns the shared moon-purple, pearl, and rose palette derived from the story textbox.
+function GameUiStoryFramePaletteCreate(_selected = false) {
+    var _palette = {
+        fill_color: make_color_rgb(28, 12, 48),
+        shadow_color: make_color_rgb(8, 5, 20),
+        border_color: make_color_rgb(242, 232, 255),
+        inner_border_color: make_color_rgb(255, 184, 224),
+        ornament_color: make_color_rgb(255, 116, 198),
+        title_color: make_color_rgb(255, 232, 184),
+        text_color: c_white,
+        muted_text_color: make_color_rgb(180, 204, 232),
+    };
+
+    if (_selected) {
+        _palette.fill_color = make_color_rgb(70, 24, 98);
+        _palette.inner_border_color = make_color_rgb(255, 220, 150);
+        _palette.ornament_color = make_color_rgb(255, 230, 164);
+        _palette.title_color = make_color_rgb(255, 246, 188);
+    }
+
+    return _palette;
+}
+
+/// @func GameUiDrawOrnamentDiamond(x, y, radius, color, alpha)
+/// Draws the small rose-diamond ornament used at story-frame joins.
+function GameUiDrawOrnamentDiamond(_x, _y, _radius, _color, _alpha = 1.0) {
+    draw_set_alpha(_alpha);
+    draw_set_color(_color);
+    draw_triangle(_x, _y - _radius, _x + _radius, _y, _x, _y + _radius, false);
+    draw_triangle(_x, _y - _radius, _x - _radius, _y, _x, _y + _radius, false);
+    draw_set_alpha(1.0);
+}
+
+/// @func GameUiDrawOrnateFrame(x, y, width, height, fill_color, fill_alpha, accent_color, selected, frame_alpha)
+/// Draws a scalable panel that echoes the pearl lines and rose ornaments of spr_textbox.
+function GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color = -1, _fill_alpha = 0.76, _accent_color = -1, _selected = false, _frame_alpha = 1.0) {
+    var _palette = GameUiStoryFramePaletteCreate(_selected);
+    var _fill = (_fill_color == -1) ? _palette.fill_color : _fill_color;
+    var _outer = (_accent_color == -1) ? _palette.border_color : _accent_color;
+    var _left = round(_x);
+    var _top = round(_y);
+    var _right = round(_x + _w);
+    var _bottom = round(_y + _h);
+    var _corner = max(3, min(8, floor(min(_w, _h) * 0.24)));
+    _frame_alpha = clamp(_frame_alpha, 0, 1);
+
+    // Soft offset shadow and translucent ink-dark fill preserve contrast over art.
+    draw_set_alpha(min(0.5, _fill_alpha * 0.7) * _frame_alpha);
+    draw_set_color(_palette.shadow_color);
+    draw_rectangle(_left + 3, _top + 3, _right + 3, _bottom + 3, false);
+
+    draw_set_alpha(_fill_alpha * _frame_alpha);
+    draw_set_color(_fill);
+    draw_rectangle(_left, _top, _right, _bottom, false);
+
+    // Pearl outer line, rose inner line, and clipped corners mirror the textbox sprite.
+    draw_set_alpha(_frame_alpha);
+    draw_set_color(_outer);
+    draw_rectangle(_left, _top, _right, _bottom, true);
+
+    if (_w >= 12 && _h >= 12) {
+        draw_set_alpha(0.86 * _frame_alpha);
+        draw_set_color(_palette.inner_border_color);
+        draw_rectangle(_left + 3, _top + 3, _right - 3, _bottom - 3, true);
+    }
+
+    draw_set_alpha(_frame_alpha);
+    draw_set_color(_palette.ornament_color);
+    draw_line(_left, _top + _corner, _left + _corner, _top);
+    draw_line(_right - _corner, _top, _right, _top + _corner);
+    draw_line(_left, _bottom - _corner, _left + _corner, _bottom);
+    draw_line(_right - _corner, _bottom, _right, _bottom - _corner);
+
+    if (_w >= 48 && _h >= 20) {
+        var _diamond_radius = (_h >= 34) ? 3 : 2;
+        GameUiDrawOrnamentDiamond((_left + _right) * 0.5, _top + 1, _diamond_radius, _palette.ornament_color, _frame_alpha);
+        GameUiDrawOrnamentDiamond((_left + _right) * 0.5, _bottom - 1, _diamond_radius, _palette.ornament_color, _frame_alpha);
+    }
+
+    if (_h >= 48) {
+        GameUiDrawOrnamentDiamond(_left + 1, (_top + _bottom) * 0.5, 2, _palette.ornament_color, _frame_alpha);
+        GameUiDrawOrnamentDiamond(_right - 1, (_top + _bottom) * 0.5, 2, _palette.ornament_color, _frame_alpha);
+    }
+
+    draw_set_alpha(1.0);
+    draw_set_color(c_white);
+}
+
 /// @func GameStoryDrawBox(frame)
 /// Draws the dialogue textbox sprite and current text content.
 function GameStoryDrawBox(_frame) {
@@ -620,33 +709,33 @@ function GameStoryDrawBox(_frame) {
     var _box_top = _gui_height - 130;
     var _text_width = 520;
     var _lines = [];
+    var _palette = GameUiStoryFramePaletteCreate(false);
 
     if (_box_asset != -1 && sprite_exists(_box_asset)) {
         draw_set_alpha(1.0);
         draw_set_color(c_white);
         draw_sprite(_box_asset, 0, _gui_width * 0.5, _gui_height);
     } else {
-        draw_set_alpha(1.0);
-        draw_set_color(make_color_rgb(224, 236, 255));
-        draw_rectangle(16, _box_top, _gui_width - 16, _gui_height - 8, true);
+        GameUiDrawOrnateFrame(38, _box_top + 4, _gui_width - 76, 116,
+            _palette.fill_color, 0.78, _palette.border_color, false);
     }
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_top);
     draw_set_font(fn_dialogue_name);
-    GameUiDrawOutlinedText(_frame.name, _gui_width * 0.5, _box_top + 10, make_color_rgb(255, 230, 180));
+    GameUiDrawOutlinedText(_frame.name, _gui_width * 0.5, _box_top + 10, _palette.title_color);
 
     draw_set_font(fn_dialogue_speech);
     _lines = GameStoryTextLinesCreate(_frame.text, _text_width, 2);
 
     for (var i = 0; i < array_length(_lines); i++) {
-        GameUiDrawOutlinedText(_lines[i], _gui_width * 0.5, _box_top + 42 + (i * 22), c_white);
+        GameUiDrawOutlinedText(_lines[i], _gui_width * 0.5, _box_top + 42 + (i * 22), _palette.text_color);
     }
 
     draw_set_halign(fa_right);
     draw_set_valign(fa_bottom);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Z / C / X continue", _gui_width - 34, _gui_height - 16, make_color_rgb(180, 204, 232));
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Z/C/X or A/B/X continue", _gui_width - 34, _gui_height - 16, _palette.muted_text_color);
 }
 
 /// @func GameStoryDraw(state)

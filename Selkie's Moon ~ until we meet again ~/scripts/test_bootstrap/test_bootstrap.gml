@@ -4,23 +4,11 @@ suite(function() {
             global.game_config = GameConfigCreateDefault();
             global.game_save = GameSaveDataCreateDefault();
 
-            if (file_exists(GameSavePathGet())) {
-                file_delete(GameSavePathGet());
-            }
-
-            if (file_exists(GameConfigPathGet())) {
-                file_delete(GameConfigPathGet());
-            }
+            GameTestPersistenceFilesDelete();
         });
 
         afterEach(function() {
-            if (file_exists(GameSavePathGet())) {
-                file_delete(GameSavePathGet());
-            }
-
-            if (file_exists(GameConfigPathGet())) {
-                file_delete(GameConfigPathGet());
-            }
+            GameTestPersistenceFilesDelete();
         });
 
         test("Default config keeps the playfield at 640x360", function() {
@@ -65,9 +53,10 @@ suite(function() {
             expect(global.game_save.high_score.ship_A[0]).toBe(777);
             expect(global.game_save.runs_started.ship_A[0]).toBe(4);
             expect(global.game_save.continues_used.ship_A[0]).toBe(1);
+            expect(file_exists(GamePersistenceBackupPathGet(GameSavePathGet()))).toBeFalsy();
         });
 
-        test("LoadGameSave rejects an old save version", function() {
+        test("LoadGameSave rejects and backs up a future save version", function() {
             var _save = GameSaveDataCreateDefault();
             _save.version = SAVE_VERSION + 1;
             _save.high_score.ship_A[0] = 999;
@@ -81,6 +70,45 @@ suite(function() {
             expect(LoadGameSave()).toBeFalsy();
             expect(global.game_save.high_score.ship_A[0]).toBe(0);
             expect(global.game_save.version).toBe(SAVE_VERSION);
+            expect(file_exists(GamePersistenceBackupPathGet(GameSavePathGet()))).toBeTruthy();
+        });
+
+        test("LoadGameSave migrates legacy scalar progress into the current ship tables", function() {
+            var _legacy = {
+                version: max(0, SAVE_VERSION - 1),
+                high_score: 43210,
+                runs_started: 7,
+                runs_finished: 3,
+                continues_used: 2,
+            };
+            var _file = file_text_open_write(GameSavePathGet());
+            file_text_write_string(_file, json_stringify(_legacy));
+            file_text_close(_file);
+
+            expect(LoadGameSave()).toBeTruthy();
+            expect(global.game_save.version).toBe(SAVE_VERSION);
+            expect(global.game_save.high_score.ship_A[0]).toBe(43210);
+            expect(global.game_save.runs_started.ship_A[0]).toBe(7);
+            expect(global.game_save.runs_finished.ship_A[0]).toBe(3);
+            expect(global.game_save.continues_used.ship_A[0]).toBe(2);
+            expect(array_length(global.game_save.high_score.ship_selkie)).toBe(10);
+            expect(file_exists(GamePersistenceBackupPathGet(GameSavePathGet()))).toBeTruthy();
+        });
+
+        test("Malformed persistence is backed up and recovered without stopping boot", function() {
+            var _file = file_text_open_write(GameSavePathGet());
+            file_text_write_string(_file, "{not valid json");
+            file_text_close(_file);
+
+            expect(LoadGameSave()).toBeFalsy();
+            expect(file_exists(GamePersistenceBackupPathGet(GameSavePathGet()))).toBeTruthy();
+            expect(global.game_save.version).toBe(SAVE_VERSION);
+        });
+
+        test("Automated tests use isolated persistence filenames", function() {
+            expect(GamePersistenceIsAutomationRun()).toBeTruthy();
+            expect(GameSavePathGet()).toBe("automation-game.sav");
+            expect(GameConfigPathGet()).toBe("automation-config.sav");
         });
 
         test("LoadGameConfig loads a matching config file", function() {
@@ -99,9 +127,10 @@ suite(function() {
             expect(global.game_config.display_scale).toBe(5);
             expect(global.game_config.fullscreen).toBeTruthy();
             expect(global.game_config.target_fps).toBe(30);
+            expect(file_exists(GamePersistenceBackupPathGet(GameConfigPathGet()))).toBeFalsy();
         });
 
-        test("LoadGameConfig rejects an old config version", function() {
+        test("LoadGameConfig rejects and backs up a future config version", function() {
             var _config = GameConfigCreateDefault();
             _config.version = CONFIG_VERSION + 1;
             _config.display_scale = 6;
@@ -115,6 +144,7 @@ suite(function() {
             expect(LoadGameConfig()).toBeFalsy();
             expect(global.game_config.version).toBe(CONFIG_VERSION);
             expect(global.game_config.display_scale).toBe(2);
+            expect(file_exists(GamePersistenceBackupPathGet(GameConfigPathGet()))).toBeTruthy();
         });
 
         test("GameInitialize writes default save and config files when missing", function() {
@@ -128,6 +158,21 @@ suite(function() {
             expect(global.game_config.version).toBe(CONFIG_VERSION);
             expect(global.game_save.version).toBe(SAVE_VERSION);
         });
+
+        test("A non-qualifying score leaves the leaderboard and continues rows unchanged", function() {
+            global.game_runtime = GameRuntimeDataCreateDefault();
+            global.game_runtime.selected_ship_id = SHIP_SUNRISE;
+            global.game_runtime.score = 5;
+            global.game_runtime.continues_used = 9;
+            global.game_save.high_score.ship_A = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
+            global.game_save.continues_used.ship_A = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+            GameRunResultSave();
+
+            expect(global.game_save.high_score.ship_A[9]).toBe(10);
+            expect(global.game_save.continues_used.ship_A[9]).toBe(9);
+            expect(global.game_save.runs_finished.ship_A[0]).toBe(1);
+        });
     });
 
     section("Title menu", function() {
@@ -136,15 +181,11 @@ suite(function() {
             global.game_save = GameSaveDataCreateDefault();
             global.game_runtime = GameRuntimeDataCreateDefault();
 
-            if (file_exists(GameConfigPathGet())) {
-                file_delete(GameConfigPathGet());
-            }
+            GameTestPersistenceFilesDelete();
         });
 
         afterEach(function() {
-            if (file_exists(GameConfigPathGet())) {
-                file_delete(GameConfigPathGet());
-            }
+            GameTestPersistenceFilesDelete();
         });
 
         test("Title state starts on the press start screen", function() {
@@ -152,7 +193,7 @@ suite(function() {
 
             expect(_state.phase).toBe("press_start");
             expect(_state.page).toBe("main");
-            expect(array_length(_state.main_items)).toBe(6);
+            expect(array_length(_state.main_items)).toBe(7);
             expect(array_length(_state.characters)).toBe(2);
             expect(array_length(_state.gallery_items)).toBeGreaterThan(1);
             expect(array_length(_state.music_items)).toBe(13);
@@ -177,7 +218,7 @@ suite(function() {
 
             GameTitleStateStep(_state, GameTitleInputSnapshotCreate(true, false, false, false, false, false));
 
-            expect(_state.main_index).toBe(5);
+            expect(_state.main_index).toBe(6);
             expect(_state.main_items[_state.main_index].id).toBe("quit");
         });
 
@@ -188,6 +229,42 @@ suite(function() {
             GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
 
             expect(_state.page).toBe("character_select");
+        });
+
+        test("Practice Select edits its setup and launches gameplay directly", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.main_index = 5;
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+            expect(_state.page).toBe("practice");
+            expect(array_length(GameTitlePracticeEntriesCreate(_state))).toBe(11);
+
+            _state.practice_index = 1;
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
+            expect(_state.practice_config.stage).toBe(2);
+
+            _state.practice_index = 2;
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
+            expect(_state.practice_config.segment).toBe(PRACTICE_SEGMENT_WAVES);
+
+            _state.practice_index = 4;
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
+            expect(_state.practice_config.rank).toBe(RANK_DEFAULT + 5);
+
+            _state.practice_index = 5;
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+            expect(_state.practice_config.dynamic_rank).toBeTruthy();
+
+            _state.practice_index = 9;
+            var _result = GameTitleStateStep(_state,
+                GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+            expect(_result.action).toBe("goto_practice");
+            expect(_result.room_name).toBe("rm_game");
+            expect(_result.practice_config.stage).toBe(2);
+            expect(_result.practice_config.segment).toBe(PRACTICE_SEGMENT_WAVES);
+            expect(_result.practice_config.rank).toBe(RANK_DEFAULT + 5);
+            expect(_result.practice_config.dynamic_rank).toBeTruthy();
         });
 
         test("Scores submenu returns to main on bomb", function() {
@@ -219,6 +296,39 @@ suite(function() {
             expect(_state.page).toBe("main");
         });
 
+        test("Music Room preview ownership follows the selected row without restoring title BGM", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "music_room";
+            global.game_audio = {
+                stage_music_playing: true,
+                current_music_id: snd_music_title,
+                music_owner: "room",
+                music_preview_instance_id: -1,
+                music_preview_sound_id: -1,
+                enemy_fire_cycle: 0,
+            };
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+
+            expect(GameMusicRoomPreviewIsActive()).toBeTruthy();
+            expect(_state.music_preview_index).toBe(0);
+            expect(global.game_audio.music_preview_sound_id).toBe(_state.music_items[0].sound_id);
+            expect(global.game_audio.music_owner).toBe("music_room");
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, true, false, false, false, false));
+
+            expect(_state.music_index).toBe(1);
+            expect(_state.music_preview_index).toBe(1);
+            expect(global.game_audio.music_preview_sound_id).toBe(_state.music_items[1].sound_id);
+
+            GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+
+            expect(GameMusicRoomPreviewIsActive()).toBeFalsy();
+            expect(_state.music_preview_index).toBe(-1);
+            expect(global.game_audio.music_owner).toBe("room");
+        });
+
         test("CG gallery browses art entries without leaving its page", function() {
             var _state = GameTitleStateCreate();
             _state.phase = "menu";
@@ -238,6 +348,7 @@ suite(function() {
 
             expect(array_length(_entries)).toBe(2);
             expect(_entries[0].id).toBe("fullscreen");
+            expect(_entries[0].value).toBe("Off");
             expect(_entries[1].id).toBe("display_scale");
         });
 
@@ -379,15 +490,11 @@ suite(function() {
             global.game_save = GameSaveDataCreateDefault();
             global.game_runtime = GameRuntimeDataCreateDefault();
 
-            if (file_exists(GameSavePathGet())) {
-                file_delete(GameSavePathGet());
-            }
+            GameTestPersistenceFilesDelete();
         });
 
         afterEach(function() {
-            if (file_exists(GameSavePathGet())) {
-                file_delete(GameSavePathGet());
-            }
+            GameTestPersistenceFilesDelete();
         });
 
         test("Default runtime includes continue and berserk state", function() {
@@ -403,6 +510,9 @@ suite(function() {
             expect(_runtime.stage_count).toBe(STAGE_COUNT);
             expect(_runtime.power).toBe(0);
             expect(_runtime.stage_frame).toBe(0);
+            expect(_runtime.resource_drop_charge).toBe(0);
+            expect(_runtime.resource_drop_threshold).toBe(RESOURCE_DROP_CHARGE_BASE);
+            expect(_runtime.resource_drops_this_stage).toBe(0);
         });
 
         test("Run start initialization records a run and defaults the ship", function() {
@@ -450,10 +560,14 @@ suite(function() {
                 var _report = GameStageBalanceReportCreate(stage);
 
                 expect(_report.no_continue_viable).toBeTruthy();
-                expect(_report.estimated_powerups).toBeGreaterThan(4);
+                expect(_report.estimated_score_pickups).toBeGreaterThan(4);
+                expect(_report.estimated_resource_pickups <= _report.resource_drop_limit).toBeTruthy();
                 expect(_report.max_spawn_pressure).toBeLessThan(42);
                 expect(_report.focus_boss_clear_frames).toBeLessThan(60 * 70);
             }
+
+            var _final_report = GameStageBalanceReportCreate(STAGE_COUNT);
+            expect(_final_report.fastest_phase_clear_frames).toBeGreaterThan(34);
         });
 
         test("Stage timeline helpers spawn above the field and stop once scrolling ends", function() {
@@ -699,6 +813,8 @@ suite(function() {
         test("Power-up rewards apply stock, power, score, and meter effects", function() {
             global.game_runtime.bombs = DEFAULT_BOMBS;
             global.game_runtime.lives = DEFAULT_LIVES;
+            global.game_runtime.score = 1234;
+            var _resource_score = global.game_runtime.score;
 
             expect(GamePowerupRewardApply(POWERUP_POWER)).toBeTruthy();
             expect(global.game_runtime.power).toBe(1);
@@ -711,10 +827,54 @@ suite(function() {
 
             expect(GamePowerupRewardApply(POWERUP_METER)).toBeTruthy();
             expect(global.game_runtime.meter).toBe(POWERUP_METER_VALUE);
+            expect(global.game_runtime.score).toBe(_resource_score);
 
             var _score_before = global.game_runtime.score;
             expect(GamePowerupRewardApply(POWERUP_SCORE)).toBeTruthy();
             expect(global.game_runtime.score).toBe(_score_before + POWERUP_SCORE_VALUE);
+        });
+
+        test("Point-blank defeats charge bounded resources while ordinary cadence drops score", function() {
+            with (obj_player) {
+                instance_destroy();
+            }
+            with (obj_powerup) {
+                instance_destroy();
+            }
+
+            var _player = instance_create_layer(100, 100, "Instances", obj_player);
+            var _resource = noone;
+            var _threshold = GameResourceDropChargeThresholdGet(1);
+
+            for (var i = 0; i < _threshold; i++) {
+                _resource = GameEnemyPowerupDropTry(100, 100, 1200);
+            }
+
+            expect(instance_exists(_resource)).toBeTruthy();
+            expect(variable_instance_get(_resource, "pickup_class")).toBe("resource");
+            expect(variable_instance_get(_resource, "powerup_type") == POWERUP_SCORE).toBeFalsy();
+            expect(global.game_runtime.resource_drops_this_stage).toBe(1);
+            expect(global.game_runtime.resource_drop_charge).toBe(0);
+
+            with (obj_powerup) {
+                instance_destroy();
+            }
+
+            global.game_runtime.powerup_drop_counter = GameScorePickupDropPeriodGet(1) - 1;
+            var _score_pickup = GameEnemyPowerupDropTry(400, 300, 500);
+
+            expect(instance_exists(_score_pickup)).toBeTruthy();
+            expect(variable_instance_get(_score_pickup, "pickup_class")).toBe("score");
+            expect(variable_instance_get(_score_pickup, "powerup_type")).toBe(POWERUP_SCORE);
+            expect(GameEnemyPointBlankResourceCheck(100, 100, 100, 100)).toBeTruthy();
+            expect(GameEnemyPointBlankResourceCheck(400, 300, 100, 100)).toBeFalsy();
+
+            with (obj_powerup) {
+                instance_destroy();
+            }
+            with (_player) {
+                instance_destroy();
+            }
         });
 
         test("Holding fire long enough switches the player from volleys into sword swings", function() {
@@ -770,6 +930,30 @@ suite(function() {
             expect(variable_instance_get(_enemy, "hp")).toBe(50 - (SWORD_SWEEP_DAMAGE * 2));
 
             with (_enemy) {
+                instance_destroy();
+            }
+        });
+
+        test("Expanded boss phases normalize damage so the fastest final phase survives its opening cadence", function() {
+            var _boss = instance_create_layer(0, 0, "Instances", obj_boss_parent);
+            var _phase_count = GameBossPhaseCountForStage(STAGE_COUNT);
+            var _phase_hp = GameBossPhaseHpGet(STAGE_COUNT, _phase_count);
+            var _scale = GameBossDamageScaleGet(_phase_count);
+            var _fastest_clear_frames = ceil(_phase_hp / (60 * _scale)) * SHOT_VOLLEY_INTERVAL;
+
+            with (_boss) {
+                phase_count = FINAL_BOSS_PHASE_COUNT;
+                phase_max_hp = _phase_hp;
+                hp = _phase_hp;
+            }
+
+            expect(_phase_hp).toBeGreaterThan(200);
+            expect(_scale).toBe(BOSS_DAMAGE_SCALE_MIN);
+            expect(_fastest_clear_frames).toBeGreaterThan(34);
+            expect(GameBossDamageApply(_boss, 60)).toBe(60 * BOSS_DAMAGE_SCALE_MIN);
+            expect(variable_instance_get(_boss, "hp")).toBe(_phase_hp - (60 * BOSS_DAMAGE_SCALE_MIN));
+
+            with (_boss) {
                 instance_destroy();
             }
         });
@@ -1281,6 +1465,76 @@ suite(function() {
             }
         });
 
+        test("Inherited combat children stop after parent freeze and destruction guards", function() {
+            var _enemy = instance_create_layer(20, 20, "Instances", obj_enemy_variant);
+            var _blade = instance_create_layer(40, 40, "Instances", obj_bullet_blade);
+            var _boss = instance_create_layer(60, 60, "Instances", obj_boss_sunset);
+
+            with (_enemy) {
+                move_direction = 0;
+                move_speed = 3;
+                age = 0;
+            }
+            with (_blade) {
+                spiral_angle = 45;
+            }
+            with (_boss) {
+                phase_timer = 0;
+                float_phase = 0;
+            }
+
+            global.game_runtime.signals.dialogue = true;
+            simulateEvent(ev_step, ev_step_normal, _enemy);
+            simulateEvent(ev_step, ev_step_normal, _blade);
+            simulateEvent(ev_step, ev_step_normal, _boss);
+
+            expect(variable_instance_get(_enemy, "x")).toBe(20);
+            expect(variable_instance_get(_enemy, "age")).toBe(0);
+            expect(variable_instance_get(_enemy, "combat_step_blocked")).toBeTruthy();
+            expect(variable_instance_get(_blade, "spiral_angle")).toBe(45);
+            expect(variable_instance_get(_blade, "combat_step_blocked")).toBeTruthy();
+            expect(variable_instance_get(_boss, "phase_timer")).toBe(0);
+            expect(variable_instance_get(_boss, "float_phase")).toBe(0);
+            expect(variable_instance_get(_boss, "combat_step_blocked")).toBeTruthy();
+
+            global.game_runtime.signals.dialogue = false;
+            with (_enemy) { instance_destroy(); }
+            with (_blade) { instance_destroy(); }
+            with (_boss) { instance_destroy(); }
+        });
+
+        test("A cancelled close-range bullet becomes a medal without hitting the player", function() {
+            with (obj_player) { instance_destroy(); }
+            with (obj_bullet_parent) { instance_destroy(); }
+            with (obj_medal) { instance_destroy(); }
+
+            var _player = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y, "Instances", obj_player);
+            var _bullet = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y - CAMERA_SCROLL_SPEED, "Instances", obj_bullet_bead);
+
+            with (_player) {
+                player_state.invuln_timer = 0;
+            }
+            with (_bullet) {
+                cancelled = true;
+            }
+
+            // The room input manager may retain runner-simulated undefined key
+            // values; this collision regression only needs a neutral snapshot.
+            global.game_input = GameInputStateCreate();
+            simulateEvent(ev_step, ev_step_normal, _player);
+
+            expect(variable_instance_get(_player, "player_state").hit).toBeFalsy();
+            expect(instance_exists(_bullet)).toBeTruthy();
+
+            simulateEvent(ev_step, ev_step_normal, _bullet);
+
+            expect(instance_exists(_bullet)).toBeFalsy();
+            expect(instance_number(obj_medal)).toBe(1);
+
+            with (_player) { instance_destroy(); }
+            with (obj_medal) { instance_destroy(); }
+        });
+
         test("Cancel meter rewards trigger berserk at one thousand", function() {
             global.game_runtime.meter = 999;
 
@@ -1496,15 +1750,403 @@ suite(function() {
         });
     });
 
+    section("Controller, pause, practice, and rank", function() {
+        beforeEach(function() {
+            global.game_config = GameConfigCreateDefault();
+            global.game_save = GameSaveDataCreateDefault();
+            global.game_runtime = GameRuntimeDataCreateDefault();
+            global.game_input = GameInputStateCreate();
+
+            GameTestPersistenceFilesDelete();
+        });
+
+        afterEach(function() {
+            GameTestPersistenceFilesDelete();
+        });
+
+        test("Synthetic gamepad snapshots expose edges and release neutral movement", function() {
+            var _state = GameInputStateCreate();
+            _state.gamepad_connected = true;
+            var _keyboard = {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                fire: false,
+                autofire: false,
+                bomb: false,
+                pause: false,
+                move_x: 0,
+                move_y: 0,
+                activity: false,
+            };
+            var _gamepad = {
+                up: false,
+                down: false,
+                left: false,
+                right: true,
+                fire: true,
+                autofire: false,
+                bomb: false,
+                pause: true,
+                move_x: 0.75,
+                move_y: -0.25,
+                activity: true,
+            };
+
+            GameInputSnapshotApply(_state, _keyboard, _gamepad);
+
+            expect(_state.device).toBe("gamepad");
+            expect(_state.move_x).toBe(0.75);
+            expect(_state.move_y).toBe(-0.25);
+            expect(_state.verbs.right.down).toBeTruthy();
+            expect(_state.verbs.right.pressed).toBeTruthy();
+            expect(_state.verbs.fire.pressed).toBeTruthy();
+            expect(_state.verbs.pause.pressed).toBeTruthy();
+
+            GameInputSnapshotApply(_state, _keyboard, _gamepad);
+            expect(_state.verbs.right.down).toBeTruthy();
+            expect(_state.verbs.right.pressed).toBeFalsy();
+
+            _gamepad.right = false;
+            _gamepad.fire = false;
+            _gamepad.pause = false;
+            _gamepad.move_x = 0;
+            _gamepad.move_y = 0;
+            _gamepad.activity = false;
+            GameInputSnapshotApply(_state, _keyboard, _gamepad);
+
+            expect(_state.device).toBe("gamepad");
+            expect(_state.move_x).toBe(0);
+            expect(_state.move_y).toBe(0);
+            expect(_state.verbs.right.down).toBeFalsy();
+            expect(_state.verbs.right.released).toBeTruthy();
+            expect(_state.verbs.fire.released).toBeTruthy();
+            expect(_state.verbs.pause.released).toBeTruthy();
+        });
+
+        test("Keyboard and controller verbs combine while the active device owns movement", function() {
+            var _state = GameInputStateCreate();
+            var _keyboard = {
+                up: false,
+                down: false,
+                left: true,
+                right: false,
+                fire: false,
+                autofire: false,
+                bomb: true,
+                pause: false,
+                move_x: -1,
+                move_y: 0,
+                activity: true,
+            };
+            var _gamepad = {
+                up: false,
+                down: true,
+                left: false,
+                right: false,
+                fire: true,
+                autofire: true,
+                bomb: false,
+                pause: false,
+                move_x: 0,
+                move_y: 0.5,
+                activity: true,
+            };
+
+            GameInputSnapshotApply(_state, _keyboard, _gamepad);
+            global.game_input = _state;
+
+            expect(_state.device).toBe("gamepad");
+            expect(_state.move_x).toBe(0);
+            expect(_state.move_y).toBe(0.5);
+            expect(GameInputVerbDown("left")).toBeTruthy();
+            expect(GameInputVerbDown("down")).toBeTruthy();
+            expect(GameInputVerbPressed("fire")).toBeTruthy();
+            expect(GameInputVerbDown("autofire")).toBeTruthy();
+            expect(GameInputVerbDown("bomb")).toBeTruthy();
+            expect(GameInputVerbDown("not_a_real_verb")).toBeFalsy();
+            expect(GameInputVerbPressed("not_a_real_verb")).toBeFalsy();
+            expect(GameInputVerbReleased("not_a_real_verb")).toBeFalsy();
+
+            _gamepad.down = false;
+            _gamepad.fire = false;
+            _gamepad.autofire = false;
+            _gamepad.move_y = 0;
+            _gamepad.activity = false;
+            GameInputSnapshotApply(_state, _keyboard, _gamepad);
+
+            expect(_state.device).toBe("keyboard");
+            expect(_state.move_x).toBe(-1);
+            expect(_state.move_y).toBe(0);
+        });
+
+        test("Pause opens from its dedicated verb and exposes mode-specific rows", function() {
+            var _state = GamePauseStateCreate();
+            var _open = GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, false, false, true), false);
+
+            expect(_open.action).toBe("open");
+            expect(_state.active).toBeTruthy();
+            expect(_state.page).toBe("main");
+            expect(array_length(GamePauseMainItemsCreate(false))).toBe(3);
+            expect(array_length(GamePauseMainItemsCreate(true))).toBe(4);
+            expect(GamePauseMainItemsCreate(true)[2]).toBe("Practice Tuning");
+
+            var _close = GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, false, false, true), false);
+            expect(_close.action).toBe("close");
+        });
+
+        test("Pause settings adjust configuration and return to the main pause page", function() {
+            var _state = GamePauseStateCreate();
+            _state.active = true;
+            _state.main_index = 1;
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, true, false, false), false);
+            expect(_state.page).toBe("options");
+            expect(_state.options_index).toBe(0);
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, true, false, false, false, false, false), false);
+            expect(_state.options_index).toBe(1);
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, true, false, false, false), false);
+            expect(global.game_config.display_scale).toBe(3);
+            expect(file_exists(GameConfigPathGet())).toBeTruthy();
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, false, true, false), false);
+            expect(_state.page).toBe("main");
+        });
+
+        test("Pause quit confirmation requires choosing Yes before returning to title", function() {
+            var _state = GamePauseStateCreate();
+            _state.active = true;
+            _state.main_index = 2;
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, true, false, false), false);
+            expect(_state.page).toBe("quit_confirm");
+            expect(_state.quit_index).toBe(0);
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, true, false, false, false), false);
+            expect(_state.quit_index).toBe(1);
+
+            var _result = GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, true, false, false), false);
+            expect(_result.action).toBe("quit_title");
+        });
+
+        test("Practice pause tuning changes live variables and can restart the attempt", function() {
+            global.game_runtime.run_mode = "practice";
+            var _state = GamePauseStateCreate();
+            _state.active = true;
+            _state.main_index = 2;
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, true, false, false), true);
+            expect(_state.page).toBe("practice");
+            expect(_state.practice_index).toBe(0);
+
+            GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, true, false, false, false), true);
+            expect(global.game_runtime.practice_config.power).toBe(1);
+            expect(global.game_runtime.power).toBe(1);
+
+            _state.practice_index = array_length(GamePracticeLiveEntriesCreate());
+            var _result = GamePauseStateStep(_state,
+                GamePauseInputSnapshotCreate(false, false, false, false, true, false, false), true);
+            expect(_result.action).toBe("restart_practice");
+        });
+
+        test("Practice tuning preserves unrelated live values and displays the active state", function() {
+            global.game_runtime.run_mode = "practice";
+            global.game_runtime.power = 1;
+            global.game_runtime.rank = 85;
+            global.game_runtime.rank_locked = true;
+            global.game_runtime.lives = 1;
+            global.game_runtime.bombs = 0;
+            global.game_runtime.meter = 700;
+            global.game_runtime.is_berserk = false;
+
+            GamePracticeLiveAdjust(0, 1);
+
+            expect(global.game_runtime.power).toBe(2);
+            expect(global.game_runtime.rank).toBe(85);
+            expect(global.game_runtime.rank_locked).toBeTruthy();
+            expect(global.game_runtime.lives).toBe(1);
+            expect(global.game_runtime.bombs).toBe(0);
+            expect(global.game_runtime.meter).toBe(700);
+            expect(global.game_runtime.is_berserk).toBeFalsy();
+
+            var _entries = GamePracticeLiveEntriesCreate();
+            expect(_entries[0].value).toBe("2/" + string(PLAYER_POWER_MAX));
+            expect(_entries[1].value).toBe("85%");
+            expect(_entries[2].value).toBe("Off");
+            expect(_entries[3].value).toBe("1");
+            expect(_entries[4].value).toBe("0");
+            expect(_entries[5].value).toBe("700");
+        });
+
+        test("Practice configuration normalizes every editable run variable", function() {
+            var _config = GamePracticeConfigNormalize({
+                ship_index: 1,
+                stage: STAGE_COUNT + 8,
+                segment: PRACTICE_SEGMENT_BOSS,
+                power: -4,
+                rank: RANK_MAX + 50,
+                dynamic_rank: true,
+                lives: 0,
+                bombs: PLAYER_BOMB_MAX + 3,
+                meter: 955,
+            });
+
+            expect(_config.ship_id).toBe(SHIP_SELKIE);
+            expect(_config.ship_index).toBe(1);
+            expect(_config.stage).toBe(STAGE_COUNT);
+            expect(_config.segment).toBe(PRACTICE_SEGMENT_BOSS);
+            expect(_config.power).toBe(0);
+            expect(_config.rank).toBe(RANK_MAX);
+            expect(_config.dynamic_rank).toBeTruthy();
+            expect(_config.lives).toBe(1);
+            expect(_config.bombs).toBe(PLAYER_BOMB_MAX);
+            expect(_config.meter).toBe(METER_MAX);
+        });
+
+        test("Practice initialization applies setup without recording starts or results", function() {
+            var _request = GamePracticeRunRequestConfigure({
+                ship_id: SHIP_SELKIE,
+                ship_index: 1,
+                stage: 7,
+                segment: PRACTICE_SEGMENT_BOSS,
+                power: PLAYER_POWER_MAX,
+                rank: 80,
+                dynamic_rank: false,
+                lives: 2,
+                bombs: 1,
+                meter: METER_MAX,
+            });
+
+            expect(_request.stage).toBe(7);
+            expect(GameRunStartInitialize()).toBeTruthy();
+            expect(GameRunIsPractice()).toBeTruthy();
+            expect(GameRunStatsShouldRecord()).toBeFalsy();
+            expect(global.game_runtime.selected_ship_id).toBe(SHIP_SELKIE);
+            expect(global.game_runtime.current_stage).toBe(7);
+            expect(global.game_runtime.power).toBe(PLAYER_POWER_MAX);
+            expect(global.game_runtime.rank).toBe(80);
+            expect(global.game_runtime.rank_locked).toBeTruthy();
+            expect(global.game_runtime.lives).toBe(2);
+            expect(global.game_runtime.bombs).toBe(1);
+            expect(global.game_runtime.meter).toBe(METER_MAX);
+            expect(global.game_runtime.is_berserk).toBeTruthy();
+            expect(global.game_runtime.run_started_recorded).toBeFalsy();
+            expect(global.game_save.runs_started.ship_selkie[0]).toBe(0);
+            expect(file_exists(GameSavePathGet())).toBeFalsy();
+
+            global.game_runtime.score = 999999;
+            expect(GameRunResultSave()).toBeFalsy();
+            expect(global.game_save.high_score.ship_selkie[0]).toBe(0);
+            expect(global.game_save.runs_finished.ship_selkie[0]).toBe(0);
+            expect(file_exists(GameSavePathGet())).toBeFalsy();
+        });
+
+        test("Practice segment selection reaches boss and waves-only seams", function() {
+            GamePracticeRunRequestConfigure({
+                stage: 9,
+                segment: PRACTICE_SEGMENT_BOSS,
+            });
+            GameRunStartInitialize();
+            var _boss_state = GameSceneStateCreate();
+
+            expect(GamePracticeSceneStateApply(_boss_state)).toBeTruthy();
+            expect(_boss_state.mode).toBe("boss_intro");
+            expect(_boss_state.frame).toBe(STAGE_LENGTH_FRAMES);
+            expect(_boss_state.scroll_speed).toBe(0);
+            expect(global.game_runtime.current_stage).toBe(9);
+            expect(global.game_runtime.stage_frame).toBe(STAGE_LENGTH_FRAMES);
+            expect(global.game_runtime.stage_notice_timer).toBe(0);
+
+            GamePracticeRunRequestConfigure({
+                stage: 4,
+                segment: PRACTICE_SEGMENT_WAVES,
+            });
+            GameRunStartInitialize();
+            var _waves_state = GameSceneStateCreate();
+            GamePracticeSceneStateApply(_waves_state);
+
+            expect(_waves_state.mode).toBe("scroll");
+            expect(_waves_state.frame).toBe(0);
+            expect(global.game_runtime.current_stage).toBe(4);
+            expect(GamePracticeWavesOnly()).toBeTruthy();
+        });
+
+        test("Rank pressure preserves neutral tuning and scales cadence in both directions", function() {
+            var _low = GameRankPressureCreate(RANK_MIN);
+            var _neutral = GameRankPressureCreate(RANK_DEFAULT);
+            var _high = GameRankPressureCreate(RANK_MAX);
+
+            expect(_neutral.spawn_interval_scale).toBe(1);
+            expect(_neutral.fire_interval_scale).toBe(1);
+            expect(_neutral.bullet_speed_scale).toBe(1);
+            expect(_low.spawn_interval_scale).toBeGreaterThan(_neutral.spawn_interval_scale);
+            expect(_low.fire_interval_scale).toBeGreaterThan(_neutral.fire_interval_scale);
+            expect(_low.bullet_speed_scale).toBeLessThan(_neutral.bullet_speed_scale);
+            expect(_high.spawn_interval_scale).toBeLessThan(_neutral.spawn_interval_scale);
+            expect(_high.fire_interval_scale).toBeLessThan(_neutral.fire_interval_scale);
+            expect(_high.bullet_speed_scale).toBeGreaterThan(_neutral.bullet_speed_scale);
+            expect(GameRankSpawnIntervalGet(100, 1, RANK_MIN)).toBe(120);
+            expect(GameRankSpawnIntervalGet(100, 1, RANK_DEFAULT)).toBe(100);
+            expect(GameRankSpawnIntervalGet(100, 1, RANK_MAX)).toBe(80);
+            expect(GameRankFireIntervalGet(100, 1, RANK_MIN)).toBe(125);
+            expect(GameRankFireIntervalGet(100, 1, RANK_DEFAULT)).toBe(100);
+            expect(GameRankFireIntervalGet(100, 1, RANK_MAX)).toBe(75);
+            expect(GameRankFireIntervalGet(4, 5, RANK_MAX)).toBe(5);
+        });
+
+        test("Dynamic rank events clamp to bounds and respect the practice lock", function() {
+            GameRankSet(95);
+            expect(GameRankDynamicEnabled()).toBeTruthy();
+            expect(GameRankEventApply(20)).toBe(RANK_MAX);
+            expect(GameRankEventApply(-200)).toBe(RANK_MIN);
+
+            GameRankSet(RANK_DEFAULT);
+            global.game_runtime.rank_locked = true;
+            expect(GameRankDynamicEnabled()).toBeFalsy();
+            expect(GameRankEventApply(20)).toBe(RANK_DEFAULT);
+            expect(GameRankGet()).toBe(RANK_DEFAULT);
+        });
+
+        test("Passive rank rises only after uninterrupted active gameplay", function() {
+            GameRankSet(RANK_DEFAULT);
+            global.game_runtime.rank_frame = RANK_PASSIVE_INTERVAL - 1;
+
+            expect(GameRankStep()).toBe(RANK_DEFAULT + 1);
+            expect(global.game_runtime.rank_frame).toBe(0);
+
+            global.game_runtime.rank_frame = RANK_PASSIVE_INTERVAL - 1;
+            global.game_runtime.signals.paused = true;
+            expect(GameRankStep()).toBe(RANK_DEFAULT + 1);
+            expect(global.game_runtime.rank_frame).toBe(RANK_PASSIVE_INTERVAL - 1);
+
+            global.game_runtime.signals.paused = false;
+            global.game_runtime.rank_locked = true;
+            expect(GameRankStep()).toBe(RANK_DEFAULT + 1);
+            expect(global.game_runtime.rank_frame).toBe(RANK_PASSIVE_INTERVAL - 1);
+        });
+    });
+
     section("Story UI", function() {
         beforeEach(function() {
             global.game_config = GameConfigCreateDefault();
             global.game_save = GameSaveDataCreateDefault();
             global.game_runtime = GameRuntimeDataCreateDefault();
 
-            if (file_exists(GameSavePathGet())) {
-                file_delete(GameSavePathGet());
-            }
+            GameTestPersistenceFilesDelete();
 
             if (file_exists("test_story.json")) {
                 file_delete("test_story.json");
@@ -1512,9 +2154,7 @@ suite(function() {
         });
 
         afterEach(function() {
-            if (file_exists(GameSavePathGet())) {
-                file_delete(GameSavePathGet());
-            }
+            GameTestPersistenceFilesDelete();
 
             if (file_exists("test_story.json")) {
                 file_delete("test_story.json");

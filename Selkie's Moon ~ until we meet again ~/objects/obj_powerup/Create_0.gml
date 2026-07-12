@@ -1,5 +1,6 @@
 // Initialize one drifting collectible.
 powerup_type = POWERUP_SCORE;
+pickup_class = "score";
 value = 0;
 move_speed = 1.25;
 pulse = irandom(359);

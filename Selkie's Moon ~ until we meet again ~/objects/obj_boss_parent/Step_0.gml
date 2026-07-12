@@ -1,10 +1,15 @@
+// Tell overriding child Steps whether inherited combat handling ended this frame.
+combat_step_blocked = false;
+
 // Suspend boss logic while dialogue or continue overlays are active.
 if (GameGameplayIsFrozen()) {
+    combat_step_blocked = true;
     exit;
 }
 
 // Resolve the final destruction countdown and signal the scene manager when the boss is gone.
 if (destruction_active) {
+    combat_step_blocked = true;
     destruction_timer -= 1;
 
     if (destruction_timer <= 0) {
@@ -28,6 +33,7 @@ if (hp > 0) {
 }
 
 if (phase_index < (phase_count - 1)) {
+    combat_step_blocked = true;
     phase_index += 1;
     hp = phase_max_hp;
     phase_timer = 0;
@@ -48,5 +54,6 @@ if (phase_index < (phase_count - 1)) {
 destruction_active = true;
 destruction_timer = BOSS_DESTRUCTION_FRAMES;
 hit_radius = 0;
+combat_step_blocked = true;
 GameBulletsCancelAll(false);
 GameBossPhaseSoundPlay();

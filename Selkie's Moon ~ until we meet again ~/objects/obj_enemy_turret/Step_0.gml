@@ -1,6 +1,10 @@
 // Run the parent enemy step first so defeat, freeze, and movement stay centralized.
 event_inherited();
 
+if (combat_step_blocked) {
+    exit;
+}
+
 // Remove the turret enemy once it drifts well below the camera.
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone && y > _camera.y + GAME_VIEW_HALF_HEIGHT + 64) {
@@ -11,7 +15,7 @@ if (_camera != noone && y > _camera.y + GAME_VIEW_HALF_HEIGHT + 64) {
 // Fire one bead directly at the player whenever the local timer completes.
 fire_timer += 1;
 
-if (fire_timer >= fire_interval) {
+if (fire_timer >= GameRankFireIntervalGet(fire_interval, 8)) {
     fire_timer = 0;
 
     var _player = instance_find(obj_player, 0);

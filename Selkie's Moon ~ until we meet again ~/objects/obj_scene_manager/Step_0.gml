@@ -12,6 +12,8 @@ if (GameGameplayIsFrozen()) {
     exit;
 }
 
+GameRankStep();
+
 // Apply berserk-wide bullet cancellation and meter drain side effects.
 if (global.game_runtime.is_berserk && global.game_runtime.meter == METER_MAX) {
     GameBulletsCancelAll(true);
@@ -29,6 +31,11 @@ if (scene_state.mode == "stage_clear") {
     }
 
     if (scene_state.stage_clear_timer <= 0) {
+        if (GameRunIsPractice()) {
+            GamePracticeReturnToTitle();
+            exit;
+        }
+
         if (GameStageIsFinal()) {
             room_goto(rm_ending);
             exit;
@@ -63,7 +70,12 @@ if (_scene_action == "boss_intro") {
     timeline_running = false;
     GameSceneCombatClear();
 
-    if (GameStageIsFinal()) {
+    if (GamePracticeWavesOnly()) {
+        scene_state.mode = "stage_clear";
+        scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
+        global.game_runtime.stage_complete = true;
+        GameStageClearSoundPlay();
+    } else if (GameStageIsFinal() && !GameRunIsPractice()) {
         GameStoryQueueRequest(GameFinalBossStoryFileGet());
     }
 }
@@ -80,6 +92,7 @@ if (scene_state.boss_defeated) {
     scene_state.boss_defeated = false;
     scene_state.mode = "stage_clear";
     scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
+    GameRankEventApply(2);
     GameStageClearSoundPlay();
     GameSceneCombatClear();
 }
