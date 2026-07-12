@@ -9,3 +9,4 @@ phase_count = BOSS_PHASE_COUNT;
 phase_timer = 0;
 destruction_active = false;
 destruction_timer = 0;
+combat_step_blocked = false;

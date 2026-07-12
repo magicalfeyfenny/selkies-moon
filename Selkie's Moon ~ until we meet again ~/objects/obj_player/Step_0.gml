@@ -17,6 +17,11 @@ if (_scene != noone) {
     _scroll_speed = _scene.scene_state.scroll_speed;
 }
 
+// Pause owns all gameplay verbs until its End Step closes the overlay.
+if (global.game_runtime.signals.paused) {
+    exit;
+}
+
 // While the continue screen is active, only prompt input is processed.
 if (global.game_runtime.signals.continue_request) {
     var _continue_action = GameContinueStateStep(global.game_runtime.continue_screen, _input);
@@ -146,6 +151,11 @@ if (!GamePlayerIsInvulnerable(player_state)) {
     for (var i = instance_number(obj_bullet_parent) - 1; i >= 0; i--) {
         var _bullet = instance_find(obj_bullet_parent, i);
         var _collision_radius = 0;
+
+        // A sword or bomb cancellation resolves into a medal on the bullet's next Step.
+        if (_bullet.cancelled) {
+            continue;
+        }
 
         if (variable_instance_exists(_bullet, "collision_radius")) {
             _collision_radius = _bullet.collision_radius;

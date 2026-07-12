@@ -5,10 +5,15 @@ var _result = GameTitleStateStep(title_state, _input);
 // Dispatch any room or application actions requested by the title flow.
 switch (_result.action) {
     case "goto_room":
-        // Persist the selected ship so the opening scene can boot the correct run state.
-        global.game_runtime.selected_ship_id = _result.character_id;
-        global.game_runtime.selected_ship_index = _result.character_index;
+        // Clear any retained practice state before booting the normal story route.
+        GameNormalRunRequestConfigure(_result.character_id, _result.character_index);
         room_goto(rm_opening);
+        break;
+
+    case "goto_practice":
+        // Practice skips story setup and launches the selected stage segment directly.
+        GamePracticeRunRequestConfigure(_result.practice_config);
+        room_goto(rm_game);
         break;
 
     case "quit":

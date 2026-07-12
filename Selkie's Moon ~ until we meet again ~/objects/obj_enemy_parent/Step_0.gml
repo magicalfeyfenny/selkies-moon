@@ -1,14 +1,19 @@
+// Tell overriding child Steps whether inherited combat handling ended this frame.
+combat_step_blocked = false;
+
+// Freeze before resolving a pending defeat so the pause frame is atomic.
+if (GameGameplayIsFrozen()) {
+    combat_step_blocked = true;
+    exit;
+}
+
 // Destroy defeated enemies and award their score before any motion update.
 if (hp <= 0) {
+    combat_step_blocked = true;
     GameEnemyDestroySoundPlay();
     global.game_runtime.score += points;
     GameEnemyPowerupDropTry(x, y, points);
     instance_destroy();
-    exit;
-}
-
-// Freeze enemy motion while gameplay is paused.
-if (GameGameplayIsFrozen()) {
     exit;
 }
 

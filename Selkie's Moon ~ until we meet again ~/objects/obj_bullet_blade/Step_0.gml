@@ -1,6 +1,10 @@
 // Run the parent bullet step first so cancels, pause freezes, and shared cleanup stay centralized.
 event_inherited();
 
+if (combat_step_blocked) {
+    exit;
+}
+
 // Hold redirected bullets in place during their freeze window, then relaunch them.
 if (freeze_timer > 0) {
     freeze_timer -= 1;
@@ -28,7 +32,7 @@ if (redirected) {
 }
 
 // Advance the blade bullet outward from its spawn point in a spiral path.
-spiral_radius += spiral_radial_speed;
+spiral_radius += spiral_radial_speed * rank_speed_scale;
 spiral_angle += spiral_turn_speed * spiral_direction;
 x = spiral_origin_x + lengthdir_x(spiral_radius, spiral_angle);
 y = spiral_origin_y + lengthdir_y(spiral_radius, spiral_angle);

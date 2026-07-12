@@ -1,6 +1,10 @@
 // Run shared defeat, freeze, and movement first.
 event_inherited();
 
+if (combat_step_blocked) {
+    exit;
+}
+
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone && (abs(x - _camera.x) > 1000 || abs(y - _camera.y) > 1000)) {
     instance_destroy();
@@ -18,7 +22,7 @@ switch (variant_kind) {
         x += dsin(age * 7 + wave_phase) * 0.9;
         image_angle = 270 + (dsin(age * 9 + wave_phase) * 18);
 
-        if (fire_timer >= fire_interval && _player != noone) {
+        if (fire_timer >= GameRankFireIntervalGet(fire_interval, 12) && _player != noone) {
             fire_timer = 0;
             var _base = point_direction(x, y, _player.x, _player.y);
 
@@ -33,7 +37,7 @@ switch (variant_kind) {
     case ENEMY_VARIANT_KELP:
         image_angle = age * 2;
 
-        if (fire_timer >= fire_interval) {
+        if (fire_timer >= GameRankFireIntervalGet(fire_interval, 12)) {
             fire_timer = 0;
             var _count = 8 + (stage_rank >= 6 ? 2 : 0);
 
@@ -53,7 +57,7 @@ switch (variant_kind) {
 
         image_angle = age * 4;
 
-        if (fire_timer >= fire_interval && _player != noone) {
+        if (fire_timer >= GameRankFireIntervalGet(fire_interval, 12) && _player != noone) {
             fire_timer = 0;
             var _aim = point_direction(x, y, _player.x, _player.y);
             GameEnemyBulletLinearSpawn(x, y, _aim - 14, 2.55 + (stage_rank * 0.05), obj_bullet_bead);
@@ -65,7 +69,7 @@ switch (variant_kind) {
     case ENEMY_VARIANT_NEEDLE:
         image_angle = move_direction;
 
-        if (fire_timer >= fire_interval && _player != noone) {
+        if (fire_timer >= GameRankFireIntervalGet(fire_interval, 12) && _player != noone) {
             fire_timer = 0;
             var _needle_aim = point_direction(x, y, _player.x, _player.y);
             GameEnemyBulletLinearSpawn(x, y, _needle_aim, 3.2 + (stage_rank * 0.05), obj_bullet_diamond);
@@ -77,7 +81,7 @@ switch (variant_kind) {
         x += dsin(age * 5 + wave_phase) * 1.15;
         image_angle = age * 3;
 
-        if (fire_timer >= fire_interval) {
+        if (fire_timer >= GameRankFireIntervalGet(fire_interval, 12)) {
             fire_timer = 0;
             for (var m = 0; m < 6; m++) {
                 GameEnemyBulletLinearSpawn(x, y, (m * 60) + (age * 3), 2.0 + (stage_rank * 0.04), obj_bullet_bead);

@@ -1,6 +1,10 @@
 // Run the parent boss step first so phase changes and defeat timing stay centralized.
 event_inherited();
 
+if (combat_step_blocked) {
+    exit;
+}
+
 // Keep the boss anchored near the top of the screen while it drifts in a figure-eight pattern.
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone) {
@@ -31,7 +35,7 @@ if (is_struct(boss_identity) && is_array(boss_identity.phase_plan)) {
             _phase_color = make_color_rgb(190, 120, 255);
         }
 
-        if ((phase_timer mod max(1, _memory_phase.cadence)) == 0) {
+        if ((phase_timer mod GameRankFireIntervalGet(_memory_phase.cadence, 1)) == 0) {
             switch (_memory_phase.shot_kind) {
             case "blade_spiral":
             case "redirect_spiral":
