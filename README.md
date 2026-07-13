@@ -10,18 +10,29 @@ Currently, there is a Mac (arm64) build and a Linux (amd64) build
 ## Gameplay
 This is a 2D vertical scrolling shooter, similar to games like Touhou or Dodonpachi.
 
-Controls:
-Menus: 
-- Up/Down/Left/Right navigates,
-- X to go back,
-- Z to select
+### Controls
 
-Gameplay: 
-- Up/Down/Left/Right moves,
-- Z (tap) fires a volley of shots,
-- Z (hold) swings a bullet cancelling sword,
-- X uses a Bomb and cancels all bullets,
-- C (hold) focuses movement and autofires the selected ship's focused shot pattern
+Keyboard and controller can be used at the same time. Connected controllers are detected automatically.
+
+Menus:
+- Arrow keys or the D-pad/left stick navigate.
+- Z or controller A confirms.
+- X or controller B goes back.
+
+Gameplay:
+- Arrow keys or the D-pad/left stick move.
+- Z or controller A fires a volley when tapped and swings the bullet-cancelling sword when held.
+- X or controller B uses a bomb and cancels all bullets.
+- C or controller X focuses movement and autofires the selected ship's focused shot pattern.
+- Escape, P, or controller Start opens the dedicated pause menu.
+
+The pause menu can resume play, change display settings, or quit the current attempt to the main menu. During practice, it also exposes live tuning and a restart-segment command.
+
+### Practice and dynamic rank
+
+Practice Select on the main menu can launch any stage as a full stage, waves-only segment, or boss-only segment. Before starting, you can choose the ship and directly set shot power, rank, lives, bombs, cancel meter, and whether rank changes dynamically. Practice attempts are not written to score or clear records, and completed segments return to Practice Select with the setup retained.
+
+Rank is the 0-100 dynamic-difficulty value shown in the gameplay HUD. A normal run starts at the neutral rank of 50 and changes with performance. Higher rank increases enemy-wave frequency, enemy firing frequency, and enemy-bullet speed; it does not alter enemy health, player damage, or boss phase count. Practice can either lock rank to a chosen value or leave dynamic rank enabled for testing.
 
 You get 3 bombs and 3 lives.  
 Bombs do not recover between lives.
@@ -29,8 +40,8 @@ Bombs do not recover between lives.
 The run now contains 10 stages. Each stage has a scrolling wave section, a boss encounter, and a stage-clear transition. Clearing stage 10 moves into the ending and then a credits sequence.
 
 Playable ships:
-- Sunrise / Moon: balanced wide shots, a long sword sweep, and a tighter focused shot.
-- Sunset / Selkie: wider crescent shots, stronger focused lances, and a shorter crescent sword sweep using the former boss ship art.
+- Sunset / Moon: balanced wide shots, a long sword sweep, and a tighter focused shot.
+- Sunrise / Selkie: wider crescent shots, stronger focused lances, and a shorter crescent sword sweep using the former boss ship art.
 
 Enemies are worth an amount of points based on the enemy type: 
 - Turrets (flower bushes): 750
@@ -39,12 +50,13 @@ Enemies are worth an amount of points based on the enemy type:
 - Stage variants: value depends on type and stage
 - Boss: 30000
 
-Enemies can drop power-ups:
+Enemies can drop two distinct pickup classes:
+- $ score pickups appear on a steady defeat cadence and are always bonus points.
+- Point-blank defeats charge the PB Recharge gauge. Filling it creates one resource-only pickup, with a per-stage cap so resources remain valuable.
 - P: increases shot power up to 5
 - B: restores one bomb up to 6
 - L: restores one life up to 6
 - M: adds cancel meter
-- $: bonus score
 
 When you cancel a bullet, it turns into a medal that vacuums towards the player.  
 When the medal is collected, it increases your points by 100 and gives you 1 "cancel meter" point.  

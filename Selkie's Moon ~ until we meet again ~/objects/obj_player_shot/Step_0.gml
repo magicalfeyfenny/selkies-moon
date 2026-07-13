@@ -34,7 +34,7 @@ for (var i = instance_number(obj_boss_parent) - 1; i >= 0; i--) {
     }
 
     if (point_distance(x, y, _boss.x, _boss.y) <= _boss.hit_radius) {
-        _boss.hp -= damage;
+        GameBossDamageApply(_boss, damage);
         instance_destroy();
         exit;
     }

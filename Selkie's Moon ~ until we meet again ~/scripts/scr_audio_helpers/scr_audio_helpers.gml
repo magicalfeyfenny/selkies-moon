@@ -5,6 +5,9 @@ function GameAudioStateEnsure() {
         global.game_audio = {
             stage_music_playing: false,
             current_music_id: -1,
+            music_owner: "room",
+            music_preview_instance_id: -1,
+            music_preview_sound_id: -1,
             enemy_fire_cycle: 0,
         };
     }
@@ -17,11 +20,85 @@ function GameAudioStateEnsure() {
         global.game_audio.current_music_id = global.game_audio.stage_music_playing ? snd_stage_music : -1;
     }
 
+    if (!struct_exists(global.game_audio, "music_owner")) {
+        global.game_audio.music_owner = "room";
+    }
+
+    if (!struct_exists(global.game_audio, "music_preview_instance_id")) {
+        global.game_audio.music_preview_instance_id = -1;
+    }
+
+    if (!struct_exists(global.game_audio, "music_preview_sound_id")) {
+        global.game_audio.music_preview_sound_id = -1;
+    }
+
     if (!struct_exists(global.game_audio, "enemy_fire_cycle")) {
         global.game_audio.enemy_fire_cycle = 0;
     }
 
     return true;
+}
+
+/// @func GameMusicRoomPreviewIsActive()
+/// Returns whether the music room currently owns the looping music channel.
+function GameMusicRoomPreviewIsActive() {
+    GameAudioStateEnsure();
+    var _owns_preview = global.game_audio.music_owner == "music_room"
+        && global.game_audio.music_preview_sound_id != -1;
+
+    if (GameShouldQuitAfterTests()) {
+        return _owns_preview;
+    }
+
+    return _owns_preview
+        && global.game_audio.music_preview_instance_id >= 0
+        && audio_is_playing(global.game_audio.music_preview_instance_id);
+}
+
+/// @func GameMusicRoomPreviewStop(restore_room_music)
+/// Releases music-room ownership and optionally restores the room's normal loop.
+function GameMusicRoomPreviewStop(_restore_room_music = true) {
+    GameAudioStateEnsure();
+
+    if (global.game_audio.music_preview_instance_id >= 0) {
+        audio_stop_sound(global.game_audio.music_preview_instance_id);
+    }
+
+    global.game_audio.music_preview_instance_id = -1;
+    global.game_audio.music_preview_sound_id = -1;
+    global.game_audio.music_owner = "room";
+
+    if (_restore_room_music) {
+        GameStageMusicSync();
+    }
+}
+
+/// @func GameMusicRoomPreviewStart(sound_id)
+/// Gives the music room exclusive ownership of music playback and starts one loop.
+function GameMusicRoomPreviewStart(_sound_id) {
+    GameAudioStateEnsure();
+
+    if (GameShouldQuitAfterTests()) {
+        global.game_audio.music_owner = "music_room";
+        global.game_audio.music_preview_sound_id = _sound_id;
+        global.game_audio.music_preview_instance_id = -2;
+        return -2;
+    }
+
+    if (global.game_audio.music_preview_instance_id >= 0) {
+        audio_stop_sound(global.game_audio.music_preview_instance_id);
+    }
+
+    if (global.game_audio.current_music_id != -1) {
+        audio_stop_sound(global.game_audio.current_music_id);
+    }
+
+    global.game_audio.current_music_id = -1;
+    global.game_audio.stage_music_playing = false;
+    global.game_audio.music_owner = "music_room";
+    global.game_audio.music_preview_sound_id = _sound_id;
+    global.game_audio.music_preview_instance_id = audio_play_sound(_sound_id, 0, true);
+    return global.game_audio.music_preview_instance_id;
 }
 
 /// @func GameStageMusicTrackGet(stage)
@@ -76,13 +153,30 @@ function GameStageMusicSync() {
     GameAudioStateEnsure();
 
     if (GameShouldQuitAfterTests()) {
+        if (global.game_audio.music_preview_instance_id >= 0) {
+            audio_stop_sound(global.game_audio.music_preview_instance_id);
+        }
+
         if (global.game_audio.current_music_id != -1) {
             audio_stop_sound(global.game_audio.current_music_id);
         }
 
+        global.game_audio.music_owner = "room";
+        global.game_audio.music_preview_instance_id = -1;
+        global.game_audio.music_preview_sound_id = -1;
         global.game_audio.current_music_id = -1;
         global.game_audio.stage_music_playing = false;
         return;
+    }
+
+    // A title-screen preview is an exclusive music route. Room sync resumes only
+    // after the preview releases ownership or after leaving the title room.
+    if (global.game_audio.music_owner == "music_room") {
+        if (room == rm_title && GameMusicRoomPreviewIsActive()) {
+            return;
+        }
+
+        GameMusicRoomPreviewStop(false);
     }
 
     var _music_id = GameMusicForRoomGet(room);

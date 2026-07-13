@@ -1,3 +1,6 @@
+// Finish the delayed resize/center sequence after display-mode changes settle.
+GameWindowCenterStep();
+
 // Keep the run music loop aligned with the current room flow across the persistent bootstrap object.
 GameStageMusicSync();
 

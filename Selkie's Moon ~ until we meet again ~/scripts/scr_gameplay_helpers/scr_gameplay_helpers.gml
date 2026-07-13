@@ -78,6 +78,8 @@
 #macro FINAL_BOSS_PHASE_COUNT 15
 #macro BOSS_PHASE_HP 300
 #macro BOSS_PHASE_HP_STAGE_STEP 30
+#macro BOSS_PHASE_MIN_HP 240
+#macro BOSS_DAMAGE_SCALE_MIN 0.2
 #macro BOSS_DESTRUCTION_FRAMES 90
 #macro BOSS_FAST_MAYFLY_TURN_SPEED 16
 #macro BOSS_FAST_MAYFLY_RADIAL_SPEED 2.25
@@ -100,6 +102,17 @@
 #macro POWERUP_SCORE "score"
 #macro POWERUP_METER_VALUE 240
 #macro POWERUP_SCORE_VALUE 5000
+#macro POINT_BLANK_RESOURCE_RADIUS 96
+#macro RESOURCE_DROP_CHARGE_BASE 4
+#macro RESOURCE_DROP_LIMIT_BASE 3
+#macro SCORE_PICKUP_DROP_PERIOD_BASE 9
+#macro RANK_MIN 0
+#macro RANK_MAX 100
+#macro RANK_DEFAULT 50
+#macro RANK_PASSIVE_INTERVAL 600
+#macro PRACTICE_SEGMENT_FULL "full"
+#macro PRACTICE_SEGMENT_WAVES "waves"
+#macro PRACTICE_SEGMENT_BOSS "boss"
 #macro ENEMY_VARIANT_MOTH "moth"
 #macro ENEMY_VARIANT_KELP "kelp"
 #macro ENEMY_VARIANT_WISP "wisp"
@@ -114,6 +127,404 @@ function GameContinueStateCreate() {
         mode: "prompt",
         game_over_timer: 0,
     };
+}
+
+/// @func GamePauseStateCreate()
+/// Creates the dedicated in-run pause menu state.
+function GamePauseStateCreate() {
+    return {
+        active: false,
+        page: "main",
+        main_index: 0,
+        options_index: 0,
+        practice_index: 0,
+        quit_index: 0,
+        close_requested: false,
+    };
+}
+
+/// @func GamePracticeConfigCreateDefault()
+/// Creates the editable setup used by title practice select and live tuning.
+function GamePracticeConfigCreateDefault() {
+    return {
+        ship_id: SHIP_SUNRISE,
+        ship_index: 0,
+        stage: 1,
+        segment: PRACTICE_SEGMENT_FULL,
+        power: 3,
+        rank: RANK_DEFAULT,
+        dynamic_rank: false,
+        lives: DEFAULT_LIVES,
+        bombs: DEFAULT_BOMBS,
+        meter: 0,
+    };
+}
+
+/// @func GamePracticeConfigNormalize(config)
+/// Returns a complete practice setup with every exposed value kept in range.
+function GamePracticeConfigNormalize(_config) {
+    var _result = GamePracticeConfigCreateDefault();
+
+    if (!is_struct(_config)) {
+        return _result;
+    }
+
+    if (struct_exists(_config, "ship_id") && _config.ship_id == SHIP_SELKIE) {
+        _result.ship_id = SHIP_SELKIE;
+        _result.ship_index = 1;
+    }
+
+    if (struct_exists(_config, "ship_index") && round(_config.ship_index) == 1) {
+        _result.ship_id = SHIP_SELKIE;
+        _result.ship_index = 1;
+    }
+
+    if (struct_exists(_config, "stage") && is_real(_config.stage)) {
+        _result.stage = clamp(round(_config.stage), 1, STAGE_COUNT);
+    }
+
+    if (struct_exists(_config, "segment") && (_config.segment == PRACTICE_SEGMENT_WAVES
+        || _config.segment == PRACTICE_SEGMENT_BOSS)) {
+        _result.segment = _config.segment;
+    }
+
+    if (struct_exists(_config, "power") && is_real(_config.power)) {
+        _result.power = clamp(round(_config.power), 0, PLAYER_POWER_MAX);
+    }
+
+    if (struct_exists(_config, "rank") && is_real(_config.rank)) {
+        _result.rank = clamp(round(_config.rank), RANK_MIN, RANK_MAX);
+    }
+
+    if (struct_exists(_config, "dynamic_rank") && is_bool(_config.dynamic_rank)) {
+        _result.dynamic_rank = _config.dynamic_rank;
+    }
+
+    if (struct_exists(_config, "lives") && is_real(_config.lives)) {
+        _result.lives = clamp(round(_config.lives), 1, PLAYER_LIFE_MAX);
+    }
+
+    if (struct_exists(_config, "bombs") && is_real(_config.bombs)) {
+        _result.bombs = clamp(round(_config.bombs), 0, PLAYER_BOMB_MAX);
+    }
+
+    if (struct_exists(_config, "meter") && is_real(_config.meter)) {
+        _result.meter = clamp(round(_config.meter / 100) * 100, 0, METER_MAX);
+    }
+
+    return _result;
+}
+
+/// @func GamePracticeSegmentNameGet(segment)
+/// Returns the player-facing label for one selectable stage section.
+function GamePracticeSegmentNameGet(_segment) {
+    switch (_segment) {
+        case PRACTICE_SEGMENT_WAVES: return "Waves Only";
+        case PRACTICE_SEGMENT_BOSS: return "Boss";
+    }
+
+    return "Full Stage";
+}
+
+/// @func GamePauseInputSnapshotCreate(up, down, left, right, fire, bomb, pause)
+/// Creates the menu-oriented input consumed by the pause state machine.
+function GamePauseInputSnapshotCreate(_up = false, _down = false, _left = false, _right = false,
+    _fire = false, _bomb = false, _pause = false) {
+    return {
+        up: _up,
+        down: _down,
+        left: _left,
+        right: _right,
+        fire: _fire,
+        bomb: _bomb,
+        pause: _pause,
+    };
+}
+
+/// @func GamePauseInputSnapshotFromGlobal()
+/// Reads keyboard/controller menu edges from the unified verb state.
+function GamePauseInputSnapshotFromGlobal() {
+    return GamePauseInputSnapshotCreate(
+        GameInputVerbPressed("up"),
+        GameInputVerbPressed("down"),
+        GameInputVerbPressed("left"),
+        GameInputVerbPressed("right"),
+        GameInputVerbPressed("fire"),
+        GameInputVerbPressed("bomb"),
+        GameInputVerbPressed("pause")
+    );
+}
+
+/// @func GameMenuValueWrap(value, delta, minimum, maximum)
+/// Wraps one integer setting across both ends of its allowed range.
+function GameMenuValueWrap(_value, _delta, _minimum, _maximum) {
+    _value += _delta;
+    if (_value < _minimum) return _maximum;
+    if (_value > _maximum) return _minimum;
+    return _value;
+}
+
+/// @func GamePauseMainItemsCreate(practice)
+/// Returns pause rows, including live tuning only for practice sessions.
+function GamePauseMainItemsCreate(_practice) {
+    if (_practice) {
+        return ["Resume", "Settings", "Practice Tuning", "Quit to Main Menu"];
+    }
+
+    return ["Resume", "Settings", "Quit to Main Menu"];
+}
+
+/// @func GamePracticeLiveEntriesCreate()
+/// Returns current values exposed by the live practice tuning page.
+function GamePracticeLiveEntriesCreate() {
+    GameRuntimeGameplayEnsure();
+    return [
+        { label: "Shot Power", value: string(GamePlayerPowerGet()) + "/" + string(PLAYER_POWER_MAX) },
+        { label: "Rank", value: string(GameRankGet()) + "%" },
+        { label: "Dynamic Rank", value: GameRankDynamicEnabled() ? "On" : "Off" },
+        { label: "Lives", value: string(global.game_runtime.lives) },
+        { label: "Bombs", value: string(global.game_runtime.bombs) },
+        { label: "Cancel Meter", value: string(global.game_runtime.meter) },
+    ];
+}
+
+/// @func GamePracticeLiveAdjust(index, delta)
+/// Changes one practice value and applies it immediately to the active run.
+function GamePracticeLiveAdjust(_index, _delta) {
+    GameRuntimeGameplayEnsure();
+    var _practice = GamePracticeConfigNormalize(global.game_runtime.practice_config);
+    var _step = (_delta < 0) ? -1 : 1;
+
+    switch (_index) {
+        case 0:
+            global.game_runtime.power = GameMenuValueWrap(GamePlayerPowerGet(), _step, 0, PLAYER_POWER_MAX);
+            _practice.power = global.game_runtime.power;
+            break;
+        case 1:
+            var _rank_step_base = clamp(round(GameRankGet() / 5) * 5, RANK_MIN, RANK_MAX);
+            global.game_runtime.rank = GameMenuValueWrap(_rank_step_base, _step * 5, RANK_MIN, RANK_MAX);
+            _practice.rank = global.game_runtime.rank;
+            break;
+        case 2:
+            global.game_runtime.rank_locked = !global.game_runtime.rank_locked;
+            _practice.dynamic_rank = !global.game_runtime.rank_locked;
+            break;
+        case 3:
+            global.game_runtime.lives = GameMenuValueWrap(global.game_runtime.lives, _step, 1, PLAYER_LIFE_MAX);
+            _practice.lives = global.game_runtime.lives;
+            break;
+        case 4:
+            global.game_runtime.bombs = GameMenuValueWrap(global.game_runtime.bombs, _step, 0, PLAYER_BOMB_MAX);
+            _practice.bombs = global.game_runtime.bombs;
+            break;
+        case 5:
+            var _meter_step_base = clamp(round(global.game_runtime.meter / 100) * 100, 0, METER_MAX);
+            global.game_runtime.meter = GameMenuValueWrap(_meter_step_base, _step * 100, 0, METER_MAX);
+            global.game_runtime.is_berserk = global.game_runtime.meter >= METER_MAX;
+            _practice.meter = global.game_runtime.meter;
+            break;
+    }
+
+    _practice = GamePracticeConfigNormalize(_practice);
+    global.game_runtime.practice_config = _practice;
+    return _practice;
+}
+
+/// @func GamePauseStateStep(state, input, practice)
+/// Advances pause navigation and returns an action for the room controller.
+function GamePauseStateStep(_state, _input, _practice) {
+    var _result = { action: "none" };
+
+    if (!_state.active) {
+        if (_input.pause) {
+            _state.active = true;
+            _state.page = "main";
+            _state.main_index = 0;
+            _result.action = "open";
+        }
+        return _result;
+    }
+
+    if (_input.pause) {
+        _result.action = "close";
+        return _result;
+    }
+
+    switch (_state.page) {
+        case "main":
+            var _main_items = GamePauseMainItemsCreate(_practice);
+            if (_input.up) _state.main_index = GameTitleWrapIndex(_state.main_index, -1, array_length(_main_items));
+            if (_input.down) _state.main_index = GameTitleWrapIndex(_state.main_index, 1, array_length(_main_items));
+
+            if (_input.bomb) {
+                _result.action = "close";
+            } else if (_input.fire) {
+                var _label = _main_items[_state.main_index];
+                if (_label == "Resume") {
+                    _result.action = "close";
+                } else if (_label == "Settings") {
+                    _state.page = "options";
+                    _state.options_index = 0;
+                } else if (_label == "Practice Tuning") {
+                    _state.page = "practice";
+                    _state.practice_index = 0;
+                } else {
+                    _state.page = "quit_confirm";
+                    _state.quit_index = 0;
+                }
+            }
+            break;
+
+        case "options":
+            var _options = GameTitleConfigEntriesCreate();
+            var _options_count = array_length(_options);
+            if (_input.up) _state.options_index = GameTitleWrapIndex(_state.options_index, -1, _options_count + 1);
+            if (_input.down) _state.options_index = GameTitleWrapIndex(_state.options_index, 1, _options_count + 1);
+
+            if (_input.bomb) {
+                _state.page = "main";
+            } else if (_state.options_index < _options_count && (_input.left || _input.right || _input.fire)) {
+                var _delta = _input.left ? -1 : 1;
+                GameTitleConfigEntryAdjust(_options[_state.options_index].id, _delta);
+            } else if (_state.options_index == _options_count && _input.fire) {
+                _state.page = "main";
+            }
+            break;
+
+        case "practice":
+            var _practice_entries = GamePracticeLiveEntriesCreate();
+            var _practice_count = array_length(_practice_entries);
+            var _practice_total = _practice_count + 2;
+            if (_input.up) _state.practice_index = GameTitleWrapIndex(_state.practice_index, -1, _practice_total);
+            if (_input.down) _state.practice_index = GameTitleWrapIndex(_state.practice_index, 1, _practice_total);
+
+            if (_input.bomb) {
+                _state.page = "main";
+            } else if (_state.practice_index < _practice_count && (_input.left || _input.right || _input.fire)) {
+                GamePracticeLiveAdjust(_state.practice_index, _input.left ? -1 : 1);
+            } else if (_state.practice_index == _practice_count && _input.fire) {
+                _result.action = "restart_practice";
+            } else if (_state.practice_index == _practice_count + 1 && _input.fire) {
+                _state.page = "main";
+            }
+            break;
+
+        case "quit_confirm":
+            if (_input.left || _input.right || _input.up || _input.down) {
+                _state.quit_index = 1 - _state.quit_index;
+            }
+
+            if (_input.bomb) {
+                _state.page = "main";
+            } else if (_input.fire) {
+                if (_state.quit_index == 1) {
+                    _result.action = "quit_title";
+                } else {
+                    _state.page = "main";
+                }
+            }
+            break;
+    }
+
+    return _result;
+}
+
+/// @func GamePauseDrawRow(x, y, width, label, value, selected)
+/// Draws one textbox-styled pause row.
+function GamePauseDrawRow(_x, _y, _width, _label, _value, _selected) {
+    var _style = GameTitlePanelStyleCreate(_selected);
+    GameUiDrawOrnateFrame(_x, _y, _width, 26, _style.fill_color, _style.fill_alpha,
+        _style.border_color, _selected);
+
+    draw_set_font(fn_menu);
+    draw_set_valign(fa_middle);
+    draw_set_halign(fa_left);
+    GameUiDrawOutlinedText(_label, _x + 10, _y + 14, _style.text_color);
+
+    if (_value != "") {
+        draw_set_halign(fa_right);
+        GameUiDrawOutlinedText(_value, _x + _width - 10, _y + 14, _style.text_color);
+    }
+}
+
+/// @func GamePauseDraw(state)
+/// Draws pause, settings, practice-tuning, and quit-confirm pages over gameplay.
+function GamePauseDraw(_state) {
+    if (!_state.active) {
+        return false;
+    }
+
+    var _palette = GameUiStoryFramePaletteCreate(false);
+    draw_set_alpha(0.72);
+    draw_set_color(c_black);
+    draw_rectangle(0, 0, GAME_VIEW_WIDTH, GAME_VIEW_HEIGHT, false);
+    draw_set_alpha(1);
+    GameUiDrawOrnateFrame(126, 28, 388, 304, _palette.fill_color, 0.94,
+        _palette.border_color, false);
+
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fn_title);
+
+    switch (_state.page) {
+        case "main":
+            GameUiDrawOutlinedText("Paused", GAME_VIEW_HALF_WIDTH, 62, _palette.title_color);
+            var _items = GamePauseMainItemsCreate(GameRunIsPractice());
+            var _start_y = GameRunIsPractice() ? 96 : 108;
+            for (var i = 0; i < array_length(_items); i++) {
+                GamePauseDrawRow(184, _start_y + (i * 42), 272, _items[i], "", i == _state.main_index);
+            }
+            break;
+
+        case "options":
+            GameUiDrawOutlinedText("Settings", GAME_VIEW_HALF_WIDTH, 62, _palette.title_color);
+            var _options = GameTitleConfigEntriesCreate();
+            for (var o = 0; o < array_length(_options); o++) {
+                GamePauseDrawRow(170, 112 + (o * 46), 300, _options[o].label, _options[o].value,
+                    o == _state.options_index);
+            }
+            GamePauseDrawRow(170, 112 + (array_length(_options) * 46), 300, "Back", "",
+                _state.options_index == array_length(_options));
+            break;
+
+        case "practice":
+            GameUiDrawOutlinedText("Practice Tuning", GAME_VIEW_HALF_WIDTH, 54, _palette.title_color);
+            var _practice_entries = GamePracticeLiveEntriesCreate();
+            var _practice_start_y = 68;
+            var _practice_row_gap = 28;
+            for (var p = 0; p < array_length(_practice_entries); p++) {
+                GamePauseDrawRow(158, _practice_start_y + (p * _practice_row_gap), 324, _practice_entries[p].label,
+                    _practice_entries[p].value, p == _state.practice_index);
+            }
+            var _restart_index = array_length(_practice_entries);
+            GamePauseDrawRow(158, _practice_start_y + (_restart_index * _practice_row_gap), 324, "Restart Segment", "",
+                _state.practice_index == _restart_index);
+            GamePauseDrawRow(158, _practice_start_y + ((_restart_index + 1) * _practice_row_gap), 324, "Back", "",
+                _state.practice_index == _restart_index + 1);
+            break;
+
+        case "quit_confirm":
+            GameUiDrawOutlinedText("Return to Main Menu?", GAME_VIEW_HALF_WIDTH, 92, _palette.title_color);
+            draw_set_font(fn_dialogue_speech);
+            GameUiDrawOutlinedText("The current attempt will not be recorded as a clear.",
+                GAME_VIEW_HALF_WIDTH, 132, _palette.muted_text_color);
+            GamePauseDrawRow(206, 176, 100, "No", "", _state.quit_index == 0);
+            GamePauseDrawRow(334, 176, 100, "Yes", "", _state.quit_index == 1);
+            break;
+    }
+
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Arrows / D-pad move   Z / A confirm",
+        GAME_VIEW_HALF_WIDTH, 306, _palette.muted_text_color);
+    GameUiDrawOutlinedText("X / B back   Esc / Start resume",
+        GAME_VIEW_HALF_WIDTH, 322, _palette.muted_text_color);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+    return true;
 }
 
 /// @func GameRuntimeGameplayEnsure()
@@ -135,8 +546,24 @@ function GameRuntimeGameplayEnsure() {
         global.game_runtime.signals.continue_request = false;
     }
 
+    if (!struct_exists(global.game_runtime.signals, "paused")) {
+        global.game_runtime.signals.paused = false;
+    }
+
     if (!struct_exists(global.game_runtime, "continue_screen")) {
         global.game_runtime.continue_screen = GameContinueStateCreate();
+    }
+
+    if (!struct_exists(global.game_runtime, "pause_menu")) {
+        global.game_runtime.pause_menu = GamePauseStateCreate();
+    }
+
+    if (!struct_exists(global.game_runtime, "run_mode")) {
+        global.game_runtime.run_mode = "normal";
+    }
+
+    if (!struct_exists(global.game_runtime, "practice_config")) {
+        global.game_runtime.practice_config = GamePracticeConfigCreateDefault();
     }
 
     if (!struct_exists(global.game_runtime, "meter")) {
@@ -175,6 +602,41 @@ function GameRuntimeGameplayEnsure() {
         global.game_runtime.powerup_drop_counter = 0;
     }
 
+    if (!struct_exists(global.game_runtime, "resource_drop_charge")) {
+        global.game_runtime.resource_drop_charge = 0;
+    }
+
+    if (!struct_exists(global.game_runtime, "resource_drop_threshold")) {
+        // Avoid routing through GameCurrentStageGet() while this ensure pass is
+        // still filling fields on an older runtime struct.
+        global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(
+            clamp(global.game_runtime.current_stage, 1, STAGE_COUNT));
+    }
+
+    if (!struct_exists(global.game_runtime, "resource_drops_this_stage")) {
+        global.game_runtime.resource_drops_this_stage = 0;
+    }
+
+    if (!struct_exists(global.game_runtime, "resource_drop_counter")) {
+        global.game_runtime.resource_drop_counter = 0;
+    }
+
+    if (!struct_exists(global.game_runtime, "rank")) {
+        global.game_runtime.rank = RANK_DEFAULT;
+    }
+
+    if (!struct_exists(global.game_runtime, "rank_locked")) {
+        global.game_runtime.rank_locked = false;
+    }
+
+    if (!struct_exists(global.game_runtime, "rank_frame")) {
+        global.game_runtime.rank_frame = 0;
+    }
+
+    if (!struct_exists(global.game_runtime, "rank_defeats")) {
+        global.game_runtime.rank_defeats = 0;
+    }
+
     if (!struct_exists(global.game_runtime, "run_started_recorded")) {
         global.game_runtime.run_started_recorded = false;
     }
@@ -203,6 +665,165 @@ function GameRunShipIdGet() {
     return _ship_id;
 }
 
+/// @func GameRunIsPractice()
+/// Returns whether the active room was launched from Practice Select.
+function GameRunIsPractice() {
+    return variable_global_exists("game_runtime")
+        && struct_exists(global.game_runtime, "run_mode")
+        && global.game_runtime.run_mode == "practice";
+}
+
+/// @func GameRunStatsShouldRecord()
+/// Keeps practice sessions out of persistent run and score statistics.
+function GameRunStatsShouldRecord() {
+    return !GameRunIsPractice();
+}
+
+/// @func GameRunTransientStateClear()
+/// Clears overlays and queued story state when a run changes rooms or modes.
+function GameRunTransientStateClear() {
+    if (!GameRuntimeGameplayEnsure()) {
+        return false;
+    }
+
+    global.game_runtime.signals.dialogue = false;
+    global.game_runtime.signals.continue_request = false;
+    global.game_runtime.signals.paused = false;
+    global.game_runtime.continue_screen = GameContinueStateCreate();
+    global.game_runtime.pause_menu = GamePauseStateCreate();
+
+    if (!struct_exists(global.game_runtime, "story")) {
+        global.game_runtime.story = {};
+    }
+    global.game_runtime.story.requested_file = "";
+    global.game_runtime.story.current_file = "";
+    return true;
+}
+
+/// @func GameNormalRunRequestConfigure(ship_id, ship_index)
+/// Clears practice-only state before the normal story route begins.
+function GameNormalRunRequestConfigure(_ship_id, _ship_index) {
+    GameRunTransientStateClear();
+    global.game_runtime.run_mode = "normal";
+    global.game_runtime.selected_ship_id = (_ship_id == SHIP_SELKIE) ? SHIP_SELKIE : SHIP_SUNRISE;
+    global.game_runtime.selected_ship_index = clamp(round(_ship_index), 0, 1);
+    global.game_runtime.run_started_recorded = false;
+    return true;
+}
+
+/// @func GamePracticeRunRequestConfigure(config)
+/// Stores one sanitized, session-only practice request before entering rm_game.
+function GamePracticeRunRequestConfigure(_config) {
+    GameRunTransientStateClear();
+    var _practice = GamePracticeConfigNormalize(_config);
+
+    global.game_runtime.run_mode = "practice";
+    global.game_runtime.practice_config = _practice;
+    global.game_runtime.selected_ship_id = _practice.ship_id;
+    global.game_runtime.selected_ship_index = _practice.ship_index;
+    global.game_runtime.run_started_recorded = false;
+    return _practice;
+}
+
+/// @func GameRunAbortToTitle()
+/// Leaves an unfinished run without writing a result row or finished-run count.
+function GameRunAbortToTitle() {
+    GameRuntimeReset();
+    room_goto(rm_title);
+    return true;
+}
+
+/// @func GamePracticeReturnToTitle()
+/// Returns a completed practice attempt to its retained setup page.
+function GamePracticeReturnToTitle() {
+    GameRunTransientStateClear();
+    room_goto(rm_title);
+    return true;
+}
+
+/// @func GameRankGet()
+/// Returns the current bounded dynamic-difficulty rank as a percentage.
+function GameRankGet() {
+    GameRuntimeGameplayEnsure();
+    return clamp(round(global.game_runtime.rank), RANK_MIN, RANK_MAX);
+}
+
+/// @func GameRankSet(rank)
+/// Sets rank directly for initialization and practice tuning.
+function GameRankSet(_rank) {
+    GameRuntimeGameplayEnsure();
+    global.game_runtime.rank = clamp(round(_rank), RANK_MIN, RANK_MAX);
+    return global.game_runtime.rank;
+}
+
+/// @func GameRankDynamicEnabled()
+/// Returns whether performance events are allowed to change rank.
+function GameRankDynamicEnabled() {
+    GameRuntimeGameplayEnsure();
+    return !global.game_runtime.rank_locked;
+}
+
+/// @func GameRankEventApply(delta)
+/// Applies one bounded performance event when dynamic rank is enabled.
+function GameRankEventApply(_delta) {
+    if (!GameRankDynamicEnabled()) {
+        return GameRankGet();
+    }
+
+    return GameRankSet(GameRankGet() + _delta);
+}
+
+/// @func GameRankStep()
+/// Raises dynamic rank slowly during uninterrupted active combat time.
+function GameRankStep() {
+    GameRuntimeGameplayEnsure();
+
+    if (!GameRankDynamicEnabled() || GameGameplayIsFrozen()) {
+        return GameRankGet();
+    }
+
+    global.game_runtime.rank_frame += 1;
+    if (global.game_runtime.rank_frame >= RANK_PASSIVE_INTERVAL) {
+        global.game_runtime.rank_frame = 0;
+        GameRankEventApply(1);
+    }
+
+    return GameRankGet();
+}
+
+/// @func GameRankPressureCreate(rank)
+/// Converts rank into stable spawn, fire-cadence, and bullet-speed multipliers.
+function GameRankPressureCreate(_rank = undefined) {
+    if (_rank == undefined) {
+        _rank = GameRankGet();
+    }
+
+    var _centered = (clamp(_rank, RANK_MIN, RANK_MAX) - RANK_DEFAULT) / max(1, RANK_DEFAULT);
+    return {
+        spawn_interval_scale: 1 - (0.20 * _centered),
+        fire_interval_scale: 1 - (0.25 * _centered),
+        bullet_speed_scale: 1 + (0.15 * _centered),
+    };
+}
+
+/// @func GameRankSpawnIntervalGet(base_interval, minimum)
+/// Applies rank pressure to a stage-director interval.
+function GameRankSpawnIntervalGet(_base_interval, _minimum = 1, _rank = undefined) {
+    return max(_minimum, round(_base_interval * GameRankPressureCreate(_rank).spawn_interval_scale));
+}
+
+/// @func GameRankFireIntervalGet(base_interval, minimum)
+/// Applies rank pressure to an enemy or boss cadence.
+function GameRankFireIntervalGet(_base_interval, _minimum = 1, _rank = undefined) {
+    return max(_minimum, round(_base_interval * GameRankPressureCreate(_rank).fire_interval_scale));
+}
+
+/// @func GameRankBulletSpeedScaleGet()
+/// Returns the current enemy-bullet speed multiplier.
+function GameRankBulletSpeedScaleGet(_rank = undefined) {
+    return GameRankPressureCreate(_rank).bullet_speed_scale;
+}
+
 /// @func GameRunStartInitialize()
 /// Initializes gameplay runtime state when rm_game begins a run.
 function GameRunStartInitialize() {
@@ -210,24 +831,54 @@ function GameRunStartInitialize() {
         return false;
     }
 
+    GameRunTransientStateClear();
+    global.game_runtime.stage_count = STAGE_COUNT;
+    global.game_runtime.stage_notice_timer = STAGE_NOTICE_FRAMES;
+    global.game_runtime.stage_frame = 0;
+    global.game_runtime.stage_complete = false;
+    global.game_runtime.bomb_active = false;
+    global.game_runtime.bomb_timer = 0;
+    global.game_runtime.powerup_drop_counter = 0;
+    global.game_runtime.resource_drop_charge = 0;
+    global.game_runtime.resource_drops_this_stage = 0;
+    global.game_runtime.resource_drop_counter = 0;
+    global.game_runtime.score = 0;
+    global.game_runtime.continues_used = 0;
+    global.game_runtime.rank_frame = 0;
+    global.game_runtime.rank_defeats = 0;
+
+    if (GameRunIsPractice()) {
+        var _practice = GamePracticeConfigNormalize(global.game_runtime.practice_config);
+        global.game_runtime.practice_config = _practice;
+        global.game_runtime.selected_ship_id = _practice.ship_id;
+        global.game_runtime.selected_ship_index = _practice.ship_index;
+        global.game_runtime.current_stage = _practice.stage;
+        global.game_runtime.power = _practice.power;
+        global.game_runtime.lives = _practice.lives;
+        global.game_runtime.bombs = _practice.bombs;
+        global.game_runtime.meter = _practice.meter;
+        global.game_runtime.is_berserk = _practice.meter >= METER_MAX;
+        global.game_runtime.rank = _practice.rank;
+        global.game_runtime.rank_locked = !_practice.dynamic_rank;
+        global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(_practice.stage);
+        global.game_runtime.run_started_recorded = false;
+        return true;
+    }
+
     if (global.game_runtime.selected_ship_id == "") {
         global.game_runtime.selected_ship_id = SHIP_SUNRISE;
         global.game_runtime.selected_ship_index = 0;
     }
 
-    global.game_runtime.signals.continue_request = false;
-    global.game_runtime.continue_screen = GameContinueStateCreate();
     global.game_runtime.current_stage = 1;
-    global.game_runtime.stage_count = STAGE_COUNT;
-    global.game_runtime.stage_notice_timer = STAGE_NOTICE_FRAMES;
-    global.game_runtime.stage_frame = 0;
-    global.game_runtime.stage_complete = false;
-    global.game_runtime.meter = clamp(global.game_runtime.meter, 0, METER_MAX);
-    global.game_runtime.is_berserk = false;
-    global.game_runtime.bomb_active = false;
-    global.game_runtime.bomb_timer = 0;
     global.game_runtime.power = 0;
-    global.game_runtime.powerup_drop_counter = 0;
+    global.game_runtime.lives = DEFAULT_LIVES;
+    global.game_runtime.bombs = DEFAULT_BOMBS;
+    global.game_runtime.meter = 0;
+    global.game_runtime.is_berserk = false;
+    global.game_runtime.rank = RANK_DEFAULT;
+    global.game_runtime.rank_locked = false;
+    global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(1);
 
     if (!global.game_runtime.run_started_recorded) {
         var _ship_id = GameRunShipIdGet();
@@ -251,7 +902,9 @@ function GameGameplayIsFrozen() {
         return false;
     }
 
-    return global.game_runtime.signals.dialogue || global.game_runtime.signals.continue_request;
+    return global.game_runtime.signals.dialogue
+        || global.game_runtime.signals.continue_request
+        || global.game_runtime.signals.paused;
 }
 
 /// @func GameSceneStateCreate()
@@ -270,6 +923,49 @@ function GameSceneStateCreate() {
         boss_defeated: false,
         stage_clear_timer: 0,
     };
+}
+
+/// @func GamePracticeSceneStateApply(state)
+/// Starts a practice request at the selected full-stage, waves, or boss seam.
+function GamePracticeSceneStateApply(_state) {
+    if (!GameRunIsPractice()) {
+        return false;
+    }
+
+    var _practice = GamePracticeConfigNormalize(global.game_runtime.practice_config);
+    global.game_runtime.practice_config = _practice;
+    global.game_runtime.current_stage = _practice.stage;
+    global.game_runtime.stage_frame = 0;
+    global.game_runtime.stage_complete = false;
+
+    _state.frame = 0;
+    _state.camera_y = CAMERA_HOME_Y;
+    _state.target_x = CAMERA_HOME_X;
+    _state.scroll_speed = CAMERA_SCROLL_SPEED;
+    _state.mode = "scroll";
+    _state.boss_spawned = false;
+    _state.boss_defeated = false;
+    _state.stage_clear_timer = 0;
+
+    if (_practice.segment == PRACTICE_SEGMENT_BOSS) {
+        _state.frame = STAGE_LENGTH_FRAMES;
+        _state.camera_y = CAMERA_HOME_Y - STAGE_LENGTH_FRAMES;
+        _state.scroll_speed = 0;
+        _state.mode = "boss_intro";
+        global.game_runtime.stage_frame = STAGE_LENGTH_FRAMES;
+        global.game_runtime.stage_notice_timer = 0;
+    } else {
+        global.game_runtime.stage_notice_timer = STAGE_NOTICE_FRAMES;
+    }
+
+    return true;
+}
+
+/// @func GamePracticeWavesOnly()
+/// Returns whether the current request should stop at the boss boundary.
+function GamePracticeWavesOnly() {
+    return GameRunIsPractice()
+        && global.game_runtime.practice_config.segment == PRACTICE_SEGMENT_WAVES;
 }
 
 /// @func GameCurrentStageGet()
@@ -331,6 +1027,9 @@ function GameSceneNextStageBegin(_state) {
     global.game_runtime.current_stage = clamp(global.game_runtime.current_stage + 1, 1, STAGE_COUNT);
     global.game_runtime.stage_frame = 0;
     global.game_runtime.stage_complete = false;
+    global.game_runtime.resource_drop_charge = 0;
+    global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(global.game_runtime.current_stage);
+    global.game_runtime.resource_drops_this_stage = 0;
     GameStageNoticeRestart();
 
     _state.frame = 0;
@@ -384,6 +1083,25 @@ function GameScenePlayerClampPosition(_camera_x, _camera_y, _x, _y) {
     return {
         x: clamp(_x, _field.left, _field.right),
         y: clamp(_y, _field.top + PLAYFIELD_VERTICAL_PADDING, _field.bottom - PLAYFIELD_VERTICAL_PADDING),
+    };
+}
+
+/// @func GamePlayerMovementDeltaCreate(input)
+/// Returns one frame of player movement with diagonal input normalized.
+function GamePlayerMovementDeltaCreate(_input) {
+    var _axis_x = _input.right_down - _input.left_down;
+    var _axis_y = _input.down_down - _input.up_down;
+    var _speed = PLAYER_MOVE_SPEED * (_input.autofire_down ? PLAYER_FOCUS_SPEED_MULTIPLIER : 1);
+
+    if (_axis_x != 0 && _axis_y != 0) {
+        var _diagonal_scale = 1 / sqrt(2);
+        _axis_x *= _diagonal_scale;
+        _axis_y *= _diagonal_scale;
+    }
+
+    return {
+        x: _axis_x * _speed,
+        y: _axis_y * _speed,
     };
 }
 
@@ -658,10 +1376,11 @@ function GameStageDirectorStep(_state) {
         return 0;
     }
 
-    var _turret_interval = max(58, 132 - (_stage * 6));
-    var _bee_interval = max(72, 156 - (_stage * 5));
-    var _variant_interval = max(88, 188 - (_stage * 6));
-    var _mayfly_interval = max(210, 460 - (_stage * 18));
+    var _rank = GameRankGet();
+    var _turret_interval = GameRankSpawnIntervalGet(max(58, 132 - (_stage * 6)), 44, _rank);
+    var _bee_interval = GameRankSpawnIntervalGet(max(72, 156 - (_stage * 5)), 54, _rank);
+    var _variant_interval = GameRankSpawnIntervalGet(max(88, 188 - (_stage * 6)), 66, _rank);
+    var _mayfly_interval = GameRankSpawnIntervalGet(max(210, 460 - (_stage * 18)), 160, _rank);
 
     if ((_frame mod _turret_interval) == 0) {
         GameStageTimelineTurretSpawn(_state.target_x, _state.camera_y);
@@ -706,13 +1425,13 @@ function GameStageDirectorStep(_state) {
 
 /// @func GameStageBalanceReportCreate(stage)
 /// Estimates whether one stage stays inside no-continue clearability bounds.
-function GameStageBalanceReportCreate(_stage) {
+function GameStageBalanceReportCreate(_stage, _rank = RANK_DEFAULT) {
     _stage = clamp(_stage, 1, STAGE_COUNT);
 
-    var _turret_interval = max(58, 132 - (_stage * 6));
-    var _bee_interval = max(72, 156 - (_stage * 5));
-    var _variant_interval = max(88, 188 - (_stage * 6));
-    var _mayfly_interval = max(210, 460 - (_stage * 18));
+    var _turret_interval = GameRankSpawnIntervalGet(max(58, 132 - (_stage * 6)), 44, _rank);
+    var _bee_interval = GameRankSpawnIntervalGet(max(72, 156 - (_stage * 5)), 54, _rank);
+    var _variant_interval = GameRankSpawnIntervalGet(max(88, 188 - (_stage * 6)), 66, _rank);
+    var _mayfly_interval = GameRankSpawnIntervalGet(max(210, 460 - (_stage * 18)), 160, _rank);
     var _turret_count = 0;
     var _bee_count = 0;
     var _variant_count = 0;
@@ -737,10 +1456,13 @@ function GameStageBalanceReportCreate(_stage) {
         }
     }
 
-    var _drop_period = max(3, 8 - (_stage div 2));
     var _total_enemy_count = _turret_count + _bee_count + _variant_count + _mayfly_count;
-    var _guaranteed_drop_count = _mayfly_count + _variant_count;
-    var _estimated_powerups = (_total_enemy_count div _drop_period) + _guaranteed_drop_count;
+    var _score_drop_period = GameScorePickupDropPeriodGet(_stage);
+    var _resource_drop_threshold = GameResourceDropChargeThresholdGet(_stage);
+    var _resource_drop_limit = GameResourceDropLimitGet(_stage);
+    var _estimated_score_pickups = _total_enemy_count div _score_drop_period;
+    var _estimated_resource_pickups = min(_resource_drop_limit, _total_enemy_count div _resource_drop_threshold);
+    var _estimated_powerups = _estimated_score_pickups + _estimated_resource_pickups;
     var _max_spawn_pressure = ceil(300 / _turret_interval)
         + (ceil(300 / _bee_interval) * STAGE_BEE_WAVE_COUNT)
         + ((_stage >= 2) ? (ceil(300 / _variant_interval) * _variant_wave_size) : 0)
@@ -759,11 +1481,15 @@ function GameStageBalanceReportCreate(_stage) {
         _selkie_damage += _selkie_focus[j].damage;
     }
 
-    var _reliable_focus_damage = max(1, min(_sunrise_damage, _selkie_damage) * 0.62);
     var _boss_phase_count = GameBossPhaseCountForStage(_stage);
-    var _boss_total_hp = GameBossPhaseHpGet(_stage, _boss_phase_count) * _boss_phase_count;
+    var _boss_phase_hp = GameBossPhaseHpGet(_stage, _boss_phase_count);
+    var _boss_damage_scale = GameBossDamageScaleGet(_boss_phase_count);
+    var _reliable_focus_damage = max(1, min(_sunrise_damage, _selkie_damage) * 0.62 * _boss_damage_scale);
+    var _maximum_focus_damage = max(1, max(_sunrise_damage, _selkie_damage) * _boss_damage_scale);
+    var _boss_total_hp = _boss_phase_hp * _boss_phase_count;
     var _focus_boss_clear_frames = ceil(_boss_total_hp / _reliable_focus_damage) * SHOT_VOLLEY_INTERVAL;
-    var _no_continue_viable = _estimated_powerups > 4
+    var _fastest_phase_clear_frames = ceil(_boss_phase_hp / _maximum_focus_damage) * SHOT_VOLLEY_INTERVAL;
+    var _no_continue_viable = _estimated_score_pickups > 4
         && _max_spawn_pressure < 42
         && _focus_boss_clear_frames < (60 * 70);
 
@@ -771,8 +1497,12 @@ function GameStageBalanceReportCreate(_stage) {
         stage: _stage,
         enemy_count: _total_enemy_count,
         estimated_powerups: _estimated_powerups,
+        estimated_score_pickups: _estimated_score_pickups,
+        estimated_resource_pickups: _estimated_resource_pickups,
+        resource_drop_limit: _resource_drop_limit,
         max_spawn_pressure: _max_spawn_pressure,
         focus_boss_clear_frames: _focus_boss_clear_frames,
+        fastest_phase_clear_frames: _fastest_phase_clear_frames,
         no_continue_viable: _no_continue_viable,
     };
 }
@@ -978,7 +1708,31 @@ function GameBossPhaseHpGet(_stage, _phase_count = undefined) {
     }
 
     var _original_total_hp = (BOSS_PHASE_HP + ((_stage - 1) * BOSS_PHASE_HP_STAGE_STEP)) * BOSS_PHASE_COUNT;
-    return max(90, ceil(_original_total_hp / max(1, _phase_count)));
+    return max(BOSS_PHASE_MIN_HP, ceil(_original_total_hp / max(1, _phase_count)));
+}
+
+/// @func GameBossDamageScaleGet(phase_count)
+/// Normalizes incoming damage so expanded encounters have time to express each phase.
+function GameBossDamageScaleGet(_phase_count) {
+    _phase_count = max(1, _phase_count);
+    return clamp(BOSS_PHASE_COUNT / _phase_count, BOSS_DAMAGE_SCALE_MIN, 1);
+}
+
+/// @func GameBossDamageApply(boss, damage)
+/// Applies phase-count-normalized damage to an active boss and returns the amount dealt.
+function GameBossDamageApply(_boss, _damage) {
+    if (!instance_exists(_boss) || !variable_instance_exists(_boss, "hp")) {
+        return 0;
+    }
+
+    if (variable_instance_exists(_boss, "destruction_active") && _boss.destruction_active) {
+        return 0;
+    }
+
+    var _phase_count = variable_instance_exists(_boss, "phase_count") ? _boss.phase_count : BOSS_PHASE_COUNT;
+    var _applied_damage = max(0, _damage) * GameBossDamageScaleGet(_phase_count);
+    _boss.hp -= _applied_damage;
+    return _applied_damage;
 }
 
 /// @func GameMemoryCoreNameGet(stage)
@@ -1689,6 +2443,7 @@ function GamePlayerDeathBegin(_state) {
     _state.hit = true;
     _state.death_timer = PLAYER_DEATH_ANIMATION_FRAMES;
     global.game_runtime.lives = max(0, global.game_runtime.lives - 1);
+    GameRankEventApply(-12);
 
     return true;
 }
@@ -1737,6 +2492,7 @@ function GamePlayerBombTryStart(_state) {
     }
 
     global.game_runtime.bombs -= 1;
+    GameRankEventApply(-4);
     _state.bomb_timer = BOMB_DURATION_FRAMES;
     GamePlayerBombStateSync(_state);
     GameBulletsCancelAll(global.game_runtime.is_berserk);
@@ -1788,6 +2544,7 @@ function GamePlayerContinueAccept(_state, _camera_x, _camera_y) {
     GameRuntimeGameplayEnsure();
 
     global.game_runtime.continues_used += 1;
+    GameRankEventApply(-25);
     global.game_runtime.lives = DEFAULT_LIVES;
     global.game_runtime.bombs = DEFAULT_BOMBS;
     global.game_runtime.meter = 0;
@@ -1811,6 +2568,11 @@ function GamePlayerGameOverBegin() {
 /// @func GamePlayerGameOverFinalize()
 /// Saves the run result, resets runtime state, and returns to the title room.
 function GamePlayerGameOverFinalize() {
+    if (GameRunIsPractice()) {
+        GamePracticeReturnToTitle();
+        return;
+    }
+
     GameRunResultSave();
     GameRuntimeReset();
     room_goto(rm_title);
@@ -1842,7 +2604,14 @@ function GamePlayerSwordDamageTryApply(_target_id, _sweep_id) {
     }
 
     variable_instance_set(_target_id, "last_sword_sweep_id", _sweep_id);
-    variable_instance_set(_target_id, "hp", variable_instance_get(_target_id, "hp") - SWORD_SWEEP_DAMAGE);
+
+    if (variable_instance_exists(_target_id, "phase_count")
+        && variable_instance_exists(_target_id, "phase_max_hp")) {
+        GameBossDamageApply(_target_id, SWORD_SWEEP_DAMAGE);
+    } else {
+        variable_instance_set(_target_id, "hp", variable_instance_get(_target_id, "hp") - SWORD_SWEEP_DAMAGE);
+    }
+
     return true;
 }
 
@@ -1865,13 +2634,14 @@ function GamePlayerFireStep(_state, _input) {
 
     if (global.game_runtime.is_berserk) {
         _state.fire_hold_frames = FIRE_HOLD_FRAMES + 1;
-    } else if (_input.fire_down) {
+    } else if (_input.fire_down && !_input.autofire_down) {
         _state.fire_hold_frames += 1;
     } else {
         _state.fire_hold_frames = 0;
     }
 
-    _use_sword = global.game_runtime.is_berserk || (_input.fire_down && _state.fire_hold_frames > FIRE_HOLD_FRAMES);
+    _use_sword = global.game_runtime.is_berserk
+        || (_input.fire_down && !_input.autofire_down && _state.fire_hold_frames > FIRE_HOLD_FRAMES);
 
     if (_use_sword) {
         var _period = GamePlayerSwordPeriodFramesGet(global.game_runtime.is_berserk);
@@ -1891,7 +2661,8 @@ function GamePlayerFireStep(_state, _input) {
     _state.sweep_frame = 0;
     _state.sword_pose = GamePlayerSwordPoseCreate(0, false, _ship_id);
 
-    if (_input.fire_pressed || _input.autofire_down || _input.autofire_pressed) {
+    if ((_input.fire_down || _input.fire_pressed || _input.autofire_down || _input.autofire_pressed)
+        && _state.volley_queue <= 0) {
         _state.volley_queue = SHOT_VOLLEY_SIZE;
     }
 
@@ -1942,11 +2713,11 @@ function GameGameplayHudLayoutCreate() {
         panel_padding: 16,
         line_height: 17,
         meter_left: _playfield_right + 16,
-        meter_top: 70,
+        meter_top: 86,
         meter_width: GAME_VIEW_WIDTH - _playfield_right - 32,
         meter_height: 12,
         boss_bar_left: _playfield_right + 16,
-        boss_bar_top: 128,
+        boss_bar_top: 152,
         boss_bar_width: GAME_VIEW_WIDTH - _playfield_right - 32,
         boss_bar_height: 8,
         boss_bar_gap: 5,
@@ -1956,22 +2727,32 @@ function GameGameplayHudLayoutCreate() {
 }
 
 /// @func GameGameplayHudLinesCreate()
-/// Returns the current HUD label strings for stage, ship, stock, score, and meter.
+/// Returns the current HUD label strings for run state, ship, stock, score, rank, and meter.
 function GameGameplayHudLinesCreate() {
     GameRuntimeGameplayEnsure();
 
+    var _stage_label = "Stage: " + string(GameCurrentStageGet()) + "/" + string(STAGE_COUNT);
+    if (GameRunIsPractice()) {
+        var _practice = GamePracticeConfigNormalize(global.game_runtime.practice_config);
+        _stage_label = "Practice S" + string(GameCurrentStageGet()) + ": "
+            + GamePracticeSegmentNameGet(_practice.segment);
+    }
+
+    var _rank_label = "Rank: " + string(GameRankGet()) + " "
+        + (GameRankDynamicEnabled() ? "Dynamic" : "Fixed");
     var _meter_label = "Meter: " + string(global.game_runtime.meter) + "/" + string(METER_MAX);
     if (global.game_runtime.is_berserk) {
         _meter_label = "Meter: BERSERK " + string(global.game_runtime.meter) + "/" + string(METER_MAX);
     }
 
     return [
-        "Stage: " + string(GameCurrentStageGet()) + "/" + string(STAGE_COUNT),
+        _stage_label,
         "Ship: " + GamePlayerShipDisplayNameGet(),
         "Lives: " + string(global.game_runtime.lives),
         "Bombs: " + string(global.game_runtime.bombs),
         "Power: " + string(GamePlayerPowerGet()) + "/" + string(PLAYER_POWER_MAX),
         "Score: " + string(global.game_runtime.score),
+        _rank_label,
         _meter_label,
     ];
 }
@@ -2023,25 +2804,25 @@ function GamePowerupRewardApply(_type) {
 
     switch (_type) {
         case POWERUP_POWER:
+            var _power_before = global.game_runtime.power;
             global.game_runtime.power = min(PLAYER_POWER_MAX, global.game_runtime.power + 1);
-            global.game_runtime.score += 1000;
+            if (global.game_runtime.power > _power_before) {
+                GameRankEventApply(1);
+            }
             return true;
 
         case POWERUP_BOMB:
             global.game_runtime.bombs = min(PLAYER_BOMB_MAX, global.game_runtime.bombs + 1);
-            global.game_runtime.score += 1500;
             return true;
 
         case POWERUP_LIFE:
             global.game_runtime.lives = min(PLAYER_LIFE_MAX, global.game_runtime.lives + 1);
-            global.game_runtime.score += 2500;
             return true;
 
         case POWERUP_METER:
             if (GamePlayerMeterRewardApply(POWERUP_METER_VALUE)) {
                 GameBulletsCancelAll(true);
             }
-            global.game_runtime.score += 1200;
             return true;
     }
 
@@ -2049,32 +2830,61 @@ function GamePowerupRewardApply(_type) {
     return true;
 }
 
-/// @func GamePowerupDropTypeChoose(counter, points)
-/// Returns the type of the next deterministic enemy power-up drop.
-function GamePowerupDropTypeChoose(_counter, _points) {
-    if (_points >= 1500 && ((_counter mod 13) == 0)) {
+/// @func GameScorePickupDropPeriodGet(stage)
+/// Returns the enemy-defeat cadence for bonus-score pickups.
+function GameScorePickupDropPeriodGet(_stage) {
+    _stage = clamp(_stage, 1, STAGE_COUNT);
+    return max(6, SCORE_PICKUP_DROP_PERIOD_BASE - ((_stage - 1) div 3));
+}
+
+/// @func GameResourceDropChargeThresholdGet(stage)
+/// Returns how many point-blank defeats are required to earn one resource pickup.
+function GameResourceDropChargeThresholdGet(_stage) {
+    _stage = clamp(_stage, 1, STAGE_COUNT);
+    return max(2, RESOURCE_DROP_CHARGE_BASE - ((_stage - 1) div 4));
+}
+
+/// @func GameResourceDropLimitGet(stage)
+/// Caps conditional resource pickups so mastery does not erase stock pressure.
+function GameResourceDropLimitGet(_stage) {
+    _stage = clamp(_stage, 1, STAGE_COUNT);
+    return RESOURCE_DROP_LIMIT_BASE + ((_stage - 1) div 4);
+}
+
+/// @func GameEnemyPointBlankResourceCheck(enemy_x, enemy_y, player_x, player_y)
+/// Returns whether an enemy was defeated close enough to charge resource recovery.
+function GameEnemyPointBlankResourceCheck(_enemy_x, _enemy_y, _player_x, _player_y) {
+    return point_distance(_enemy_x, _enemy_y, _player_x, _player_y) <= POINT_BLANK_RESOURCE_RADIUS;
+}
+
+/// @func GamePowerupResourceDropTypeChoose(counter)
+/// Chooses a useful resource reward without mixing ordinary score pickups into the cycle.
+function GamePowerupResourceDropTypeChoose(_counter) {
+    if (global.game_runtime.lives < DEFAULT_LIVES) {
         return POWERUP_LIFE;
     }
 
-    switch (_counter mod 5) {
-        case 0:
-            return POWERUP_POWER;
-
-        case 1:
-            return POWERUP_METER;
-
-        case 2:
-            return POWERUP_SCORE;
-
-        case 3:
-            return POWERUP_BOMB;
+    if (global.game_runtime.bombs < DEFAULT_BOMBS) {
+        return POWERUP_BOMB;
     }
 
-    return POWERUP_POWER;
+    if (global.game_runtime.power < PLAYER_POWER_MAX) {
+        return POWERUP_POWER;
+    }
+
+    if (((_counter mod 4) == 0) && global.game_runtime.lives < PLAYER_LIFE_MAX) {
+        return POWERUP_LIFE;
+    }
+
+    if (((_counter mod 3) == 0) && global.game_runtime.bombs < PLAYER_BOMB_MAX) {
+        return POWERUP_BOMB;
+    }
+
+    return POWERUP_METER;
 }
 
 /// @func GameEnemyPowerupDropTry(x, y, points)
-/// Drops a collectible from selected defeated enemies.
+/// Drops sparse score bonuses, while point-blank defeats charge bounded resource recovery.
 function GameEnemyPowerupDropTry(_x, _y, _points) {
     GameRuntimeGameplayEnsure();
 
@@ -2082,15 +2892,42 @@ function GameEnemyPowerupDropTry(_x, _y, _points) {
 
     var _counter = global.game_runtime.powerup_drop_counter;
     var _stage = GameCurrentStageGet();
-    var _drop_period = max(3, 8 - (_stage div 2));
-    var _should_drop = (_points >= 1200) || ((_counter mod _drop_period) == 0);
+    var _resource_threshold = GameResourceDropChargeThresholdGet(_stage);
+    var _resource_limit = GameResourceDropLimitGet(_stage);
+    global.game_runtime.resource_drop_threshold = _resource_threshold;
+    var _drop_type = POWERUP_SCORE;
+    var _pickup_class = "score";
+    var _should_drop = false;
+    var _player = instance_find(obj_player, 0);
+    var _point_blank = _player != noone && !_player.player_state.hit
+        && GameEnemyPointBlankResourceCheck(_x, _y, _player.x, _player.y);
+
+    if (_point_blank && global.game_runtime.resource_drops_this_stage < _resource_limit) {
+        global.game_runtime.resource_drop_charge += 1;
+
+        if (global.game_runtime.resource_drop_charge >= _resource_threshold) {
+            global.game_runtime.resource_drop_charge = 0;
+            global.game_runtime.resource_drops_this_stage += 1;
+            global.game_runtime.resource_drop_counter += 1;
+            _drop_type = GamePowerupResourceDropTypeChoose(global.game_runtime.resource_drop_counter);
+            _pickup_class = "resource";
+            _should_drop = true;
+        }
+    } else if (global.game_runtime.resource_drops_this_stage >= _resource_limit) {
+        global.game_runtime.resource_drop_charge = 0;
+    }
+
+    if (!_should_drop && ((_counter mod GameScorePickupDropPeriodGet(_stage)) == 0)) {
+        _should_drop = true;
+    }
 
     if (!_should_drop) {
         return noone;
     }
 
     var _powerup = instance_create_layer(_x, _y, "Instances", obj_powerup);
-    _powerup.powerup_type = GamePowerupDropTypeChoose(_counter, _points);
+    _powerup.powerup_type = _drop_type;
+    _powerup.pickup_class = _pickup_class;
     _powerup.value = _points;
     return _powerup;
 }
