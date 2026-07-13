@@ -6,3 +6,5 @@ move_direction = 270;
 move_speed = 4;
 draw_radius = 4;
 collision_radius = 0;
+combat_step_blocked = false;
+rank_speed_scale = GameRankBulletSpeedScaleGet();

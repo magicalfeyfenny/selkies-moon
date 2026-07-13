@@ -81,6 +81,7 @@ function GameTitleMainItemsCreate() {
         { id: "cg_gallery", label: "CG Gallery" },
         { id: "music_room", label: "Music Room" },
         { id: "options", label: "Options" },
+        { id: "practice", label: "Practice" },
         { id: "quit", label: "Quit" }
     ];
 }
@@ -99,6 +100,9 @@ function GameTitleStateCreate() {
         gallery_index: 0,
         music_index: 0,
         music_preview_id: -1,
+        music_preview_index: -1,
+        practice_index: 0,
+        practice_config: GamePracticeConfigCreateDefault(),
         characters: GameTitleCharactersCreate(),
         gallery_items: GameTitleGalleryItemsCreate(),
         music_items: GameTitleMusicItemsCreate(),
@@ -127,7 +131,7 @@ function GameTitleInputSnapshotFromGlobal() {
         GameInputVerbPressed("down"),
         GameInputVerbPressed("left"),
         GameInputVerbPressed("right"),
-        GameInputVerbPressed("fire"),
+        GameInputVerbPressed("fire") || GameInputVerbPressed("pause"),
         GameInputVerbPressed("bomb")
     );
 }
@@ -154,7 +158,7 @@ function GameTitleWrapIndex(_index, _delta, _count) {
 /// Creates the list of editable settings shown on the options page.
 function GameTitleConfigEntriesCreate() {
     return [
-        { id: "fullscreen", label: "Fullscreen", value: string(global.game_config.fullscreen) },
+        { id: "fullscreen", label: "Fullscreen", value: global.game_config.fullscreen ? "On" : "Off" },
         { id: "display_scale", label: "Display Scale", value: string(global.game_config.display_scale) }
     ];
 }
@@ -217,39 +221,139 @@ function GameTitleConfigEntryAdjust(_entry_id, _delta) {
     return _did_change;
 }
 
+/// @func GameTitlePracticeEntriesCreate(state)
+/// Creates the complete set of editable rows shown on Practice Select.
+function GameTitlePracticeEntriesCreate(_state) {
+    _state.practice_config = GamePracticeConfigNormalize(_state.practice_config);
+    var _practice = _state.practice_config;
+    var _ship = GameTitleCharacterGet(_state, _practice.ship_index);
+
+    return [
+        { id: "ship", label: "Ship", value: _ship.name },
+        { id: "stage", label: "Stage", value: string(_practice.stage) + " / " + string(STAGE_COUNT) },
+        { id: "segment", label: "Segment", value: GamePracticeSegmentNameGet(_practice.segment) },
+        { id: "power", label: "Power", value: string(_practice.power) + " / " + string(PLAYER_POWER_MAX) },
+        { id: "rank", label: "Rank", value: string(_practice.rank) + "%" },
+        { id: "dynamic_rank", label: "Dynamic Rank", value: _practice.dynamic_rank ? "On" : "Off" },
+        { id: "lives", label: "Lives", value: string(_practice.lives) },
+        { id: "bombs", label: "Bombs", value: string(_practice.bombs) },
+        { id: "meter", label: "Meter", value: string(_practice.meter) + " / " + string(METER_MAX) },
+        { id: "start", label: "Start", value: "" },
+        { id: "back", label: "Back", value: "" },
+    ];
+}
+
+/// @func GameTitlePracticeEntryAdjust(state, entry_id, delta)
+/// Applies one wrapped left/right change to a Practice Select value.
+function GameTitlePracticeEntryAdjust(_state, _entry_id, _delta) {
+    if (_delta == 0) {
+        return false;
+    }
+
+    var _practice = GamePracticeConfigNormalize(_state.practice_config);
+    var _direction = sign(_delta);
+
+    switch (_entry_id) {
+        case "ship":
+            _practice.ship_index = GameTitleConfigValueWrap(_practice.ship_index, _direction, 0,
+                array_length(_state.characters) - 1);
+            _practice.ship_id = GameTitleCharacterGet(_state, _practice.ship_index).id;
+            break;
+
+        case "stage":
+            _practice.stage = GameTitleConfigValueWrap(_practice.stage, _direction, 1, STAGE_COUNT);
+            break;
+
+        case "segment":
+            var _segments = [PRACTICE_SEGMENT_FULL, PRACTICE_SEGMENT_WAVES, PRACTICE_SEGMENT_BOSS];
+            var _segment_index = 0;
+
+            for (var i = 0; i < array_length(_segments); i++) {
+                if (_segments[i] == _practice.segment) {
+                    _segment_index = i;
+                    break;
+                }
+            }
+
+            _segment_index = GameTitleWrapIndex(_segment_index, _direction, array_length(_segments));
+            _practice.segment = _segments[_segment_index];
+            break;
+
+        case "power":
+            _practice.power = GameTitleConfigValueWrap(_practice.power, _direction, 0, PLAYER_POWER_MAX);
+            break;
+
+        case "rank":
+            _practice.rank = GameTitleConfigValueWrap(_practice.rank, _direction * 5, RANK_MIN, RANK_MAX);
+            break;
+
+        case "dynamic_rank":
+            _practice.dynamic_rank = !_practice.dynamic_rank;
+            break;
+
+        case "lives":
+            _practice.lives = GameTitleConfigValueWrap(_practice.lives, _direction, 1, PLAYER_LIFE_MAX);
+            break;
+
+        case "bombs":
+            _practice.bombs = GameTitleConfigValueWrap(_practice.bombs, _direction, 0, PLAYER_BOMB_MAX);
+            break;
+
+        case "meter":
+            _practice.meter = GameTitleConfigValueWrap(_practice.meter, _direction * 100, 0, METER_MAX);
+            break;
+
+        default:
+            return false;
+    }
+
+    _state.practice_config = GamePracticeConfigNormalize(_practice);
+    return true;
+}
+
+/// @func GameTitlePracticeHelpGet(entry_id)
+/// Returns one concise explanation for the selected Practice Select row.
+function GameTitlePracticeHelpGet(_entry_id) {
+    switch (_entry_id) {
+        case "segment": return "Full stage, enemy waves, or the boss alone";
+        case "rank": return "Starting bullet pressure and enemy tempo";
+        case "dynamic_rank": return "Let survival and mistakes adjust rank during play";
+        case "meter": return "Start with up to a full berserk meter";
+        case "start": return "Launch this setup directly into gameplay";
+        case "back": return "Return to the main menu";
+    }
+
+    return "Left / Right or D-pad adjusts this value";
+}
+
 /// @func GameTitleMusicPreviewStop(state)
 /// Stops the currently playing music-room preview.
 function GameTitleMusicPreviewStop(_state) {
-    if (_state.music_preview_id != -1) {
-        audio_stop_sound(_state.music_preview_id);
-        _state.music_preview_id = -1;
-    }
+    GameMusicRoomPreviewStop(true);
+    _state.music_preview_id = -1;
+    _state.music_preview_index = -1;
+}
 
-    GameStageMusicSync();
+/// @func GameTitleMusicPreviewPlaySelected(state)
+/// Starts or cleanly switches to the currently selected music-room row.
+function GameTitleMusicPreviewPlaySelected(_state) {
+    var _track = _state.music_items[_state.music_index];
+    var _preview_id = GameMusicRoomPreviewStart(_track.sound_id);
+
+    _state.music_preview_id = _preview_id;
+    _state.music_preview_index = (_preview_id != -1) ? _state.music_index : -1;
+    return _preview_id != -1;
 }
 
 /// @func GameTitleMusicPreviewToggle(state)
 /// Toggles the selected music-room preview track.
 function GameTitleMusicPreviewToggle(_state) {
-    if (_state.music_preview_id != -1) {
+    if (GameMusicRoomPreviewIsActive() && _state.music_preview_index == _state.music_index) {
         GameTitleMusicPreviewStop(_state);
         return false;
     }
 
-    if (GameShouldQuitAfterTests()) {
-        return false;
-    }
-
-    GameAudioStateEnsure();
-    if (global.game_audio.current_music_id != -1) {
-        audio_stop_sound(global.game_audio.current_music_id);
-        global.game_audio.current_music_id = -1;
-        global.game_audio.stage_music_playing = false;
-    }
-
-    var _track = _state.music_items[_state.music_index];
-    _state.music_preview_id = audio_play_sound(_track.sound_id, 0, true);
-    return true;
+    return GameTitleMusicPreviewPlaySelected(_state);
 }
 
 /// @func GameTitleStateStep(state, input)
@@ -259,7 +363,8 @@ function GameTitleStateStep(_state, _input) {
         action: "none",
         room_name: "",
         character_id: "",
-        character_index: -1
+        character_index: -1,
+        practice_config: GamePracticeConfigCreateDefault(),
     };
 
     _state.flash_timer += 1;
@@ -311,6 +416,12 @@ function GameTitleStateStep(_state, _input) {
                         _state.music_index = 0;
                         break;
 
+                    case "practice":
+                        _state.page = "practice";
+                        _state.practice_index = 0;
+                        _state.practice_config = GamePracticeConfigNormalize(_state.practice_config);
+                        break;
+
                     case "quit":
                         GameTitleMusicPreviewStop(_state);
                         _result.action = "quit";
@@ -348,12 +459,21 @@ function GameTitleStateStep(_state, _input) {
             break;
 
         case "music_room":
+            var _music_was_playing = GameMusicRoomPreviewIsActive();
+            var _music_previous_index = _state.music_index;
+
             if (_input.up) {
                 _state.music_index = GameTitleWrapIndex(_state.music_index, -1, array_length(_state.music_items));
             }
 
             if (_input.down) {
                 _state.music_index = GameTitleWrapIndex(_state.music_index, 1, array_length(_state.music_items));
+            }
+
+            // Browsing while a preview is active immediately follows the cursor,
+            // so the highlighted row and audible track can never disagree.
+            if (_music_was_playing && _state.music_index != _music_previous_index) {
+                GameTitleMusicPreviewPlaySelected(_state);
             }
 
             if (_input.fire) {
@@ -393,6 +513,50 @@ function GameTitleStateStep(_state, _input) {
             }
             break;
 
+        case "practice":
+            var _practice_entries = GameTitlePracticeEntriesCreate(_state);
+            var _practice_count = array_length(_practice_entries);
+
+            if (_input.up) {
+                _state.practice_index = GameTitleWrapIndex(_state.practice_index, -1, _practice_count);
+            }
+
+            if (_input.down) {
+                _state.practice_index = GameTitleWrapIndex(_state.practice_index, 1, _practice_count);
+            }
+
+            var _practice_entry = _practice_entries[_state.practice_index];
+            if (_input.left) {
+                GameTitlePracticeEntryAdjust(_state, _practice_entry.id, -1);
+            }
+
+            if (_input.right) {
+                GameTitlePracticeEntryAdjust(_state, _practice_entry.id, 1);
+            }
+
+            if (_input.bomb) {
+                _state.page = "main";
+            } else if (_input.fire) {
+                switch (_practice_entry.id) {
+                    case "start":
+                        GameTitleMusicPreviewStop(_state);
+                        _state.practice_config = GamePracticeConfigNormalize(_state.practice_config);
+                        _result.action = "goto_practice";
+                        _result.room_name = "rm_game";
+                        _result.practice_config = _state.practice_config;
+                        break;
+
+                    case "back":
+                        _state.page = "main";
+                        break;
+
+                    case "dynamic_rank":
+                        GameTitlePracticeEntryAdjust(_state, _practice_entry.id, 1);
+                        break;
+                }
+            }
+            break;
+
         case "character_select":
             if (_input.left) {
                 _state.select_character_index = GameTitleWrapIndex(_state.select_character_index, -1, array_length(_state.characters));
@@ -422,12 +586,7 @@ function GameTitleStateStep(_state, _input) {
 /// @func GameTitleDrawFrame(x, y, width, height, border_color, fill_color, fill_alpha)
 /// Draws a framed UI panel for title menu widgets.
 function GameTitleDrawFrame(_x, _y, _w, _h, _border_color, _fill_color, _fill_alpha = 1.0) {
-    draw_set_alpha(_fill_alpha);
-    draw_set_color(_fill_color);
-    draw_rectangle(_x, _y, _x + _w, _y + _h, false);
-    draw_set_alpha(1.0);
-    draw_set_color(_border_color);
-    draw_rectangle(_x, _y, _x + _w, _y + _h, true);
+    GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color, _fill_alpha, _border_color, false);
 }
 
 /// @func GameTitleDrawSpriteFit(sprite_name, center_x, center_y, max_width, max_height, scale_cap)
@@ -523,19 +682,29 @@ function GameUiDrawOutlinedTextExt(_text, _x, _y, _sep, _width, _text_color = c_
     draw_set_alpha(1.0);
 }
 
+/// @func GameTitleDrawPageHeading(text, y, color)
+/// Draws title-page headings in the same ornate face as cutscene nameplates.
+function GameTitleDrawPageHeading(_text, _y = 42, _color = c_white) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_font(fn_title);
+    GameUiDrawOutlinedText(_text, 320, _y, _color);
+}
+
 /// @func GameTitlePanelStyleCreate(selected)
 /// Returns the shared purple panel styling used across title-menu pages.
 function GameTitlePanelStyleCreate(_selected = false) {
+    var _story_palette = GameUiStoryFramePaletteCreate(_selected);
     var _style = {
         fill_color: make_color_rgb(58, 18, 92),
-        border_color: make_color_rgb(96, 124, 180),
+        border_color: _story_palette.border_color,
         text_color: c_white,
         fill_alpha: 0.75,
     };
 
     if (_selected) {
         _style.fill_color = make_color_rgb(78, 28, 116);
-        _style.border_color = make_color_rgb(144, 236, 255);
+        _style.border_color = _story_palette.inner_border_color;
         _style.text_color = make_color_rgb(255, 255, 160);
     }
 
@@ -580,16 +749,19 @@ function GameTitleDrawLogo(_state) {
 /// Draws the press-start prompt and input hint text.
 function GameTitleDrawPrompt(_state) {
     var _prompt_alpha = (((_state.flash_timer div 20) mod 2) == 0) ? 1.0 : 0.42;
+    var _palette = GameUiStoryFramePaletteCreate(false);
+
+    GameUiDrawOrnateFrame(242, 162, 382, 82, _palette.fill_color, 0.58, _palette.border_color, false);
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Press Z to start", 452, 188, c_white, c_black, _prompt_alpha);
+    GameUiDrawOutlinedText("Press Z / A / Start", 433, 188, c_white, c_black, _prompt_alpha);
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Arrows move   Z fire   X bomb/back", 452, 222, make_color_rgb(140, 210, 255));
+    GameUiDrawOutlinedText("Arrows/D-pad move  Z/A shot  C/X focus  X/B bomb", 433, 222, make_color_rgb(140, 210, 255));
 }
 
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
@@ -607,24 +779,22 @@ function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
 /// @func GameTitleDrawMainMenu(state)
 /// Draws the main title menu page.
 function GameTitleDrawMainMenu(_state) {
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Main Menu", 320, 44, c_white);
+    GameTitleDrawPageHeading("Main Menu", 44);
 
     var _item_count = array_length(_state.main_items);
     for (var i = 0; i < _item_count; i++) {
-        GameTitleDrawMenuItem(210, 112 + (i * 36), _state.main_items[i].label, i == _state.main_index);
+        GameTitleDrawMenuItem(210, 78 + (i * 34), _state.main_items[i].label, i == _state.main_index);
     }
+
+    draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Arrows / D-pad select   Z / A / Start confirm", 320, 330, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawOptionsPage(state)
 /// Draws the options page and highlights the active setting row.
 function GameTitleDrawOptionsPage(_state) {
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Options", 320, 44, c_white);
+    GameTitleDrawPageHeading("Options", 44);
 
     var _entries = GameTitleConfigEntriesCreate();
     var _entry_count = array_length(_entries);
@@ -642,8 +812,49 @@ function GameTitleDrawOptionsPage(_state) {
     }
 
     draw_set_halign(fa_center);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Up/Down select  Left/Right change  X back", 320, 322, make_color_rgb(160, 188, 220));
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("Arrows / D-pad adjust   X / B back", 320, 322, make_color_rgb(160, 188, 220));
+}
+
+/// @func GameTitleDrawPracticePage(state)
+/// Draws the scrolling Practice Select setup and its live variable values.
+function GameTitleDrawPracticePage(_state) {
+    var _entries = GameTitlePracticeEntriesCreate(_state);
+    var _entry_count = array_length(_entries);
+    var _visible_count = min(7, _entry_count);
+    var _first_entry = clamp(_state.practice_index - 3, 0, max(0, _entry_count - _visible_count));
+
+    GameTitleDrawPageHeading("Practice Select", 34);
+    draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText(string(_state.practice_index + 1) + " / " + string(_entry_count),
+        320, 54, make_color_rgb(160, 188, 220));
+
+    for (var i = 0; i < _visible_count; i++) {
+        var _entry_index = _first_entry + i;
+        var _entry = _entries[_entry_index];
+        var _style = GameTitlePanelStyleCreate(_entry_index == _state.practice_index);
+        var _row_top = 68 + (i * 30);
+
+        GameTitleDrawFrame(128, _row_top, 384, 26, _style.border_color, _style.fill_color, _style.fill_alpha);
+        draw_set_font(fn_menu);
+
+        if (_entry.id == "start" || _entry.id == "back") {
+            draw_set_halign(fa_center);
+            GameUiDrawOutlinedText(_entry.label, 320, _row_top + 14, _style.text_color);
+        } else {
+            draw_set_halign(fa_left);
+            GameUiDrawOutlinedText(_entry.label, 142, _row_top + 14, _style.text_color);
+            draw_set_halign(fa_right);
+            GameUiDrawOutlinedText(_entry.value, 498, _row_top + 14, _style.text_color);
+        }
+    }
+
+    var _selected_entry = _entries[_state.practice_index];
+    draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText(GameTitlePracticeHelpGet(_selected_entry.id), 320, 294, make_color_rgb(190, 214, 234));
+    GameUiDrawOutlinedText("D-pad adjust   Z / A choose   X / B back", 320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawScoresPage(state)
@@ -653,10 +864,8 @@ function GameTitleDrawScoresPage(_state) {
     var _scores = GameTitleScoresGet(_character.id);
     var _score_count = array_length(_scores);
 
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Scores", 320, 36, c_white);
+    GameTitleDrawPageHeading("Scores", 36);
+    draw_set_font(fn_dialogue_name);
     GameUiDrawOutlinedText(_character.name, 320, 60, _character.accent_color);
 
     for (var i = 0; i < _score_count; i++) {
@@ -674,7 +883,7 @@ function GameTitleDrawScoresPage(_state) {
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Left/Right change ship   X back", 320, 326, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Left/Right or D-pad change ship   X / B back", 320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawGalleryPage(state)
@@ -683,28 +892,23 @@ function GameTitleDrawGalleryPage(_state) {
     var _item = _state.gallery_items[_state.gallery_index];
     var _style = GameTitlePanelStyleCreate(false);
 
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
+    GameTitleDrawPageHeading("CG Gallery", 36);
     draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("CG Gallery", 320, 36, c_white);
     GameUiDrawOutlinedText(string(_state.gallery_index + 1) + "/" + string(array_length(_state.gallery_items)), 320, 58, make_color_rgb(160, 188, 220));
 
-    GameTitleDrawFrame(104, 76, 432, 182, _style.border_color, _style.fill_color, 0.52);
+    GameTitleDrawFrame(128, 76, 384, 182, _style.border_color, _style.fill_color, 0.52);
     GameTitleDrawSpriteFit(_item.sprite, 320, 164, 340, 138, 1.0);
 
     GameUiDrawOutlinedText(_item.name, 320, 282, c_white);
     draw_set_font(fn_dialogue_speech);
     GameUiDrawOutlinedText(_item.caption, 320, 304, make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText("Left/Right browse   X back", 320, 332, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Left/Right or D-pad browse   X / B back", 320, 332, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawMusicRoomPage(state)
 /// Draws the music room page and playback state.
 function GameTitleDrawMusicRoomPage(_state) {
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Music Room", 320, 42, c_white);
+    GameTitleDrawPageHeading("Music Room", 42);
 
     var _track_count = array_length(_state.music_items);
     var _visible_count = min(5, _track_count);
@@ -714,20 +918,34 @@ function GameTitleDrawMusicRoomPage(_state) {
         var _track_index = _first_track + i;
         var _track = _state.music_items[_track_index];
         var _style = GameTitlePanelStyleCreate(_track_index == _state.music_index);
+        var _is_playing = GameMusicRoomPreviewIsActive() && _state.music_preview_index == _track_index;
 
-        GameTitleDrawFrame(128, 88 + (i * 38), 384, 30, _style.border_color, _style.fill_color, _style.fill_alpha);
+        var _row_top = 70 + (i * 42);
+        GameTitleDrawFrame(128, _row_top, 384, 38, _style.border_color, _style.fill_color, _style.fill_alpha);
         draw_set_halign(fa_left);
         draw_set_font(fn_menu);
-        GameUiDrawOutlinedText(_track.name, 142, 100 + (i * 38), _style.text_color);
+        GameUiDrawOutlinedText(_track.name, 142, _row_top + 12, _style.text_color);
         draw_set_font(fn_dialogue_speech);
-        GameUiDrawOutlinedText(_track.subtitle, 142, 114 + (i * 38), make_color_rgb(180, 204, 224));
+        GameUiDrawOutlinedText(_track.subtitle, 142, _row_top + 29, make_color_rgb(180, 204, 224));
+
+        if (_is_playing) {
+            draw_set_halign(fa_right);
+            GameUiDrawOutlinedText("PLAY", 498, _row_top + 12, make_color_rgb(255, 230, 164));
+        }
     }
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    var _status = (_state.music_preview_id != -1) ? "Playing" : "Stopped";
-    GameUiDrawOutlinedText(_status, 320, 290, (_state.music_preview_id != -1) ? c_yellow : make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText("Z play/stop   X back", 320, 326, make_color_rgb(160, 188, 220));
+    var _preview_active = GameMusicRoomPreviewIsActive() && _state.music_preview_index >= 0;
+    var _status = "Stopped";
+
+    if (_preview_active) {
+        _status = "Playing: " + _state.music_items[_state.music_preview_index].name;
+    }
+
+    GameUiDrawOutlinedText(_status, 320, 296, _preview_active ? c_yellow : make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText(_preview_active ? "D-pad switch   Z / A stop   X / B back" : "D-pad select   Z / A play   X / B back",
+        320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawCharacterSelectPage(state)
@@ -737,11 +955,10 @@ function GameTitleDrawCharacterSelectPage(_state) {
     var _line_count = array_length(_character.description_lines);
     var _description_start_y = 178;
 
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Character Select", 320, 36, c_white);
+    GameTitleDrawPageHeading("Character Select", 36);
+    draw_set_font(fn_dialogue_name);
     GameUiDrawOutlinedText(_character.name, 320, 62, _character.accent_color);
+    draw_set_font(fn_dialogue_speech);
     GameUiDrawOutlinedText(_character.subtitle, 320, 84, make_color_rgb(180, 204, 224));
 
     var _panel_style = GameTitlePanelStyleCreate(false);
@@ -772,13 +989,19 @@ function GameTitleDrawCharacterSelectPage(_state) {
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Z begin   Left/Right switch   X back", 320, 326, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Z / A begin   D-pad switch   X / B back", 320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDraw(state)
 /// Draws the current title screen page for the active state.
 function GameTitleDraw(_state) {
     GameTitleDrawBackground(_state);
+
+    if (_state.phase != "press_start") {
+        var _palette = GameUiStoryFramePaletteCreate(false);
+        GameUiDrawOrnateFrame(18, 18, 604, 326, _palette.fill_color, 0.30, _palette.border_color, false);
+    }
+
     GameTitleDrawLogo(_state);
 
     if (_state.phase == "press_start") {
@@ -793,6 +1016,10 @@ function GameTitleDraw(_state) {
 
         case "options":
             GameTitleDrawOptionsPage(_state);
+            break;
+
+        case "practice":
+            GameTitleDrawPracticePage(_state);
             break;
 
         case "scores":
