@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+# Build an isolated project copy and run the GMTL suite with retries for the
+# GameMaker asset compiler's intermittent macOS access violations.
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname "$0")" && pwd)

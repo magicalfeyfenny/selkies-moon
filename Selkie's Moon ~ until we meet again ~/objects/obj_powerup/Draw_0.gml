@@ -1,3 +1,4 @@
+// Distinguish guaranteed score drops from earned resource drops by silhouette.
 var _color = GamePowerupColorGet(powerup_type);
 var _radius = 9 + (dsin(pulse) * 1.5);
 var _is_resource = pickup_class == "resource";

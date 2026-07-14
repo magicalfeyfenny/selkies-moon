@@ -1,3 +1,5 @@
+// Music ownership, room routing, and semantic sound-effect entry points.
+
 /// @func GameAudioStateEnsure()
 /// Ensures the shared audio state exists before music sync logic runs.
 function GameAudioStateEnsure() {
@@ -12,29 +14,14 @@ function GameAudioStateEnsure() {
         };
     }
 
-    if (!struct_exists(global.game_audio, "stage_music_playing")) {
-        global.game_audio.stage_music_playing = false;
-    }
-
-    if (!struct_exists(global.game_audio, "current_music_id")) {
-        global.game_audio.current_music_id = global.game_audio.stage_music_playing ? snd_stage_music : -1;
-    }
-
-    if (!struct_exists(global.game_audio, "music_owner")) {
-        global.game_audio.music_owner = "room";
-    }
-
-    if (!struct_exists(global.game_audio, "music_preview_instance_id")) {
-        global.game_audio.music_preview_instance_id = -1;
-    }
-
-    if (!struct_exists(global.game_audio, "music_preview_sound_id")) {
-        global.game_audio.music_preview_sound_id = -1;
-    }
-
-    if (!struct_exists(global.game_audio, "enemy_fire_cycle")) {
-        global.game_audio.enemy_fire_cycle = 0;
-    }
+    // Keep compatibility with audio state created by an older persistent bootstrap.
+    GameStructFieldEnsure(global.game_audio, "stage_music_playing", false);
+    GameStructFieldEnsure(global.game_audio, "current_music_id",
+        global.game_audio.stage_music_playing ? snd_stage_music : -1);
+    GameStructFieldEnsure(global.game_audio, "music_owner", "room");
+    GameStructFieldEnsure(global.game_audio, "music_preview_instance_id", -1);
+    GameStructFieldEnsure(global.game_audio, "music_preview_sound_id", -1);
+    GameStructFieldEnsure(global.game_audio, "enemy_fire_cycle", 0);
 
     return true;
 }
@@ -139,12 +126,6 @@ function GameMusicForRoomGet(_room_id) {
     }
 
     return -1;
-}
-
-/// @func GameRunMusicShouldPlay(room_id)
-/// Returns whether the stage loop should be active in the given room.
-function GameRunMusicShouldPlay(_room_id) {
-    return GameMusicForRoomGet(_room_id) != -1;
 }
 
 /// @func GameStageMusicSync()

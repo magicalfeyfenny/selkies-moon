@@ -112,6 +112,36 @@ if (_boss != noone) {
     }
 }
 
+// Introduce each attack over the playfield for its first two active seconds.
+if (_boss != noone && !GameGameplayIsFrozen()
+    && variable_instance_exists(_boss, "boss_identity")
+    && is_struct(_boss.boss_identity)
+    && is_array(_boss.boss_identity.phase_plan)
+    && array_length(_boss.boss_identity.phase_plan) > 0
+    && (!variable_instance_exists(_boss, "destruction_active") || !_boss.destruction_active)) {
+    var _notice_plan = _boss.boss_identity.phase_plan;
+    var _notice_index = floor(clamp(_boss.phase_index, 0, array_length(_notice_plan) - 1));
+    var _notice_phase = _notice_plan[_notice_index];
+    var _notice_alpha = GameBossPhaseNoticeAlphaGet(_boss.phase_timer);
+
+    if (_notice_alpha > 0) {
+        var _notice_name = GameBossPhaseDisplayNameGet(_notice_phase);
+        var _notice_color = GameBossPhaseColorGet(_notice_phase.attack_theme);
+        var _notice_left = _layout.playfield_left + 34;
+        var _notice_width = (_layout.playfield_right - _layout.playfield_left) - 68;
+
+        draw_set_halign(fa_center);
+        draw_set_valign(fa_middle);
+        GameUiDrawOrnateFrame(_notice_left, 16, _notice_width, 38,
+            _story_palette.fill_color, 0.76, _notice_color, false, _notice_alpha);
+        draw_set_font(fn_dialogue_name);
+        GameUiDrawOutlinedText(
+            _notice_name, GAME_VIEW_HALF_WIDTH, 35, _notice_color, c_black, _notice_alpha);
+        draw_set_halign(fa_left);
+        draw_set_valign(fa_top);
+    }
+}
+
 var _scene = instance_find(obj_scene_manager, 0);
 if (global.game_runtime.stage_notice_timer > 0) {
     var _alpha = clamp(global.game_runtime.stage_notice_timer / STAGE_NOTICE_FRAMES, 0, 1);

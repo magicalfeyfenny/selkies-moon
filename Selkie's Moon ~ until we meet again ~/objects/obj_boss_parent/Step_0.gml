@@ -38,10 +38,6 @@ if (phase_index < (phase_count - 1)) {
     hp = phase_max_hp;
     phase_timer = 0;
 
-    if (variable_instance_exists(id, "pattern_timer")) {
-        pattern_timer = 0;
-    }
-
     if (variable_instance_exists(id, "pattern_clockwise_first")) {
         pattern_clockwise_first = true;
     }

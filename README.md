@@ -73,6 +73,27 @@ Generally the best scoring strategy is to use bombs when a lot of bullets are on
 Download GameMaker from https://gamemaker.io/en/download and install it.  
 Open the .yyp file and run by pressing F5 or clicking the play button in the top toolbar.
 
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md): runtime ownership, modules, object inheritance, and extension rules.
+- [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and timeline generation.
+- [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md): input, stage flow, rank, weapons, enemies, bosses, pickups, pause, and story flow.
+- [Data formats](docs/DATA_FORMATS.md): story JSON, persistence schemas, boss phase descriptors, and practice requests.
+
+All project-owned GML functions also carry `/// @func` API comments beside their implementation.
+
+Boss encounters demonstrate their complete seed set, then complete variant sets, and finish with a unique non-repeated signature attack. See [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md#bosses) for the 5/7/9/16-phase progression.
+
+### Tests
+
+Run the complete GMTL suite from the repository root:
+
+~~~zsh
+GMTL_TEST_ATTEMPTS=8 ./tools/run_gmtl_tests.zsh
+~~~
+
+The retry count accounts for intermittent GameMaker asset-compiler crashes. A valid run must reach the complete GMTL summary with every test passing.
+
 ## Credits
 GameMaker, IDE v2024.14.4.222, runtime v2024.14.4.268  
 GPT 5.4 on Codex v26.406.31014  

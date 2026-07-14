@@ -1,3 +1,4 @@
+// Scroll until input, content completion, or the safety timeout returns to title.
 credits_timer += 1;
 credits_scroll_y -= 0.42;
 

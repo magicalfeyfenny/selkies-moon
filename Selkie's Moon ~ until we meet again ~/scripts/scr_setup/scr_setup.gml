@@ -1,10 +1,21 @@
-//increment config and save versions when needed
+// Boot, persistence, migration, display configuration, and runtime defaults.
+// Increment these schema versions only when persisted or runtime data changes shape.
 #macro CONFIG_VERSION 3
 #macro SAVE_VERSION 2
 #macro RUNTIME_VERSION 7
 
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
+
+/// @func GameStructFieldEnsure(target, field_name, default_value)
+/// Adds a missing struct field and returns the stored value.
+function GameStructFieldEnsure(_target, _field_name, _default_value) {
+    if (!struct_exists(_target, _field_name)) {
+        _target[$ _field_name] = _default_value;
+    }
+
+    return _target[$ _field_name];
+}
 
 /// @func GameConfigCreateDefault()
 /// Creates the default configuration struct for a fresh boot.
@@ -490,44 +501,19 @@ function GameSaveShipEntriesEnsure(_ship_id) {
 
     global.game_save.version = SAVE_VERSION;
 
-    if (!struct_exists(global.game_save, "high_score") || !is_struct(global.game_save.high_score)) {
-        global.game_save.high_score = {};
-    }
+    // All four statistics share the same per-ship, ten-entry table schema.
+    var _table_names = ["high_score", "runs_started", "runs_finished", "continues_used"];
 
-    if (!struct_exists(global.game_save, "runs_started") || !is_struct(global.game_save.runs_started)) {
-        global.game_save.runs_started = {};
-    }
+    for (var i = 0; i < array_length(_table_names); i++) {
+        var _table_name = _table_names[i];
 
-    if (!struct_exists(global.game_save, "runs_finished") || !is_struct(global.game_save.runs_finished)) {
-        global.game_save.runs_finished = {};
-    }
+        if (!struct_exists(global.game_save, _table_name) || !is_struct(global.game_save[$ _table_name])) {
+            global.game_save[$ _table_name] = {};
+        }
 
-    if (!struct_exists(global.game_save, "continues_used") || !is_struct(global.game_save.continues_used)) {
-        global.game_save.continues_used = {};
-    }
-
-    if (!struct_exists(global.game_save.high_score, _ship_id)) {
-        global.game_save.high_score[$ _ship_id] = array_create(10, 0);
-    } else {
-        global.game_save.high_score[$ _ship_id] = GameSaveValueArrayNormalize(global.game_save.high_score[$ _ship_id]);
-    }
-
-    if (!struct_exists(global.game_save.runs_started, _ship_id)) {
-        global.game_save.runs_started[$ _ship_id] = array_create(10, 0);
-    } else {
-        global.game_save.runs_started[$ _ship_id] = GameSaveValueArrayNormalize(global.game_save.runs_started[$ _ship_id]);
-    }
-
-    if (!struct_exists(global.game_save.runs_finished, _ship_id)) {
-        global.game_save.runs_finished[$ _ship_id] = array_create(10, 0);
-    } else {
-        global.game_save.runs_finished[$ _ship_id] = GameSaveValueArrayNormalize(global.game_save.runs_finished[$ _ship_id]);
-    }
-
-    if (!struct_exists(global.game_save.continues_used, _ship_id)) {
-        global.game_save.continues_used[$ _ship_id] = array_create(10, 0);
-    } else {
-        global.game_save.continues_used[$ _ship_id] = GameSaveValueArrayNormalize(global.game_save.continues_used[$ _ship_id]);
+        var _table = global.game_save[$ _table_name];
+        var _stored_values = struct_exists(_table, _ship_id) ? _table[$ _ship_id] : [];
+        _table[$ _ship_id] = GameSaveValueArrayNormalize(_stored_values);
     }
 }
 
@@ -579,12 +565,6 @@ function GameValueArrayInsertDescendingIndex(_values, _value) {
     }
 
     return -1;
-}
-
-/// @func GameValueArrayInsertDescending(values, value)
-/// Returns a fixed-length array with a value inserted into descending order.
-function GameValueArrayInsertDescending(_values, _value) {
-    return GameValueArrayInsertAt(_values, GameValueArrayInsertDescendingIndex(_values, _value), _value);
 }
 
 /// @func GameRunResultSave()
