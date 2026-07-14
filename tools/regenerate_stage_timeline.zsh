@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+# Regenerate the mechanical timeline moments from STAGE_LENGTH_FRAMES.
+# Run from any directory; the script discovers the project relative to itself.
 set -euo pipefail
 
 project_root="$(cd "$(dirname "$0")/.." && pwd)"

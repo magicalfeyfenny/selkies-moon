@@ -10,6 +10,8 @@ function GameStoryFrameCreate(_name = "", _text = "", _portraits = [], _position
     };
 }
 
+// Story JSON loading, dialogue state transitions, and shared ornate UI drawing.
+
 /// @func GameStoryStateCreate()
 /// Creates the local state container used by obj_UI_story.
 function GameStoryStateCreate() {
@@ -236,6 +238,23 @@ function GameFinalBossStoryFileGet() {
     }
 
     return "boss_intro_story.json";
+}
+
+/// @func GameCharacterBossStoryFileGet(stage, after_defeat, ship_id)
+/// Returns a character boss's route-specific story seam, or an empty string.
+function GameCharacterBossStoryFileGet(_stage, _after_defeat = false, _ship_id = undefined) {
+    var _character_boss = GameCharacterBossInfoCreate(_stage);
+    if (!is_struct(_character_boss)) {
+        return "";
+    }
+
+    if (_ship_id == undefined) {
+        _ship_id = GameRunShipIdGet();
+    }
+
+    var _route = (_ship_id == SHIP_SELKIE) ? "selkie_route" : "moon_route";
+    var _seam = _after_defeat ? "defeat" : "intro";
+    return _character_boss.story_id + "_" + _seam + "_story_" + _route + ".json";
 }
 
 /// @func GameEndingStoryFileGet()

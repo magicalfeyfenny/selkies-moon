@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Shalmii",
+    "text": "Stand-down acknowledged. Your force did not erase your restraint.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Moon",
+    "text": "I never wanted to hurt you.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Shalmii",
+    "text": "Intent is not discipline. You adjusted when the line broke. That is discipline.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "Will you let me pass?",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Shalmii",
+    "text": "Yes. Meet Selkie as a person, not an objective. No victory holds otherwise.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "Understood.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  }
+]

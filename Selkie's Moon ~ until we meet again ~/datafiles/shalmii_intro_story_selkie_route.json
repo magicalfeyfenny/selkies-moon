@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Shalmii",
+    "text": "Selkie. Moonwake command marks your pursuit as an uncontrolled advance.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then your report is outdated. I know exactly why I am here.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_selkie_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Shalmii",
+    "text": "To rescue Moon, or to avoid admitting that she may refuse you?",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_selkie_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "To stand where she can refuse me and still know I stayed.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_selkie_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Shalmii",
+    "text": "Acceptable words. I require proof under pressure.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_selkie_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Selkie",
+    "text": "Raise the hammer, Shalmii.",
+    "backgrounds": [],
+    "portraits": ["spr_shalmii_portrait", "spr_selkie_portrait"],
+    "positions": ["left", "right"]
+  }
+]
