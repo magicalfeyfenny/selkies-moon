@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Mira",
+    "text": "There it is. The one card I could not account for.",
+    "backgrounds": [],
+    "portraits": ["spr_mira_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Moon",
+    "text": "You mistook resolve for luck.",
+    "backgrounds": [],
+    "portraits": ["spr_mira_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Mira",
+    "text": "No. I mistook your fear for the whole hand.",
+    "backgrounds": [],
+    "portraits": ["spr_mira_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "And now?",
+    "backgrounds": [],
+    "portraits": ["spr_mira_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Mira",
+    "text": "Now I know you can lose certainty without losing yourself. Do that when you reach Selkie.",
+    "backgrounds": [],
+    "portraits": ["spr_mira_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "I will.",
+    "backgrounds": [],
+    "portraits": ["spr_mira_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  }
+]

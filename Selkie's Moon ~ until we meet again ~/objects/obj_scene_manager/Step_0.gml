@@ -25,6 +25,11 @@ if (GamePlayerBerserkDrainStep()) {
 
 GameStageNoticeStep();
 
+// A character-boss outro holds the scene here until its queued dialogue closes.
+if (scene_state.mode == "boss_outro") {
+    GameSceneStageClearBegin(scene_state);
+}
+
 if (scene_state.mode == "stage_clear") {
     if (scene_state.stage_clear_timer > 0) {
         scene_state.stage_clear_timer -= 1;
@@ -71,12 +76,15 @@ if (_scene_action == "boss_intro") {
     GameSceneCombatClear();
 
     if (GamePracticeWavesOnly()) {
-        scene_state.mode = "stage_clear";
-        scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
-        global.game_runtime.stage_complete = true;
-        GameStageClearSoundPlay();
-    } else if (GameStageIsFinal() && !GameRunIsPractice()) {
-        GameStoryQueueRequest(GameFinalBossStoryFileGet());
+        GameSceneStageClearBegin(scene_state);
+    } else if (!GameRunIsPractice()) {
+        var _character_intro_file = GameCharacterBossStoryFileGet(GameCurrentStageGet(), false);
+
+        if (_character_intro_file != "") {
+            GameStoryQueueRequest(_character_intro_file);
+        } else if (GameStageIsFinal()) {
+            GameStoryQueueRequest(GameFinalBossStoryFileGet());
+        }
     }
 }
 
@@ -90,11 +98,18 @@ if (scene_state.mode == "boss_intro" && !global.game_runtime.signals.dialogue &&
 
 if (scene_state.boss_defeated) {
     scene_state.boss_defeated = false;
-    scene_state.mode = "stage_clear";
-    scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
     GameRankEventApply(2);
-    GameStageClearSoundPlay();
     GameSceneCombatClear();
+
+    var _character_outro_file = GameRunIsPractice()
+        ? ""
+        : GameCharacterBossStoryFileGet(GameCurrentStageGet(), true);
+
+    if (_character_outro_file != "" && GameStoryQueueRequest(_character_outro_file)) {
+        scene_state.mode = "boss_outro";
+    } else {
+        GameSceneStageClearBegin(scene_state);
+    }
 }
 
 if (instance_exists(camera_id)) {

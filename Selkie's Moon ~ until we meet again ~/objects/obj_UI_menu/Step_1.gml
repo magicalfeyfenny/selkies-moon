@@ -1,3 +1,4 @@
+// Advance pause navigation after normal gameplay Steps have read the freeze signal.
 GameRuntimeGameplayEnsure();
 
 // Dialogue and Continue already own confirm/cancel, so they cannot open pause.

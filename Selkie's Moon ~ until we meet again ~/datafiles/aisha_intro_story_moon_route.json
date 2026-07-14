@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Aisha",
+    "text": "Moon. Mira said you would keep moving after the table turned against you.",
+    "backgrounds": [],
+    "portraits": ["spr_aisha_portrait"],
+    "positions": ["center"]
+  },
+  {
+    "name": "Moon",
+    "text": "Then you know why I cannot stop.",
+    "backgrounds": [],
+    "portraits": ["spr_aisha_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Aisha",
+    "text": "Desire can point like a blade. It cuts whoever mistakes wanting for truth.",
+    "backgrounds": [],
+    "portraits": ["spr_aisha_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "I want Selkie safe.",
+    "backgrounds": [],
+    "portraits": ["spr_aisha_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Aisha",
+    "text": "Order binds the outcome. Chaos abandons it. Show me the path between them.",
+    "backgrounds": [],
+    "portraits": ["spr_aisha_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  },
+  {
+    "name": "Moon",
+    "text": "Draw the Blade of Desires. I will.",
+    "backgrounds": [],
+    "portraits": ["spr_aisha_portrait", "spr_moon_portrait"],
+    "positions": ["left", "right"]
+  }
+]

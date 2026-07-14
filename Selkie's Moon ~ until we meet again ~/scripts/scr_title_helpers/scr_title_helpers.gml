@@ -1,3 +1,5 @@
+// Title-page state, menu actions, character metadata, and title rendering.
+
 /// @func GameTitleCharactersCreate()
 /// Creates the selectable character roster shown on the title screen.
 function GameTitleCharactersCreate() {
@@ -136,24 +138,6 @@ function GameTitleInputSnapshotFromGlobal() {
     );
 }
 
-/// @func GameTitleWrapIndex(index, delta, count)
-/// Wraps a menu index forward or backward within a fixed item count.
-function GameTitleWrapIndex(_index, _delta, _count) {
-    if (_count <= 0) {
-        return 0;
-    }
-
-    _index += _delta;
-
-    if (_index < 0) {
-        _index = _count - 1;
-    } else if (_index >= _count) {
-        _index = 0;
-    }
-
-    return _index;
-}
-
 /// @func GameTitleConfigEntriesCreate()
 /// Creates the list of editable settings shown on the options page.
 function GameTitleConfigEntriesCreate() {
@@ -275,7 +259,7 @@ function GameTitlePracticeEntryAdjust(_state, _entry_id, _delta) {
                 }
             }
 
-            _segment_index = GameTitleWrapIndex(_segment_index, _direction, array_length(_segments));
+            _segment_index = GameMenuIndexWrap(_segment_index, _direction, array_length(_segments));
             _practice.segment = _segments[_segment_index];
             break;
 
@@ -381,13 +365,8 @@ function GameTitleStateStep(_state, _input) {
 
     switch (_state.page) {
         case "main":
-            if (_input.up) {
-                _state.main_index = GameTitleWrapIndex(_state.main_index, -1, array_length(_state.main_items));
-            }
-
-            if (_input.down) {
-                _state.main_index = GameTitleWrapIndex(_state.main_index, 1, array_length(_state.main_items));
-            }
+            _state.main_index = GameMenuIndexStep(
+                _state.main_index, _input.up, _input.down, array_length(_state.main_items));
 
             if (_input.fire) {
                 var _item = _state.main_items[_state.main_index];
@@ -431,13 +410,8 @@ function GameTitleStateStep(_state, _input) {
             break;
 
         case "scores":
-            if (_input.left) {
-                _state.score_character_index = GameTitleWrapIndex(_state.score_character_index, -1, array_length(_state.characters));
-            }
-
-            if (_input.right) {
-                _state.score_character_index = GameTitleWrapIndex(_state.score_character_index, 1, array_length(_state.characters));
-            }
+            _state.score_character_index = GameMenuIndexStep(
+                _state.score_character_index, _input.left, _input.right, array_length(_state.characters));
 
             if (_input.bomb) {
                 _state.page = "main";
@@ -445,13 +419,8 @@ function GameTitleStateStep(_state, _input) {
             break;
 
         case "cg_gallery":
-            if (_input.left) {
-                _state.gallery_index = GameTitleWrapIndex(_state.gallery_index, -1, array_length(_state.gallery_items));
-            }
-
-            if (_input.right) {
-                _state.gallery_index = GameTitleWrapIndex(_state.gallery_index, 1, array_length(_state.gallery_items));
-            }
+            _state.gallery_index = GameMenuIndexStep(
+                _state.gallery_index, _input.left, _input.right, array_length(_state.gallery_items));
 
             if (_input.bomb) {
                 _state.page = "main";
@@ -462,13 +431,8 @@ function GameTitleStateStep(_state, _input) {
             var _music_was_playing = GameMusicRoomPreviewIsActive();
             var _music_previous_index = _state.music_index;
 
-            if (_input.up) {
-                _state.music_index = GameTitleWrapIndex(_state.music_index, -1, array_length(_state.music_items));
-            }
-
-            if (_input.down) {
-                _state.music_index = GameTitleWrapIndex(_state.music_index, 1, array_length(_state.music_items));
-            }
+            _state.music_index = GameMenuIndexStep(
+                _state.music_index, _input.up, _input.down, array_length(_state.music_items));
 
             // Browsing while a preview is active immediately follows the cursor,
             // so the highlighted row and audible track can never disagree.
@@ -490,13 +454,8 @@ function GameTitleStateStep(_state, _input) {
             var _entries = GameTitleConfigEntriesCreate();
             var _entry_count = array_length(_entries);
 
-            if (_input.up) {
-                _state.options_index = GameTitleWrapIndex(_state.options_index, -1, _entry_count);
-            }
-
-            if (_input.down) {
-                _state.options_index = GameTitleWrapIndex(_state.options_index, 1, _entry_count);
-            }
+            _state.options_index = GameMenuIndexStep(
+                _state.options_index, _input.up, _input.down, _entry_count);
 
             if (_entry_count > 0) {
                 if (_input.left) {
@@ -517,13 +476,8 @@ function GameTitleStateStep(_state, _input) {
             var _practice_entries = GameTitlePracticeEntriesCreate(_state);
             var _practice_count = array_length(_practice_entries);
 
-            if (_input.up) {
-                _state.practice_index = GameTitleWrapIndex(_state.practice_index, -1, _practice_count);
-            }
-
-            if (_input.down) {
-                _state.practice_index = GameTitleWrapIndex(_state.practice_index, 1, _practice_count);
-            }
+            _state.practice_index = GameMenuIndexStep(
+                _state.practice_index, _input.up, _input.down, _practice_count);
 
             var _practice_entry = _practice_entries[_state.practice_index];
             if (_input.left) {
@@ -558,13 +512,8 @@ function GameTitleStateStep(_state, _input) {
             break;
 
         case "character_select":
-            if (_input.left) {
-                _state.select_character_index = GameTitleWrapIndex(_state.select_character_index, -1, array_length(_state.characters));
-            }
-
-            if (_input.right) {
-                _state.select_character_index = GameTitleWrapIndex(_state.select_character_index, 1, array_length(_state.characters));
-            }
+            _state.select_character_index = GameMenuIndexStep(
+                _state.select_character_index, _input.left, _input.right, array_length(_state.characters));
 
             if (_input.bomb) {
                 _state.page = "main";

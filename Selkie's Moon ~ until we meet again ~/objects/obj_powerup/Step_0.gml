@@ -1,3 +1,4 @@
+// Freeze with combat, drift normally, and magnetize into a living player.
 if (GameGameplayIsFrozen()) {
     exit;
 }
@@ -27,6 +28,7 @@ if (_player != noone && !_player.player_state.hit) {
 }
 
 var _camera = instance_find(obj_camera, 0);
+// Cull abandoned pickups well outside the active camera.
 if (_camera != noone && (abs(x - _camera.x) > 1000 || abs(y - _camera.y) > 1000)) {
     instance_destroy();
 }

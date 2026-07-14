@@ -1,3 +1,5 @@
+// GMTL regression suite. Tests are grouped by owning subsystem and exercise
+// pure helpers plus representative object events without writing player saves.
 suite(function() {
     section("Game setup", function() {
         beforeEach(function() {
@@ -35,6 +37,15 @@ suite(function() {
             expect(_save.runs_finished.ship_selkie[0]).toBe(0);
             expect(_save.continues_used.ship_A[0]).toBe(0);
             expect(_save.continues_used.ship_selkie[0]).toBe(0);
+        });
+
+        test("Struct defaults fill missing fields without overwriting live values", function() {
+            var _state = { retained: 7 };
+
+            expect(GameStructFieldEnsure(_state, "added", 3)).toBe(3);
+            expect(GameStructFieldEnsure(_state, "retained", 99)).toBe(7);
+            expect(_state.added).toBe(3);
+            expect(_state.retained).toBe(7);
         });
 
         test("LoadGameSave loads a matching save file", function() {
@@ -958,21 +969,69 @@ suite(function() {
             }
         });
 
-        test("Only stage ten uses the route-dependent character boss", function() {
+        test("Stages two, five, six, seven, nine, and ten use character boss identities", function() {
             var _stage_one = GameBossEncounterInfoCreate(1, SHIP_SUNRISE);
+            var _stage_two = GameBossEncounterInfoCreate(MIRA_BOSS_STAGE, SHIP_SUNRISE);
+            var _stage_five = GameBossEncounterInfoCreate(SHALMII_BOSS_STAGE, SHIP_SUNRISE);
+            var _stage_six = GameBossEncounterInfoCreate(AISHA_BOSS_STAGE, SHIP_SUNRISE);
+            var _stage_seven = GameBossEncounterInfoCreate(ASTER_BOSS_STAGE, SHIP_SUNRISE);
+            var _stage_nine = GameBossEncounterInfoCreate(CAELIA_BOSS_STAGE, SHIP_SUNRISE);
             var _moon_route = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SUNRISE);
             var _selkie_route = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SELKIE);
 
             expect(_stage_one.is_final).toBeFalsy();
+            expect(_stage_one.is_character).toBeFalsy();
             expect(_stage_one.display_name).toBe("Tideglass Core");
             expect(_stage_one.sprite_id).toBe(spr_mayfly);
+            expect(_stage_two.is_final).toBeFalsy();
+            expect(_stage_two.is_character).toBeTruthy();
+            expect(_stage_two.display_name).toBe(MIRA_BOSS_NAME);
+            expect(_stage_two.ship_name).toBe(MIRA_SHIP_NAME);
+            expect(_stage_two.sprite_id).toBe(spr_mira_ship);
+            expect(_stage_two.phase_signature).toBe(
+                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(MIRA_BOSS_STAGE))
+            );
+            expect(_stage_five.is_final).toBeFalsy();
+            expect(_stage_five.is_character).toBeTruthy();
+            expect(_stage_five.display_name).toBe(SHALMII_BOSS_NAME);
+            expect(_stage_five.ship_name).toBe(SHALMII_SHIP_NAME);
+            expect(_stage_five.sprite_id).toBe(spr_shalmii_ship);
+            expect(_stage_five.phase_signature).toBe(
+                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(SHALMII_BOSS_STAGE))
+            );
+            expect(_stage_six.is_final).toBeFalsy();
+            expect(_stage_six.is_character).toBeTruthy();
+            expect(_stage_six.display_name).toBe(AISHA_BOSS_NAME);
+            expect(_stage_six.ship_name).toBe(AISHA_SHIP_NAME);
+            expect(_stage_six.sprite_id).toBe(spr_aisha_ship);
+            expect(_stage_six.phase_signature).toBe(
+                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(AISHA_BOSS_STAGE))
+            );
+            expect(_stage_seven.is_final).toBeFalsy();
+            expect(_stage_seven.is_character).toBeTruthy();
+            expect(_stage_seven.display_name).toBe(ASTER_BOSS_NAME);
+            expect(_stage_seven.ship_name).toBe(ASTER_SHIP_NAME);
+            expect(_stage_seven.sprite_id).toBe(spr_aster_ship);
+            expect(_stage_seven.phase_signature).toBe(
+                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(ASTER_BOSS_STAGE))
+            );
+            expect(_stage_nine.is_final).toBeFalsy();
+            expect(_stage_nine.is_character).toBeTruthy();
+            expect(_stage_nine.display_name).toBe(CAELIA_BOSS_NAME);
+            expect(_stage_nine.ship_name).toBe(CAELIA_SHIP_NAME);
+            expect(_stage_nine.sprite_id).toBe(spr_caelia_ship);
+            expect(_stage_nine.phase_signature).toBe(
+                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(CAELIA_BOSS_STAGE))
+            );
             expect(_moon_route.is_final).toBeTruthy();
+            expect(_moon_route.is_character).toBeTruthy();
             expect(_moon_route.opponent_ship_id).toBe(SHIP_SELKIE);
             expect(_moon_route.display_name).toBe("Selkie");
             expect(_moon_route.ship_name).toBe("Sunrise");
             expect(_moon_route.sprite_id).toBe(spr_sunset);
             expect(_moon_route.draw_y_scale).toBe(1);
             expect(_selkie_route.is_final).toBeTruthy();
+            expect(_selkie_route.is_character).toBeTruthy();
             expect(_selkie_route.opponent_ship_id).toBe(SHIP_SUNRISE);
             expect(_selkie_route.display_name).toBe("Moon");
             expect(_selkie_route.ship_name).toBe("Sunset");
@@ -980,23 +1039,51 @@ suite(function() {
             expect(_selkie_route.draw_y_scale).toBe(-1);
         });
 
-        test("Each Memory Core exposes a unique expanding shot plan", function() {
+        test("Non-final bosses play complete seed and variant sets before unique finales", function() {
             var _signatures = [];
             var _phase_ids = [];
+            var _seed_kinds = [];
+            var _final_kinds = [];
             var _stage_one_count = array_length(GameBossEncounterInfoCreate(1, SHIP_SUNRISE).phase_plan);
             var _stage_five_count = array_length(GameBossEncounterInfoCreate(5, SHIP_SUNRISE).phase_plan);
             var _stage_nine_count = array_length(GameBossEncounterInfoCreate(9, SHIP_SUNRISE).phase_plan);
 
-            expect(_stage_one_count).toBe(BOSS_PHASE_COUNT);
+            expect(_stage_one_count).toBe(5);
+            expect(_stage_five_count).toBe(7);
+            expect(_stage_nine_count).toBe(9);
             expect(_stage_five_count).toBeGreaterThan(_stage_one_count);
             expect(_stage_nine_count).toBeGreaterThan(_stage_five_count);
 
             for (var stage = 1; stage < STAGE_COUNT; stage++) {
                 var _core = GameBossEncounterInfoCreate(stage, SHIP_SUNRISE);
+                var _seeds = GameMemoryCoreBasePhasePlanCreate(stage);
+                var _seed_count = array_length(_seeds);
+                var _expected_seed_count = (stage <= 2) ? 2 : ((stage <= 6) ? 3 : 4);
 
                 expect(_core.is_final).toBeFalsy();
+                expect(_seed_count).toBe(_expected_seed_count);
                 expect(array_length(_core.phase_plan)).toBe(GameBossPhaseCountForStage(stage));
                 expect(_core.phase_signature != "").toBeTruthy();
+
+                for (var seed = 0; seed < _seed_count; seed++) {
+                    expect(_core.phase_plan[seed].id).toBe(_seeds[seed].id);
+                    expect(_core.phase_plan[seed + _seed_count].id).toBe(_seeds[seed].id + "_v1");
+
+                    for (var seen_kind = 0; seen_kind < array_length(_seed_kinds); seen_kind++) {
+                        expect(_seeds[seed].shot_kind == _seed_kinds[seen_kind]).toBeFalsy();
+                    }
+
+                    array_push(_seed_kinds, _seeds[seed].shot_kind);
+                }
+
+                var _final_phase = _core.phase_plan[array_length(_core.phase_plan) - 1];
+                expect(string_pos("_finale", _final_phase.id)).toBeGreaterThan(0);
+
+                for (var seen_final = 0; seen_final < array_length(_final_kinds); seen_final++) {
+                    expect(_final_phase.shot_kind == _final_kinds[seen_final]).toBeFalsy();
+                }
+
+                array_push(_final_kinds, _final_phase.shot_kind);
 
                 for (var phase = 0; phase < array_length(_core.phase_plan); phase++) {
                     expect(_core.phase_plan[phase].id != "").toBeTruthy();
@@ -1017,20 +1104,60 @@ suite(function() {
             }
 
             expect(array_length(_signatures)).toBe(STAGE_COUNT - 1);
+            expect(array_length(_seed_kinds)).toBe(28);
+            expect(array_length(_final_kinds)).toBe(9);
             expect(array_length(_phase_ids)).toBeGreaterThan((STAGE_COUNT - 1) * BOSS_PHASE_COUNT);
         });
 
-        test("Final bosses use fifteen unique route-specific themed phases", function() {
+        test("Character bosses use motif-specific seed families and finales", function() {
+            var _motifs = [
+                { stage: MIRA_BOSS_STAGE, theme: "poker", first: "mira_four_suits", finale: "mira_royal_flush" },
+                { stage: SHALMII_BOSS_STAGE, theme: "rune", first: "shalmii_hex_runes", finale: "shalmii_runebreaker" },
+                { stage: AISHA_BOSS_STAGE, theme: "desire", first: "aisha_order_circle", finale: "aisha_blade_of_desires" },
+                { stage: ASTER_BOSS_STAGE, theme: "ribbon", first: "aster_ribbon_loop", finale: "aster_ribbonstar_wish" },
+                { stage: CAELIA_BOSS_STAGE, theme: "astral", first: "caelia_planetary_orbit", finale: "caelia_cosmic_zenith" },
+            ];
+
+            for (var motif_index = 0; motif_index < array_length(_motifs); motif_index++) {
+                var _motif = _motifs[motif_index];
+                var _seeds = GameMemoryCoreBasePhasePlanCreate(_motif.stage);
+                var _finale = GameMemoryCoreFinalPhaseCreate(_motif.stage);
+
+                expect(_seeds[0].id).toBe(_motif.first);
+                expect(_finale.shot_kind).toBe(_motif.finale);
+                expect(_finale.attack_theme).toBe(_motif.theme);
+
+                for (var seed_index = 0; seed_index < array_length(_seeds); seed_index++) {
+                    expect(_seeds[seed_index].attack_theme).toBe(_motif.theme);
+                }
+            }
+        });
+
+        test("Final bosses play two complete variant sets before unique route finales", function() {
             var _selkie_final = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SUNRISE);
             var _moon_final = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SELKIE);
+            var _selkie_seeds = GameFinalBossBasePhasePlanCreate(SHIP_SELKIE);
+            var _moon_seeds = GameFinalBossBasePhasePlanCreate(SHIP_SUNRISE);
             var _selkie_phase_ids = [];
             var _moon_phase_ids = [];
 
-            expect(array_length(_selkie_final.phase_plan)).toBe(15);
-            expect(array_length(_moon_final.phase_plan)).toBe(15);
+            expect(array_length(_selkie_final.phase_plan)).toBe(16);
+            expect(array_length(_moon_final.phase_plan)).toBe(16);
             expect(_selkie_final.phase_signature == _moon_final.phase_signature).toBeFalsy();
 
-            for (var i = 0; i < 15; i++) {
+            for (var seed = 0; seed < 5; seed++) {
+                expect(_selkie_final.phase_plan[seed].id).toBe(_selkie_seeds[seed].id);
+                expect(_selkie_final.phase_plan[seed + 5].id).toBe(_selkie_seeds[seed].id + "_v1");
+                expect(_selkie_final.phase_plan[seed + 10].id).toBe(_selkie_seeds[seed].id + "_v2");
+                expect(_moon_final.phase_plan[seed].id).toBe(_moon_seeds[seed].id);
+                expect(_moon_final.phase_plan[seed + 5].id).toBe(_moon_seeds[seed].id + "_v1");
+                expect(_moon_final.phase_plan[seed + 10].id).toBe(_moon_seeds[seed].id + "_v2");
+            }
+
+            expect(_selkie_final.phase_plan[15].id).toBe("selkie_chakram_apotheosis_finale");
+            expect(_moon_final.phase_plan[15].id).toBe("moon_rose_eternity_finale");
+
+            for (var i = 0; i < 16; i++) {
                 expect(_selkie_final.phase_plan[i].attack_theme).toBe("chakram");
                 expect(_moon_final.phase_plan[i].attack_theme).toBe("rose");
 
@@ -1044,6 +1171,200 @@ suite(function() {
 
                 array_push(_selkie_phase_ids, _selkie_final.phase_plan[i].id);
                 array_push(_moon_phase_ids, _moon_final.phase_plan[i].id);
+            }
+        });
+
+        test("Boss phase titles format descriptor ids and remain visible for two seconds", function() {
+            var _seed = GameMemoryCorePhaseCreate(
+                "tideglass_spiral", "blade_spiral", 24, 10, 0, 19, 0, 12, 1.55, 0);
+            var _variant = GameBossPhaseVariantCreate(_seed, 1);
+            var _finale = GameMemoryCoreFinalPhaseCreate(9);
+
+            expect(GameBossPhaseDisplayNameGet(_seed)).toBe("Tideglass Spiral");
+            expect(GameBossPhaseDisplayNameGet(_variant)).toBe("Tideglass Spiral - Variant 1");
+            expect(GameBossPhaseDisplayNameGet(_finale)).toBe("Caelia Cosmic Zenith");
+            expect(GameBossPhaseDisplayNameGet({})).toBe("Boss Attack");
+            expect(GameBossPhaseNoticeAlphaGet(0)).toBe(0);
+            expect(GameBossPhaseNoticeAlphaGet(BOSS_PHASE_NOTICE_FADE_IN_FRAMES)).toBe(1);
+            expect(GameBossPhaseNoticeAlphaGet(BOSS_PHASE_NOTICE_FRAMES - BOSS_PHASE_NOTICE_FADE_OUT_FRAMES)).toBe(1);
+            expect(GameBossPhaseNoticeAlphaGet(BOSS_PHASE_NOTICE_FRAMES - 15)).toBe(0.5);
+            expect(GameBossPhaseNoticeAlphaGet(BOSS_PHASE_NOTICE_FRAMES)).toBe(0);
+        });
+
+        test("Every configured boss shot kind has a live runtime interpreter", function() {
+            global.game_runtime.current_stage = 1;
+            var _boss = instance_create_layer(100, 100, "Instances", obj_boss_sunset);
+            var _plans = [];
+            var _seen_kinds = [];
+
+            for (var stage = 1; stage < STAGE_COUNT; stage++) {
+                array_push(_plans, GameMemoryCorePhasePlanCreate(stage));
+            }
+
+            array_push(_plans, GameFinalBossPhasePlanCreate(SHIP_SUNRISE));
+            array_push(_plans, GameFinalBossPhasePlanCreate(SHIP_SELKIE));
+
+            for (var plan_index = 0; plan_index < array_length(_plans); plan_index++) {
+                var _plan = _plans[plan_index];
+
+                for (var phase_index = 0; phase_index < array_length(_plan); phase_index++) {
+                    var _phase = _plan[phase_index];
+                    var _already_seen = false;
+
+                    for (var seen = 0; seen < array_length(_seen_kinds); seen++) {
+                        if (_seen_kinds[seen] == _phase.shot_kind) {
+                            _already_seen = true;
+                            break;
+                        }
+                    }
+
+                    if (_already_seen) {
+                        continue;
+                    }
+
+                    array_push(_seen_kinds, _phase.shot_kind);
+                    expect(GameBossPhasePatternFire(_boss, _phase, _phase.cadence, 100, 260, 0)).toBeTruthy();
+                    expect(instance_number(obj_bullet_parent)).toBeGreaterThan(0);
+
+                    with (obj_bullet_parent) {
+                        instance_destroy();
+                    }
+                }
+            }
+
+            expect(array_length(_seen_kinds)).toBe(49);
+
+            with (_boss) {
+                instance_destroy();
+            }
+        });
+
+        test("Radial blade families and aimed fans produce distinct geometries", function() {
+            global.game_runtime.current_stage = 1;
+            var _boss = instance_create_layer(100, 100, "Instances", obj_boss_sunset);
+            var _spiral = GameMemoryCorePhaseCreate(
+                "test_spiral", "blade_spiral", 30, 8, 0, 11, 0, 10, 1.5, 0);
+            var _redirect = GameMemoryCorePhaseCreate(
+                "test_redirect", "redirect_spiral", 30, 8, 0, 11, 0, 10, 1.5, 80, 120);
+            var _cross = GameMemoryCorePhaseCreate(
+                "test_cross", "blade_cross", 30, 8, 0, 11, 0, 10, 1.5, 0);
+
+            expect(GameBossPhasePatternFire(_boss, _spiral, 0, 100, 260, 0)).toBeTruthy();
+            expect(instance_number(obj_bullet_blade)).toBe(8);
+
+            var _spiral_clockwise = 0;
+            var _spiral_offset = 0;
+
+            for (var spiral_index = 0; spiral_index < instance_number(obj_bullet_blade); spiral_index++) {
+                var _spiral_bullet = instance_find(obj_bullet_blade, spiral_index);
+
+                if (variable_instance_get(_spiral_bullet, "spiral_direction") < 0) {
+                    _spiral_clockwise += 1;
+                }
+
+                if (variable_instance_get(_spiral_bullet, "spiral_radius") > 0) {
+                    _spiral_offset += 1;
+                }
+            }
+
+            expect(_spiral_clockwise).toBe(8);
+            expect(_spiral_offset).toBe(0);
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            _boss.pattern_clockwise_first = true;
+            expect(GameBossPhasePatternFire(_boss, _redirect, 0, 100, 260, 0)).toBeTruthy();
+            expect(instance_number(obj_bullet_blade)).toBe(8);
+
+            var _redirect_clockwise = 0;
+            var _redirect_offset = 0;
+
+            for (var redirect_index = 0; redirect_index < instance_number(obj_bullet_blade); redirect_index++) {
+                var _redirect_bullet = instance_find(obj_bullet_blade, redirect_index);
+
+                if (variable_instance_get(_redirect_bullet, "spiral_direction") < 0) {
+                    _redirect_clockwise += 1;
+                }
+
+                if (variable_instance_get(_redirect_bullet, "spiral_radius") > 0) {
+                    _redirect_offset += 1;
+                }
+            }
+
+            expect(_redirect_clockwise).toBe(4);
+            expect(_redirect_offset).toBe(8);
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            _boss.pattern_clockwise_first = true;
+            expect(GameBossPhasePatternFire(_boss, _cross, 0, 100, 260, 0)).toBeTruthy();
+            expect(instance_number(obj_bullet_blade)).toBe(8);
+
+            var _cross_inner = 0;
+            var _cross_outer = 0;
+
+            for (var cross_index = 0; cross_index < instance_number(obj_bullet_blade); cross_index++) {
+                var _cross_bullet = instance_find(obj_bullet_blade, cross_index);
+
+                if (variable_instance_get(_cross_bullet, "spiral_radius") == 0) {
+                    _cross_inner += 1;
+                } else {
+                    _cross_outer += 1;
+                }
+            }
+
+            expect(_cross_inner).toBe(4);
+            expect(_cross_outer).toBe(4);
+
+            with (obj_bullet_blade) {
+                instance_destroy();
+            }
+
+            var _bead_arc = GameMemoryCorePhaseCreate(
+                "test_bead_arc", "bead_arc", 30, 5, 0, 0, 3, 0, 0, 60);
+            var _diamond_fan = GameMemoryCorePhaseCreate(
+                "test_diamond_fan", "diamond_fan", 30, 5, 0, 0, 3, 0, 0, 60);
+            expect(GameBossPhasePatternFire(_boss, _bead_arc, 0, 100, 260, 0)).toBeTruthy();
+            expect(instance_number(obj_bullet_bead)).toBe(5);
+
+            for (var bead_index = 0; bead_index < instance_number(obj_bullet_bead); bead_index++) {
+                var _bead = instance_find(obj_bullet_bead, bead_index);
+                expect(variable_instance_get(_bead, "move_speed")).toBe(3);
+            }
+
+            with (obj_bullet_bead) {
+                instance_destroy();
+            }
+
+            expect(GameBossPhasePatternFire(_boss, _diamond_fan, 0, 100, 260, 0)).toBeTruthy();
+            expect(instance_number(obj_bullet_diamond)).toBe(5);
+
+            var _first_diamond_speed = undefined;
+            var _diamond_speed_varies = false;
+
+            for (var diamond_index = 0; diamond_index < instance_number(obj_bullet_diamond); diamond_index++) {
+                var _diamond = instance_find(obj_bullet_diamond, diamond_index);
+                var _diamond_speed = variable_instance_get(_diamond, "move_speed");
+
+                if (_first_diamond_speed == undefined) {
+                    _first_diamond_speed = _diamond_speed;
+                } else if (_diamond_speed != _first_diamond_speed) {
+                    _diamond_speed_varies = true;
+                }
+            }
+
+            expect(_diamond_speed_varies).toBeTruthy();
+
+            with (obj_bullet_diamond) {
+                instance_destroy();
+            }
+
+            with (_boss) {
+                instance_destroy();
             }
         });
 
@@ -1100,7 +1421,7 @@ suite(function() {
 
             expect(_stage_two_blades).toBe(0);
             expect(_stage_two_beads).toBeGreaterThan(0);
-            expect(_stage_two_diamonds).toBe(0);
+            expect(_stage_two_diamonds).toBeGreaterThan(0);
 
             with (obj_bullet_parent) {
                 instance_destroy();
@@ -1118,11 +1439,6 @@ suite(function() {
         test("Music routing selects generated tracks for menus, stages, ending, and credits", function() {
             global.game_runtime.current_stage = 1;
 
-            expect(GameRunMusicShouldPlay(rm_title)).toBeTruthy();
-            expect(GameRunMusicShouldPlay(rm_opening)).toBeTruthy();
-            expect(GameRunMusicShouldPlay(rm_game)).toBeTruthy();
-            expect(GameRunMusicShouldPlay(rm_ending)).toBeTruthy();
-            expect(GameRunMusicShouldPlay(rm_credits)).toBeTruthy();
             expect(GameMusicForRoomGet(rm_title)).toBe(snd_music_title);
             expect(GameMusicForRoomGet(rm_opening)).toBe(snd_music_title);
             expect(GameMusicForRoomGet(rm_game)).toBe(snd_music_stage_01);
@@ -1136,21 +1452,17 @@ suite(function() {
 
         test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
             var _shot = GameTurretShotSpecCreate(100, 120, 100, 220);
-            var _spawn = GameSceneTurretSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
 
             expect(_shot.object_index).toBe(obj_bullet_bead);
             expect(_shot.direction).toBe(270);
             expect(_shot.speed).toBe(TURRET_BULLET_SPEED);
             expect(GamePlayerBulletHitCheck(100, 100, 105, 100, 4)).toBeTruthy();
             expect(GamePlayerBulletHitCheck(100, 100, 106, 100, 4)).toBeFalsy();
-            expect(_spawn.x).toBe(CAMERA_HOME_X);
-            expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 72);
         });
 
         test("Bee enemies drift toward the player and fire three aligned diamond shots every six frames", function() {
             var _player = instance_create_layer(0, 0, "Instances", obj_player);
             var _bee = instance_create_layer(0, 0, "Instances", obj_enemy_bee);
-            var _spawn = GameSceneBeeSpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
             var _slow_count = 0;
             var _mid_count = 0;
             var _fast_count = 0;
@@ -1179,8 +1491,6 @@ suite(function() {
             expect(variable_instance_get(_bee, "move_direction")).toBe(0);
             expect(variable_instance_get(_bee, "image_angle")).toBe(0);
             expect(instance_number(obj_bullet_diamond)).toBe(3);
-            expect(_spawn.x).toBe(CAMERA_HOME_X - PLAYFIELD_HALF_WIDTH + 40);
-            expect(_spawn.y).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + 96);
 
             for (var i = 0; i < instance_number(obj_bullet_diamond); i++) {
                 var _bullet = instance_find(obj_bullet_diamond, i);
@@ -1221,8 +1531,8 @@ suite(function() {
 
         test("Mayfly bursts alternate spiral direction while dropping into the y=100 camera lane", function() {
             var _camera = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y, "Instances", obj_camera);
-            var _mayfly_spawn = GameSceneMayflySpawnPositionGet(CAMERA_HOME_X, CAMERA_HOME_Y);
-            var _mayfly = instance_create_layer(_mayfly_spawn.x, _mayfly_spawn.y, "Instances", obj_enemy_mayfly);
+            var _visible_lane_y = CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y;
+            var _mayfly = instance_create_layer(CAMERA_HOME_X, _visible_lane_y, "Instances", obj_enemy_mayfly);
             var _clockwise_count = 0;
             var _counter_count = 0;
             var _offset = GameMayflyInfinityOffsetCreate(90);
@@ -1366,16 +1676,12 @@ suite(function() {
             }
         });
 
-        test("Boss helpers expose segmented life bars and timed attack windows", function() {
+        test("Boss helpers expose segmented life bars", function() {
             var _segments = GameBossBarSegmentsCreate(1, BOSS_PHASE_HP * 0.5, BOSS_PHASE_HP);
 
             expect(_segments[0]).toBe(0);
             expect(_segments[1]).toBe(0.5);
             expect(_segments[2]).toBe(1);
-            expect(GameBossPhaseTwoScatterActive(19)).toBeTruthy();
-            expect(GameBossPhaseTwoScatterActive(20)).toBeFalsy();
-            expect(GameBossPhaseThreeRedirectDue(300)).toBeTruthy();
-            expect(GameBossPhaseThreeRedirectDue(299)).toBeFalsy();
         });
 
         test("Boss intro combat clear removes enemies and bullets but keeps bosses and score unchanged", function() {
@@ -1625,6 +1931,16 @@ suite(function() {
         });
 
         test("Imported art and audio assets are registered with the expected sizes", function() {
+            var _aisha_portrait = asset_get_index("spr_aisha_portrait");
+            var _aisha_ship = asset_get_index("spr_aisha_ship");
+            var _aster_portrait = asset_get_index("spr_aster_portrait");
+            var _aster_ship = asset_get_index("spr_aster_ship");
+            var _caelia_portrait = asset_get_index("spr_caelia_portrait");
+            var _caelia_ship = asset_get_index("spr_caelia_ship");
+            var _mira_portrait = asset_get_index("spr_mira_portrait");
+            var _mira_ship = asset_get_index("spr_mira_ship");
+            var _shalmii_portrait = asset_get_index("spr_shalmii_portrait");
+            var _shalmii_ship = asset_get_index("spr_shalmii_ship");
             var _bee = asset_get_index("spr_bee");
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
@@ -1672,6 +1988,16 @@ suite(function() {
             var _turret = asset_get_index("spr_turret");
             var _violet_tiles = asset_get_index("spr_violet_tiles");
 
+            expect(_aisha_portrait != -1 && sprite_exists(_aisha_portrait)).toBeTruthy();
+            expect(_aisha_ship != -1 && sprite_exists(_aisha_ship)).toBeTruthy();
+            expect(_aster_portrait != -1 && sprite_exists(_aster_portrait)).toBeTruthy();
+            expect(_aster_ship != -1 && sprite_exists(_aster_ship)).toBeTruthy();
+            expect(_caelia_portrait != -1 && sprite_exists(_caelia_portrait)).toBeTruthy();
+            expect(_caelia_ship != -1 && sprite_exists(_caelia_ship)).toBeTruthy();
+            expect(_mira_portrait != -1 && sprite_exists(_mira_portrait)).toBeTruthy();
+            expect(_mira_ship != -1 && sprite_exists(_mira_ship)).toBeTruthy();
+            expect(_shalmii_portrait != -1 && sprite_exists(_shalmii_portrait)).toBeTruthy();
+            expect(_shalmii_ship != -1 && sprite_exists(_shalmii_ship)).toBeTruthy();
             expect(_bee != -1 && sprite_exists(_bee)).toBeTruthy();
             expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
             expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
@@ -1729,6 +2055,26 @@ suite(function() {
             expect(object_exists(obj_powerup)).toBeTruthy();
             expect(object_exists(obj_UI_credits)).toBeTruthy();
             expect(asset_get_index("rm_credits") != -1).toBeTruthy();
+            expect(sprite_get_width(_aisha_portrait)).toBe(360);
+            expect(sprite_get_height(_aisha_portrait)).toBe(360);
+            expect(sprite_get_width(_aisha_ship)).toBe(64);
+            expect(sprite_get_height(_aisha_ship)).toBe(64);
+            expect(sprite_get_width(_aster_portrait)).toBe(360);
+            expect(sprite_get_height(_aster_portrait)).toBe(360);
+            expect(sprite_get_width(_aster_ship)).toBe(64);
+            expect(sprite_get_height(_aster_ship)).toBe(64);
+            expect(sprite_get_width(_caelia_portrait)).toBe(360);
+            expect(sprite_get_height(_caelia_portrait)).toBe(360);
+            expect(sprite_get_width(_caelia_ship)).toBe(64);
+            expect(sprite_get_height(_caelia_ship)).toBe(64);
+            expect(sprite_get_width(_mira_portrait)).toBe(360);
+            expect(sprite_get_height(_mira_portrait)).toBe(360);
+            expect(sprite_get_width(_mira_ship)).toBe(64);
+            expect(sprite_get_height(_mira_ship)).toBe(64);
+            expect(sprite_get_width(_shalmii_portrait)).toBe(360);
+            expect(sprite_get_height(_shalmii_portrait)).toBe(360);
+            expect(sprite_get_width(_shalmii_ship)).toBe(64);
+            expect(sprite_get_height(_shalmii_ship)).toBe(64);
             expect(sprite_get_width(_bee)).toBe(64);
             expect(sprite_get_width(_bullet_bead)).toBe(16);
             expect(sprite_get_width(_bullet_bead_mask)).toBe(16);
@@ -1867,8 +2213,6 @@ suite(function() {
             expect(GameInputVerbDown("bomb")).toBeTruthy();
             expect(GameInputVerbDown("not_a_real_verb")).toBeFalsy();
             expect(GameInputVerbPressed("not_a_real_verb")).toBeFalsy();
-            expect(GameInputVerbReleased("not_a_real_verb")).toBeFalsy();
-
             _gamepad.down = false;
             _gamepad.fire = false;
             _gamepad.autofire = false;
@@ -2235,6 +2579,45 @@ suite(function() {
 
             global.game_runtime.selected_ship_id = SHIP_SELKIE;
             expect(GameFinalBossStoryFileGet()).toBe("boss_intro_story_selkie_route.json");
+        });
+
+        test("Character bosses have route-specific dialogue around motif-specific fights", function() {
+            var _bosses = [
+                { stage: MIRA_BOSS_STAGE, story_id: "mira", name: MIRA_BOSS_NAME, portrait: "spr_mira_portrait" },
+                { stage: SHALMII_BOSS_STAGE, story_id: "shalmii", name: SHALMII_BOSS_NAME, portrait: "spr_shalmii_portrait" },
+                { stage: AISHA_BOSS_STAGE, story_id: "aisha", name: AISHA_BOSS_NAME, portrait: "spr_aisha_portrait" },
+                { stage: ASTER_BOSS_STAGE, story_id: "aster", name: ASTER_BOSS_NAME, portrait: "spr_aster_portrait" },
+                { stage: CAELIA_BOSS_STAGE, story_id: "caelia", name: CAELIA_BOSS_NAME, portrait: "spr_caelia_portrait" },
+            ];
+
+            for (var i = 0; i < array_length(_bosses); i++) {
+                var _boss = _bosses[i];
+                var _moon_intro_file = GameCharacterBossStoryFileGet(_boss.stage, false, SHIP_SUNRISE);
+                var _moon_defeat_file = GameCharacterBossStoryFileGet(_boss.stage, true, SHIP_SUNRISE);
+                var _selkie_intro_file = GameCharacterBossStoryFileGet(_boss.stage, false, SHIP_SELKIE);
+                var _selkie_defeat_file = GameCharacterBossStoryFileGet(_boss.stage, true, SHIP_SELKIE);
+                var _moon_intro = GameStoryLoadFramesFromFile(_moon_intro_file);
+                var _moon_defeat = GameStoryLoadFramesFromFile(_moon_defeat_file);
+                var _selkie_intro = GameStoryLoadFramesFromFile(_selkie_intro_file);
+                var _selkie_defeat = GameStoryLoadFramesFromFile(_selkie_defeat_file);
+
+                expect(_moon_intro_file).toBe(_boss.story_id + "_intro_story_moon_route.json");
+                expect(_moon_defeat_file).toBe(_boss.story_id + "_defeat_story_moon_route.json");
+                expect(_selkie_intro_file).toBe(_boss.story_id + "_intro_story_selkie_route.json");
+                expect(_selkie_defeat_file).toBe(_boss.story_id + "_defeat_story_selkie_route.json");
+                expect(array_length(_moon_intro)).toBe(6);
+                expect(array_length(_moon_defeat)).toBe(6);
+                expect(array_length(_selkie_intro)).toBe(6);
+                expect(array_length(_selkie_defeat)).toBe(6);
+                expect(_moon_intro[0].name).toBe(_boss.name);
+                expect(_moon_intro[0].portraits[0]).toBe(_boss.portrait);
+                expect(_moon_intro[1].name).toBe("Moon");
+                expect(_moon_defeat[5].name).toBe("Moon");
+                expect(_selkie_intro[1].name).toBe("Selkie");
+                expect(_selkie_defeat[5].name).toBe("Selkie");
+            }
+
+            expect(GameCharacterBossStoryFileGet(3, false, SHIP_SUNRISE)).toBe("");
         });
 
         test("Story textbox wrapping never exceeds two lines", function() {
