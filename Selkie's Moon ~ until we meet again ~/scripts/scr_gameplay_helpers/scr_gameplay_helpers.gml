@@ -1,9 +1,13 @@
+// Core gameplay constants and pure/system helpers. Object events should stay
+// thin and delegate reusable rules here; boss pattern execution has its own
+// scr_boss_patterns module.
+
+// View, playfield, camera, and stage flow.
 #macro GAME_VIEW_WIDTH 640
 #macro GAME_VIEW_HEIGHT 360
 #macro GAME_VIEW_HALF_WIDTH 320
 #macro GAME_VIEW_HALF_HEIGHT 180
 
-#macro PLAYFIELD_WIDTH 202
 #macro PLAYFIELD_HALF_WIDTH 101
 #macro PLAYFIELD_HALF_HEIGHT 180
 #macro PLAYFIELD_VERTICAL_PADDING 10
@@ -17,9 +21,25 @@
 #macro STAGE_SPAWN_SIDE_MARGIN 16
 #macro STAGE_BEE_WAVE_COUNT 3
 #macro STAGE_COUNT 10
+#macro MIRA_BOSS_STAGE 2
+#macro MIRA_BOSS_NAME "Mira"
+#macro MIRA_SHIP_NAME "Wildheart"
+#macro SHALMII_BOSS_STAGE 5
+#macro SHALMII_BOSS_NAME "Shalmii"
+#macro SHALMII_SHIP_NAME "Lockstep"
+#macro AISHA_BOSS_STAGE 6
+#macro AISHA_BOSS_NAME "Aisha"
+#macro AISHA_SHIP_NAME "Wishbound"
+#macro ASTER_BOSS_STAGE 7
+#macro ASTER_BOSS_NAME "Aster"
+#macro ASTER_SHIP_NAME "Ribbonstar"
+#macro CAELIA_BOSS_STAGE 9
+#macro CAELIA_BOSS_NAME "Caelia"
+#macro CAELIA_SHIP_NAME "Zenith"
 #macro STAGE_NOTICE_FRAMES 150
 #macro STAGE_CLEAR_DELAY_FRAMES 120
 
+// Player movement, resources, weapons, and damage.
 #macro PLAYER_MOVE_SPEED 4
 #macro PLAYER_FOCUS_SPEED_MULTIPLIER 0.62
 #macro PLAYER_RESPAWN_OFFSET_Y 120
@@ -46,6 +66,7 @@
 #macro BEE_BULLET_SPEED 4
 #macro BEE_BULLET_SPEED_DELTA 0.5
 
+// Standard enemy behavior.
 #macro MAYFLY_PATTERN_PERIOD 20
 #macro MAYFLY_SECOND_BURST_DELAY 3
 #macro MAYFLY_BURST_COUNT 12
@@ -57,7 +78,7 @@
 #macro MAYFLY_VISIBLE_Y 100
 #macro MAYFLY_DROP_SPEED 3
 
-#macro SWEEP_RATE 2
+// Sword geometry and timing.
 #macro SWEEP_PERIOD_FRAMES 48
 #macro SWORD_START_ANGLE 315
 #macro SWORD_END_ANGLE 585
@@ -69,30 +90,28 @@
 #macro CANCEL_METER 1
 #macro METER_MAX 1000
 
+// Continue and boss encounter flow.
 #macro CONTINUE_OPTION_YES 0
 #macro CONTINUE_OPTION_NO 1
 #macro GAME_OVER_DELAY_FRAMES 90
 
 #macro STAGE_LENGTH_FRAMES 2400
 #macro BOSS_PHASE_COUNT 3
-#macro FINAL_BOSS_PHASE_COUNT 15
+#macro FINAL_BOSS_PHASE_COUNT 16
+#macro FINAL_BOSS_EXPANDED_PHASE_COUNT 15
 #macro BOSS_PHASE_HP 300
 #macro BOSS_PHASE_HP_STAGE_STEP 30
 #macro BOSS_PHASE_MIN_HP 240
 #macro BOSS_DAMAGE_SCALE_MIN 0.2
 #macro BOSS_DESTRUCTION_FRAMES 90
-#macro BOSS_FAST_MAYFLY_TURN_SPEED 16
-#macro BOSS_FAST_MAYFLY_RADIAL_SPEED 2.25
-#macro BOSS_BEE_PATTERN_INTERVAL 30
-#macro BOSS_PHASE2_SCATTER_PERIOD 30
-#macro BOSS_PHASE2_BREAK_FRAMES 10
-#macro BOSS_PHASE2_SHOTS_PER_FRAME 2
-#macro BOSS_PHASE2_BEAD_SPEED 4.25
-#macro BOSS_PHASE3_REDIRECT_INTERVAL 300
 #macro BOSS_PHASE3_FREEZE_FRAMES 5
 #macro BOSS_PHASE3_REDIRECT_SPEED 1.5
 #macro BOSS_PHASE3_REDIRECT_ACCELERATION 0.05
+#macro BOSS_PHASE_NOTICE_FRAMES 120
+#macro BOSS_PHASE_NOTICE_FADE_IN_FRAMES 12
+#macro BOSS_PHASE_NOTICE_FADE_OUT_FRAMES 30
 
+// Ship identities, pickups, and point-blank resource economy.
 #macro SHIP_SUNRISE "ship_A"
 #macro SHIP_SELKIE "ship_selkie"
 #macro POWERUP_POWER "power"
@@ -353,8 +372,8 @@ function GamePauseStateStep(_state, _input, _practice) {
     switch (_state.page) {
         case "main":
             var _main_items = GamePauseMainItemsCreate(_practice);
-            if (_input.up) _state.main_index = GameTitleWrapIndex(_state.main_index, -1, array_length(_main_items));
-            if (_input.down) _state.main_index = GameTitleWrapIndex(_state.main_index, 1, array_length(_main_items));
+            _state.main_index = GameMenuIndexStep(
+                _state.main_index, _input.up, _input.down, array_length(_main_items));
 
             if (_input.bomb) {
                 _result.action = "close";
@@ -378,8 +397,8 @@ function GamePauseStateStep(_state, _input, _practice) {
         case "options":
             var _options = GameTitleConfigEntriesCreate();
             var _options_count = array_length(_options);
-            if (_input.up) _state.options_index = GameTitleWrapIndex(_state.options_index, -1, _options_count + 1);
-            if (_input.down) _state.options_index = GameTitleWrapIndex(_state.options_index, 1, _options_count + 1);
+            _state.options_index = GameMenuIndexStep(
+                _state.options_index, _input.up, _input.down, _options_count + 1);
 
             if (_input.bomb) {
                 _state.page = "main";
@@ -395,8 +414,8 @@ function GamePauseStateStep(_state, _input, _practice) {
             var _practice_entries = GamePracticeLiveEntriesCreate();
             var _practice_count = array_length(_practice_entries);
             var _practice_total = _practice_count + 2;
-            if (_input.up) _state.practice_index = GameTitleWrapIndex(_state.practice_index, -1, _practice_total);
-            if (_input.down) _state.practice_index = GameTitleWrapIndex(_state.practice_index, 1, _practice_total);
+            _state.practice_index = GameMenuIndexStep(
+                _state.practice_index, _input.up, _input.down, _practice_total);
 
             if (_input.bomb) {
                 _state.page = "main";
@@ -534,119 +553,40 @@ function GameRuntimeGameplayEnsure() {
         return false;
     }
 
-    if (!struct_exists(global.game_runtime, "signals")) {
-        global.game_runtime.signals = {};
+    // The default factory is the single source of truth for runtime fields.
+    // Preserve live values while filling anything introduced by a newer build.
+    var _resource_threshold_missing = !struct_exists(global.game_runtime, "resource_drop_threshold");
+    var _defaults = GameRuntimeDataCreateDefault();
+    var _field_names = variable_struct_get_names(_defaults);
+
+    for (var i = 0; i < array_length(_field_names); i++) {
+        var _field_name = _field_names[i];
+        GameStructFieldEnsure(global.game_runtime, _field_name, _defaults[$ _field_name]);
     }
 
-    if (!struct_exists(global.game_runtime.signals, "dialogue")) {
-        global.game_runtime.signals.dialogue = false;
+    // Nested structs can evolve independently, so normalize their fields too.
+    if (!is_struct(global.game_runtime.signals)) {
+        global.game_runtime.signals = _defaults.signals;
+    }
+    if (!is_struct(global.game_runtime.story)) {
+        global.game_runtime.story = _defaults.story;
     }
 
-    if (!struct_exists(global.game_runtime.signals, "continue_request")) {
-        global.game_runtime.signals.continue_request = false;
+    var _signal_names = variable_struct_get_names(_defaults.signals);
+    for (var s = 0; s < array_length(_signal_names); s++) {
+        var _signal_name = _signal_names[s];
+        GameStructFieldEnsure(global.game_runtime.signals, _signal_name, _defaults.signals[$ _signal_name]);
     }
 
-    if (!struct_exists(global.game_runtime.signals, "paused")) {
-        global.game_runtime.signals.paused = false;
+    var _story_names = variable_struct_get_names(_defaults.story);
+    for (var t = 0; t < array_length(_story_names); t++) {
+        var _story_name = _story_names[t];
+        GameStructFieldEnsure(global.game_runtime.story, _story_name, _defaults.story[$ _story_name]);
     }
 
-    if (!struct_exists(global.game_runtime, "continue_screen")) {
-        global.game_runtime.continue_screen = GameContinueStateCreate();
-    }
-
-    if (!struct_exists(global.game_runtime, "pause_menu")) {
-        global.game_runtime.pause_menu = GamePauseStateCreate();
-    }
-
-    if (!struct_exists(global.game_runtime, "run_mode")) {
-        global.game_runtime.run_mode = "normal";
-    }
-
-    if (!struct_exists(global.game_runtime, "practice_config")) {
-        global.game_runtime.practice_config = GamePracticeConfigCreateDefault();
-    }
-
-    if (!struct_exists(global.game_runtime, "meter")) {
-        global.game_runtime.meter = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "is_berserk")) {
-        global.game_runtime.is_berserk = false;
-    }
-
-    if (!struct_exists(global.game_runtime, "stage_frame")) {
-        global.game_runtime.stage_frame = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "stage_complete")) {
-        global.game_runtime.stage_complete = false;
-    }
-
-    if (!struct_exists(global.game_runtime, "current_stage")) {
-        global.game_runtime.current_stage = 1;
-    }
-
-    if (!struct_exists(global.game_runtime, "stage_count")) {
-        global.game_runtime.stage_count = STAGE_COUNT;
-    }
-
-    if (!struct_exists(global.game_runtime, "stage_notice_timer")) {
-        global.game_runtime.stage_notice_timer = STAGE_NOTICE_FRAMES;
-    }
-
-    if (!struct_exists(global.game_runtime, "power")) {
-        global.game_runtime.power = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "powerup_drop_counter")) {
-        global.game_runtime.powerup_drop_counter = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "resource_drop_charge")) {
-        global.game_runtime.resource_drop_charge = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "resource_drop_threshold")) {
-        // Avoid routing through GameCurrentStageGet() while this ensure pass is
-        // still filling fields on an older runtime struct.
+    if (_resource_threshold_missing) {
         global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(
             clamp(global.game_runtime.current_stage, 1, STAGE_COUNT));
-    }
-
-    if (!struct_exists(global.game_runtime, "resource_drops_this_stage")) {
-        global.game_runtime.resource_drops_this_stage = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "resource_drop_counter")) {
-        global.game_runtime.resource_drop_counter = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "rank")) {
-        global.game_runtime.rank = RANK_DEFAULT;
-    }
-
-    if (!struct_exists(global.game_runtime, "rank_locked")) {
-        global.game_runtime.rank_locked = false;
-    }
-
-    if (!struct_exists(global.game_runtime, "rank_frame")) {
-        global.game_runtime.rank_frame = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "rank_defeats")) {
-        global.game_runtime.rank_defeats = 0;
-    }
-
-    if (!struct_exists(global.game_runtime, "run_started_recorded")) {
-        global.game_runtime.run_started_recorded = false;
-    }
-
-    if (!struct_exists(global.game_runtime, "bomb_active")) {
-        global.game_runtime.bomb_active = false;
-    }
-
-    if (!struct_exists(global.game_runtime, "bomb_timer")) {
-        global.game_runtime.bomb_timer = 0;
     }
 
     return true;
@@ -1019,6 +959,15 @@ function GameStageNoticeStep() {
     }
 }
 
+/// @func GameSceneStageClearBegin(state)
+/// Moves the scene into its timed stage-clear seam and marks the stage complete.
+function GameSceneStageClearBegin(_state) {
+    _state.mode = "stage_clear";
+    _state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
+    global.game_runtime.stage_complete = true;
+    GameStageClearSoundPlay();
+}
+
 /// @func GameSceneNextStageBegin(state)
 /// Advances runtime and scene state into the next scrolling stage.
 function GameSceneNextStageBegin(_state) {
@@ -1129,39 +1078,6 @@ function GameScenePlayerRespawnPositionGet(_camera_x, _camera_y) {
     return {
         x: _camera_x,
         y: _camera_y + PLAYER_RESPAWN_OFFSET_Y,
-    };
-}
-
-/// @func GameSceneTurretSpawnPositionGet(camera_x, camera_y)
-/// Returns a visible top-lane spawn point for the starter turret enemy.
-function GameSceneTurretSpawnPositionGet(_camera_x, _camera_y) {
-    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
-
-    return {
-        x: _camera_x,
-        y: _field.top + 72,
-    };
-}
-
-/// @func GameSceneBeeSpawnPositionGet(camera_x, camera_y)
-/// Returns a visible upper-lane spawn point for the starter bee enemy.
-function GameSceneBeeSpawnPositionGet(_camera_x, _camera_y) {
-    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
-
-    return {
-        x: _field.left + 40,
-        y: _field.top + 96,
-    };
-}
-
-/// @func GameSceneMayflySpawnPositionGet(camera_x, camera_y)
-/// Returns a visible upper-lane anchor point for the mayfly enemy.
-function GameSceneMayflySpawnPositionGet(_camera_x, _camera_y) {
-    var _field = GameSceneFieldRectGet(_camera_x, _camera_y);
-
-    return {
-        x: _camera_x,
-        y: _field.top + MAYFLY_VISIBLE_Y,
     };
 }
 
@@ -1686,16 +1602,92 @@ function GameMemoryCorePhaseCreate(_id, _shot_kind, _cadence, _burst_count, _bas
     };
 }
 
-/// @func GameBossPhaseCountForStage(stage)
-/// Returns the number of boss life segments for a stage.
-function GameBossPhaseCountForStage(_stage) {
+/// @func GameBossPhaseDisplayNameGet(phase)
+/// Formats a descriptor id as the player-facing attack name shown by the HUD.
+function GameBossPhaseDisplayNameGet(_phase) {
+    if (!is_struct(_phase) || !variable_struct_exists(_phase, "id")) {
+        return "Boss Attack";
+    }
+
+    var _id = string_lower(string(_phase.id));
+    var _variant_label = "";
+    var _variant_pos = string_pos("_v", _id);
+
+    if (_variant_pos > 0) {
+        _variant_label = string_copy(
+            _id,
+            _variant_pos + 2,
+            string_length(_id) - (_variant_pos + 1)
+        );
+        _id = string_copy(_id, 1, _variant_pos - 1);
+    }
+
+    var _finale_pos = string_pos("_finale", _id);
+    if (_finale_pos > 0) {
+        _id = string_copy(_id, 1, _finale_pos - 1);
+    }
+
+    var _display_name = "";
+    var _capitalize_next = true;
+
+    for (var i = 1; i <= string_length(_id); i++) {
+        var _character = string_char_at(_id, i);
+
+        if (_character == "_") {
+            _display_name += " ";
+            _capitalize_next = true;
+        } else if (_capitalize_next) {
+            _display_name += string_upper(_character);
+            _capitalize_next = false;
+        } else {
+            _display_name += _character;
+        }
+    }
+
+    if (_variant_label != "") {
+        _display_name += " - Variant " + _variant_label;
+    }
+
+    return (_display_name == "") ? "Boss Attack" : _display_name;
+}
+
+/// @func GameBossPhaseNoticeAlphaGet(phase_timer)
+/// Returns the two-second phase-title opacity with short entrance and exit fades.
+function GameBossPhaseNoticeAlphaGet(_phase_timer) {
+    if (_phase_timer < 0 || _phase_timer >= BOSS_PHASE_NOTICE_FRAMES) {
+        return 0;
+    }
+
+    var _fade_in = clamp(_phase_timer / BOSS_PHASE_NOTICE_FADE_IN_FRAMES, 0, 1);
+    var _remaining = BOSS_PHASE_NOTICE_FRAMES - _phase_timer;
+    var _fade_out = clamp(_remaining / BOSS_PHASE_NOTICE_FADE_OUT_FRAMES, 0, 1);
+    return min(_fade_in, _fade_out);
+}
+
+/// @func GameBossExpandedPhaseCountForStage(stage)
+/// Returns the seed-and-variant phase count before the unique finale is appended.
+function GameBossExpandedPhaseCountForStage(_stage) {
     _stage = clamp(_stage, 1, STAGE_COUNT);
 
     if (_stage >= STAGE_COUNT) {
-        return FINAL_BOSS_PHASE_COUNT;
+        return FINAL_BOSS_EXPANDED_PHASE_COUNT;
     }
 
-    return BOSS_PHASE_COUNT + ((_stage - 1) div 2);
+    if (_stage <= 2) {
+        return 4;
+    }
+
+    if (_stage <= 6) {
+        return 6;
+    }
+
+    return 8;
+}
+
+/// @func GameBossPhaseCountForStage(stage)
+/// Returns the full life-segment count, including the boss-exclusive finale.
+function GameBossPhaseCountForStage(_stage) {
+    return GameBossExpandedPhaseCountForStage(_stage) + 1;
 }
 
 /// @func GameBossPhaseHpGet(stage, phase_count)
@@ -1754,70 +1746,72 @@ function GameMemoryCoreNameGet(_stage) {
 }
 
 /// @func GameMemoryCoreBasePhasePlanCreate(stage)
-/// Returns the boss-specific seed phases for a non-final Memory Core.
+/// Returns the boss-specific seed phases for any non-final encounter. The
+/// legacy function name is retained because stage and practice data call it.
 function GameMemoryCoreBasePhasePlanCreate(_stage) {
     switch (clamp(_stage, 1, STAGE_COUNT - 1)) {
         case 1:
             return [
                 GameMemoryCorePhaseCreate("tideglass_spiral", "blade_spiral", 24, 10, 0, 19, 0, 12, 1.55, 0),
                 GameMemoryCorePhaseCreate("tideglass_fan", "diamond_fan", 36, 5, 0, 0, 3.4, 0, 0, 44),
-                GameMemoryCorePhaseCreate("tideglass_ring", "bead_ring", 52, 12, 0, 11, 3.1, 0, 0, 0),
             ];
 
         case 2:
             return [
-                GameMemoryCorePhaseCreate("lantern_orbit", "bead_ring", 32, 14, 12, -9, 2.7, 0, 0, 0),
-                GameMemoryCorePhaseCreate("lantern_lanes", "diamond_sweep", 28, 6, 270, 17, 3.5, 0, 0, 56),
-                GameMemoryCorePhaseCreate("lantern_cross", "blade_cross", 42, 8, 45, 13, 0, 9, 1.9, 0),
+                GameMemoryCorePhaseCreate("mira_four_suits", "mira_four_suits", 30, 12, 12, -9, 2.8, 0, 0, 72, 0, "poker"),
+                GameMemoryCorePhaseCreate("mira_dealer_fan", "mira_dealer_fan", 38, 9, 0, 11, 3.5, 0, 0, 76, 0, "poker"),
             ];
 
         case 3:
             return [
-                GameMemoryCorePhaseCreate("saltwind_gale", "diamond_sweep", 22, 7, 250, 23, 3.6, 0, 0, 72),
-                GameMemoryCorePhaseCreate("saltwind_needles", "bead_arc", 30, 7, 0, 0, 3.9, 0, 0, 62),
-                GameMemoryCorePhaseCreate("saltwind_spindrift", "blade_spiral", 38, 16, 9, -17, 0, 15, 1.35, 0),
+                GameMemoryCorePhaseCreate("saltwind_gale", "saltwind_gale", 22, 8, 250, 23, 3.6, 0, 0, 74, 0, "saltwind"),
+                GameMemoryCorePhaseCreate("saltwind_spindrift", "saltwind_spindrift", 34, 14, 9, -17, 0, 15, 1.35, 82, 0, "saltwind"),
+                GameMemoryCorePhaseCreate("saltwind_needles", "saltwind_needles", 28, 9, 0, 11, 4.0, 0, 0, 68, 0, "saltwind"),
             ];
 
         case 4:
             return [
-                GameMemoryCorePhaseCreate("kelp_snare", "bead_arc", 44, 9, 0, 0, 2.8, 0, 0, 96),
-                GameMemoryCorePhaseCreate("kelp_twist", "blade_spiral", 28, 12, 0, 29, 0, 8, 2.05, 0),
-                GameMemoryCorePhaseCreate("kelp_wall", "mixed_cross", 34, 8, 90, 15, 3.0, 10, 1.6, 0),
+                GameMemoryCorePhaseCreate("kelp_snare", "kelp_snare", 38, 10, 0, 0, 3.0, 0, 0, 104, 0, "kelp"),
+                GameMemoryCorePhaseCreate("kelp_bramble", "kelp_bramble", 28, 12, 0, 29, 2.9, 9, 1.85, 72, 0, "kelp"),
+                GameMemoryCorePhaseCreate("kelp_wall", "kelp_wall", 32, 10, 90, 15, 3.2, 10, 1.6, 88, 0, "kelp"),
             ];
 
         case 5:
             return [
-                GameMemoryCorePhaseCreate("moonwake_crescent", "bead_arc", 26, 11, 0, 0, 3.2, 0, 0, 120),
-                GameMemoryCorePhaseCreate("moonwake_return", "redirect_spiral", 36, 12, 18, 21, 0, 13, 1.8, 0, 150),
-                GameMemoryCorePhaseCreate("moonwake_tide", "diamond_fan", 24, 7, 0, 0, 4.1, 0, 0, 84),
+                GameMemoryCorePhaseCreate("shalmii_hex_runes", "shalmii_hex_runes", 26, 12, 0, 17, 3.2, 0, 0, 0, 0, "rune"),
+                GameMemoryCorePhaseCreate("shalmii_hammerfall", "shalmii_hammerfall", 34, 12, 270, 9, 3.5, 12, 1.7, 96, 0, "rune"),
+                GameMemoryCorePhaseCreate("shalmii_shockwave", "shalmii_shockwave", 24, 15, 30, -13, 3.0, 0, 0, 0, 0, "rune"),
             ];
 
         case 6:
             return [
-                GameMemoryCorePhaseCreate("glassreef_prism", "mixed_cross", 30, 12, 0, 31, 3.2, 11, 1.4, 0),
-                GameMemoryCorePhaseCreate("glassreef_refraction", "bead_ring", 24, 18, 6, 7, 2.9, 0, 0, 0),
-                GameMemoryCorePhaseCreate("glassreef_shards", "diamond_sweep", 20, 8, 235, -19, 4.0, 0, 0, 68),
+                GameMemoryCorePhaseCreate("aisha_order_circle", "aisha_order_circle", 28, 12, 0, 19, 3.2, 0, 0, 0, 0, "desire"),
+                GameMemoryCorePhaseCreate("aisha_chaos_shards", "aisha_chaos_shards", 22, 11, 235, -17, 4.0, 0, 0, 84, 0, "desire"),
+                GameMemoryCorePhaseCreate("aisha_talisman_seal", "aisha_talisman_seal", 32, 18, 6, 13, 2.8, 14, 1.65, 92, 0, "desire"),
             ];
 
         case 7:
             return [
-                GameMemoryCorePhaseCreate("starfall_comets", "diamond_sweep", 18, 9, 220, 29, 4.3, 0, 0, 92),
-                GameMemoryCorePhaseCreate("starfall_gravity", "redirect_spiral", 30, 16, 0, -23, 0, 16, 1.65, 0, 120),
-                GameMemoryCorePhaseCreate("starfall_halo", "bead_ring", 36, 20, 10, -11, 3.3, 0, 0, 0),
+                GameMemoryCorePhaseCreate("aster_ribbon_loop", "aster_ribbon_loop", 20, 12, 0, 23, 2.8, 13, 1.55, 88, 0, "ribbon"),
+                GameMemoryCorePhaseCreate("aster_bunny_hop", "aster_bunny_hop", 28, 12, 0, -17, 3.5, 0, 0, 104, 0, "ribbon"),
+                GameMemoryCorePhaseCreate("aster_winged_staff", "aster_winged_staff", 24, 10, 240, 15, 4.2, 12, 1.7, 82, 0, "ribbon"),
+                GameMemoryCorePhaseCreate("aster_lavender_knot", "aster_lavender_knot", 32, 16, 10, -11, 3.0, 17, 1.75, 72, 105, "ribbon"),
             ];
 
         case 8:
             return [
-                GameMemoryCorePhaseCreate("bloodtide_pulse", "bead_ring", 20, 16, 0, 17, 3.6, 0, 0, 0),
-                GameMemoryCorePhaseCreate("bloodtide_rip", "mixed_cross", 26, 10, 45, -21, 3.8, 14, 1.75, 0),
-                GameMemoryCorePhaseCreate("bloodtide_hunt", "diamond_fan", 18, 9, 0, 0, 4.5, 0, 0, 104),
+                GameMemoryCorePhaseCreate("bloodtide_pulse", "bloodtide_pulse", 20, 16, 0, 17, 3.6, 0, 0, 0, 0, "bloodtide"),
+                GameMemoryCorePhaseCreate("bloodtide_rip", "bloodtide_rip", 26, 10, 45, -21, 3.8, 14, 1.75, 76, 0, "bloodtide"),
+                GameMemoryCorePhaseCreate("bloodtide_hunt", "bloodtide_hunt", 18, 9, 0, 0, 4.5, 0, 0, 104, 0, "bloodtide"),
+                GameMemoryCorePhaseCreate("bloodtide_deluge", "bloodtide_deluge", 30, 14, 270, 13, 3.5, 10, 1.55, 96, 0, "bloodtide"),
             ];
 
         case 9:
             return [
-                GameMemoryCorePhaseCreate("crescent_gate_lock", "blade_cross", 22, 12, 22, 37, 0, 18, 1.7, 0),
-                GameMemoryCorePhaseCreate("crescent_gate_key", "bead_arc", 20, 13, 0, 0, 4.0, 0, 0, 132),
-                GameMemoryCorePhaseCreate("crescent_gate_open", "redirect_spiral", 24, 18, 0, 27, 0, 19, 1.9, 0, 90),
+                GameMemoryCorePhaseCreate("caelia_planetary_orbit", "caelia_planetary_orbit", 22, 12, 22, 29, 3.3, 16, 1.65, 84, 0, "astral"),
+                GameMemoryCorePhaseCreate("caelia_constellation", "caelia_constellation", 20, 15, 0, 11, 4.0, 0, 0, 120, 0, "astral"),
+                GameMemoryCorePhaseCreate("caelia_astrolabe", "caelia_astrolabe", 26, 18, 0, 25, 3.1, 18, 1.85, 76, 0, "astral"),
+                GameMemoryCorePhaseCreate("caelia_star_cage", "caelia_star_cage", 28, 16, 45, -17, 3.7, 15, 1.75, 108, 75, "astral"),
             ];
     }
 
@@ -1826,6 +1820,41 @@ function GameMemoryCoreBasePhasePlanCreate(_stage) {
         GameMemoryCorePhaseCreate("memory_default_fan", "diamond_fan", 36, 5, 0, 0, 3.5, 0, 0, 48),
         GameMemoryCorePhaseCreate("memory_default_ring", "bead_ring", 48, 12, 0, 0, 3.0, 0, 0, 0),
     ];
+}
+
+/// @func GameMemoryCoreFinalPhaseCreate(stage)
+/// Returns the one-off attack appended after every non-final seed and variant set.
+function GameMemoryCoreFinalPhaseCreate(_stage) {
+    switch (clamp(_stage, 1, STAGE_COUNT - 1)) {
+        case 1:
+            return GameMemoryCorePhaseCreate("tideglass_maelstrom_finale", "tideglass_maelstrom", 18, 18, 0, 23, 3.4, 15, 1.65, 96, 0, "tideglass");
+
+        case 2:
+            return GameMemoryCorePhaseCreate("mira_royal_flush_finale", "mira_royal_flush", 18, 16, 45, -19, 3.8, 0, 0, 104, 0, "poker");
+
+        case 3:
+            return GameMemoryCorePhaseCreate("saltwind_eye_finale", "saltwind_eye", 16, 18, 270, 31, 4.1, 17, 1.75, 112, 0, "saltwind");
+
+        case 4:
+            return GameMemoryCorePhaseCreate("kelp_abyssal_bloom_finale", "kelp_abyssal_bloom", 20, 16, 0, 27, 3.5, 13, 1.9, 120, 0, "kelp");
+
+        case 5:
+            return GameMemoryCorePhaseCreate("shalmii_runebreaker_finale", "shalmii_runebreaker", 16, 20, 0, -29, 4.0, 18, 1.95, 132, 0, "rune");
+
+        case 6:
+            return GameMemoryCorePhaseCreate("aisha_blade_of_desires_finale", "aisha_blade_of_desires", 14, 21, 6, 37, 4.3, 14, 1.8, 116, 0, "desire");
+
+        case 7:
+            return GameMemoryCorePhaseCreate("aster_ribbonstar_wish_finale", "aster_ribbonstar_wish", 14, 22, 0, -33, 4.5, 20, 2.0, 128, 75, "ribbon");
+
+        case 8:
+            return GameMemoryCorePhaseCreate("bloodtide_heart_finale", "bloodtide_heart", 14, 24, 45, 29, 4.4, 18, 2.05, 136, 0, "bloodtide");
+
+        case 9:
+            return GameMemoryCorePhaseCreate("caelia_cosmic_zenith_finale", "caelia_cosmic_zenith", 12, 24, 0, 33, 4.6, 21, 2.1, 144, 60, "astral");
+    }
+
+    return GameMemoryCorePhaseCreate("memory_finale", "tideglass_maelstrom", 20, 16, 0, 19, 3.5, 14, 1.7, 96);
 }
 
 /// @func GameBossPhaseVariantCreate(phase, variant_index)
@@ -1886,10 +1915,12 @@ function GameBossPhasePlanExpand(_seed_plan, _target_count) {
 /// @func GameMemoryCorePhasePlanCreate(stage)
 /// Returns the expanding unique phase descriptors for a non-final Memory Core.
 function GameMemoryCorePhasePlanCreate(_stage) {
-    return GameBossPhasePlanExpand(
-        GameMemoryCoreBasePhasePlanCreate(_stage),
-        GameBossPhaseCountForStage(_stage)
-    );
+    _stage = clamp(_stage, 1, STAGE_COUNT - 1);
+    var _expanded_count = GameBossExpandedPhaseCountForStage(_stage);
+    var _seed_plan = GameMemoryCoreBasePhasePlanCreate(_stage);
+    var _phase_plan = GameBossPhasePlanExpand(_seed_plan, _expanded_count);
+    array_push(_phase_plan, GameMemoryCoreFinalPhaseCreate(_stage));
+    return _phase_plan;
 }
 
 /// @func GameFinalBossBasePhasePlanCreate(opponent_ship_id)
@@ -1914,13 +1945,31 @@ function GameFinalBossBasePhasePlanCreate(_opponent_ship_id) {
     ];
 }
 
-/// @func GameFinalBossPhasePlanCreate(opponent_ship_id)
-/// Returns the full 15-phase final boss pattern plan.
-function GameFinalBossPhasePlanCreate(_opponent_ship_id) {
-    return GameBossPhasePlanExpand(
-        GameFinalBossBasePhasePlanCreate(_opponent_ship_id),
-        FINAL_BOSS_PHASE_COUNT
+/// @func GameFinalBossFinalPhaseCreate(opponent_ship_id)
+/// Returns the route opponent's one-off sixteenth and final attack.
+function GameFinalBossFinalPhaseCreate(_opponent_ship_id) {
+    if (_opponent_ship_id == SHIP_SUNRISE) {
+        return GameMemoryCorePhaseCreate(
+            "moon_rose_eternity_finale", "rose_eternity", 12, 26, 0, 31,
+            4.4, 22, 2.15, 156, 60, "rose"
+        );
+    }
+
+    return GameMemoryCorePhaseCreate(
+        "selkie_chakram_apotheosis_finale", "chakram_apotheosis", 12, 24, 45, -33,
+        4.7, 23, 2.2, 148, 60, "chakram"
     );
+}
+
+/// @func GameFinalBossPhasePlanCreate(opponent_ship_id)
+/// Returns three complete five-pattern sets followed by a route-exclusive finale.
+function GameFinalBossPhasePlanCreate(_opponent_ship_id) {
+    var _phase_plan = GameBossPhasePlanExpand(
+        GameFinalBossBasePhasePlanCreate(_opponent_ship_id),
+        FINAL_BOSS_EXPANDED_PHASE_COUNT
+    );
+    array_push(_phase_plan, GameFinalBossFinalPhaseCreate(_opponent_ship_id));
+    return _phase_plan;
 }
 
 /// @func GameMemoryCorePhaseSignatureCreate(phase)
@@ -1956,6 +2005,55 @@ function GameMemoryCorePhasePlanSignatureCreate(_phase_plan) {
     return _signature;
 }
 
+/// @func GameCharacterBossInfoCreate(stage)
+/// Returns character presentation metadata for a replaced Memory Core.
+/// The encounter's original phase plan remains owned by its stage.
+function GameCharacterBossInfoCreate(_stage) {
+    switch (clamp(_stage, 1, STAGE_COUNT)) {
+        case MIRA_BOSS_STAGE:
+            return {
+                story_id: "mira",
+                display_name: MIRA_BOSS_NAME,
+                ship_name: MIRA_SHIP_NAME,
+                sprite_id: spr_mira_ship,
+            };
+
+        case SHALMII_BOSS_STAGE:
+            return {
+                story_id: "shalmii",
+                display_name: SHALMII_BOSS_NAME,
+                ship_name: SHALMII_SHIP_NAME,
+                sprite_id: spr_shalmii_ship,
+            };
+
+        case AISHA_BOSS_STAGE:
+            return {
+                story_id: "aisha",
+                display_name: AISHA_BOSS_NAME,
+                ship_name: AISHA_SHIP_NAME,
+                sprite_id: spr_aisha_ship,
+            };
+
+        case ASTER_BOSS_STAGE:
+            return {
+                story_id: "aster",
+                display_name: ASTER_BOSS_NAME,
+                ship_name: ASTER_SHIP_NAME,
+                sprite_id: spr_aster_ship,
+            };
+
+        case CAELIA_BOSS_STAGE:
+            return {
+                story_id: "caelia",
+                display_name: CAELIA_BOSS_NAME,
+                ship_name: CAELIA_SHIP_NAME,
+                sprite_id: spr_caelia_ship,
+            };
+    }
+
+    return undefined;
+}
+
 /// @func GameBossEncounterInfoCreate(stage, player_ship_id)
 /// Returns the visual identity for a stage boss encounter.
 function GameBossEncounterInfoCreate(_stage = undefined, _player_ship_id = undefined) {
@@ -1967,16 +2065,20 @@ function GameBossEncounterInfoCreate(_stage = undefined, _player_ship_id = undef
         _player_ship_id = GameRunShipIdGet();
     }
 
-    var _is_final = clamp(_stage, 1, STAGE_COUNT) >= STAGE_COUNT;
+    _stage = clamp(_stage, 1, STAGE_COUNT);
+    var _is_final = _stage >= STAGE_COUNT;
     if (!_is_final) {
         var _phase_plan = GameMemoryCorePhasePlanCreate(_stage);
+        var _character_boss = GameCharacterBossInfoCreate(_stage);
+        var _is_character = is_struct(_character_boss);
 
         return {
             is_final: false,
+            is_character: _is_character,
             opponent_ship_id: "",
-            display_name: GameMemoryCoreNameGet(_stage),
-            ship_name: "",
-            sprite_id: spr_mayfly,
+            display_name: _is_character ? _character_boss.display_name : GameMemoryCoreNameGet(_stage),
+            ship_name: _is_character ? _character_boss.ship_name : "",
+            sprite_id: _is_character ? _character_boss.sprite_id : spr_mayfly,
             draw_y_scale: 1,
             phase_plan: _phase_plan,
             phase_signature: GameMemoryCorePhasePlanSignatureCreate(_phase_plan),
@@ -1988,6 +2090,7 @@ function GameBossEncounterInfoCreate(_stage = undefined, _player_ship_id = undef
 
     return {
         is_final: true,
+        is_character: true,
         opponent_ship_id: _opponent_ship_id,
         display_name: GamePlayerShipDisplayNameGet(_opponent_ship_id),
         ship_name: GamePlayerShipNameGet(_opponent_ship_id),
@@ -2257,20 +2360,6 @@ function GamePlayerSwordPoseCreate(_frame, _is_berserk, _ship_id = undefined) {
         length: _length * (_is_berserk ? BERSERK_SWORD_MULTIPLIER : 1),
         moving: _moving,
     };
-}
-
-/// @func GameAngleNormalizeAround(angle, reference)
-/// Normalizes an angle around a nearby reference angle for range comparisons.
-function GameAngleNormalizeAround(_angle, _reference) {
-    while (_angle - _reference > 180) {
-        _angle -= 360;
-    }
-
-    while (_angle - _reference < -180) {
-        _angle += 360;
-    }
-
-    return _angle;
 }
 
 /// @func GamePlayerSwordShouldCancelBullet(player_x, player_y, bullet_x, bullet_y, previous_pose, current_pose)
@@ -2554,15 +2643,6 @@ function GamePlayerContinueAccept(_state, _camera_x, _camera_y) {
 
     GamePlayerRespawnStateApply(_state);
     return GameScenePlayerRespawnPositionGet(_camera_x, _camera_y);
-}
-
-/// @func GamePlayerGameOverBegin()
-/// Moves the continue prompt into its game-over countdown mode.
-function GamePlayerGameOverBegin() {
-    GameRuntimeGameplayEnsure();
-
-    global.game_runtime.continue_screen.mode = "game_over";
-    global.game_runtime.continue_screen.game_over_timer = GAME_OVER_DELAY_FRAMES;
 }
 
 /// @func GamePlayerGameOverFinalize()
@@ -3078,28 +3158,4 @@ function GameBossBarSegmentsCreate(_phase_index, _hp, _phase_max_hp, _phase_coun
     }
 
     return _segments;
-}
-
-/// @func GameBossPhaseTwoScatterActive(frame)
-/// Returns whether the phase-two scatter attack is currently in its firing window.
-function GameBossPhaseTwoScatterActive(_frame) {
-    return (_frame mod BOSS_PHASE2_SCATTER_PERIOD) < (BOSS_PHASE2_SCATTER_PERIOD - BOSS_PHASE2_BREAK_FRAMES);
-}
-
-/// @func GameBossPhaseThreeRedirectDue(frame)
-/// Returns whether the phase-three freeze-and-redirect event should trigger.
-function GameBossPhaseThreeRedirectDue(_frame) {
-    return _frame > 0 && ((_frame mod BOSS_PHASE3_REDIRECT_INTERVAL) == 0);
-}
-
-/// @func GameBossScatterShotSpecCreate(enemy_x, enemy_y)
-/// Returns one random-direction bead shot specification for the boss scatter phase.
-function GameBossScatterShotSpecCreate(_enemy_x, _enemy_y) {
-    return {
-        x: _enemy_x,
-        y: _enemy_y,
-        direction: irandom(359),
-        speed: BOSS_PHASE2_BEAD_SPEED,
-        object_index: obj_bullet_bead,
-    };
 }

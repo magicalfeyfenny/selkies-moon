@@ -1,3 +1,4 @@
+// Draw the scrolling credits over a dimmed story-art backdrop.
 draw_clear_alpha(make_color_rgb(8, 12, 28), 1);
 
 var _core_asset = asset_get_index("spr_dialogue_bg_core");

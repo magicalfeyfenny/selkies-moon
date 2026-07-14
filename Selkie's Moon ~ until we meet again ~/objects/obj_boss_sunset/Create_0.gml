@@ -4,7 +4,6 @@ event_inherited();
 points = 30000 + (stage_rank * 5000);
 hit_radius = 28;
 float_phase = 0;
-pattern_timer = 0;
 pattern_clockwise_first = true;
 anchor_offset_x = 0;
 anchor_offset_y = -96;

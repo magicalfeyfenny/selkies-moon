@@ -1,3 +1,5 @@
+// Device polling and device-agnostic input verbs used by gameplay and menus.
+
 /// @func GameInputVerbStateCreate()
 /// Creates the per-verb state container for one input action.
 function GameInputVerbStateCreate() {
@@ -192,32 +194,29 @@ function GameInputSnapshotApply(_state, _keyboard, _gamepad) {
     }
 }
 
-/// @func GameInputUpdateKeyboard(state)
-/// Refreshes verb states from the current keyboard mapping.
-function GameInputUpdateKeyboard(_state) {
-    var _keyboard = GameInputKeyboardSnapshotCreate();
-    var _gamepad = GameInputGamepadSnapshotCreate(_state);
-    _gamepad.up = false;
-    _gamepad.down = false;
-    _gamepad.left = false;
-    _gamepad.right = false;
-    _gamepad.fire = false;
-    _gamepad.autofire = false;
-    _gamepad.bomb = false;
-    _gamepad.pause = false;
-    _gamepad.activity = false;
-    GameInputSnapshotApply(_state, _keyboard, _gamepad);
-    _state.device = "keyboard";
-    _state.move_x = _keyboard.move_x;
-    _state.move_y = _keyboard.move_y;
-}
-
 /// @func GameInputUpdate(state)
 /// Updates the active input device and polls its mapped verbs.
 function GameInputUpdate(_state) {
     var _keyboard = GameInputKeyboardSnapshotCreate();
     var _gamepad = GameInputGamepadSnapshotCreate(_state);
     GameInputSnapshotApply(_state, _keyboard, _gamepad);
+}
+
+/// @func GameMenuIndexWrap(index, delta, count)
+/// Moves a menu cursor by one delta and wraps it inside the item count.
+function GameMenuIndexWrap(_index, _delta, _count) {
+    if (_count <= 0) {
+        return 0;
+    }
+
+    return ((_index + _delta) mod _count + _count) mod _count;
+}
+
+/// @func GameMenuIndexStep(index, negative_pressed, positive_pressed, count)
+/// Applies one pair of directional menu inputs to a wrapping cursor.
+function GameMenuIndexStep(_index, _negative_pressed, _positive_pressed, _count) {
+    var _delta = (_positive_pressed ? 1 : 0) - (_negative_pressed ? 1 : 0);
+    return GameMenuIndexWrap(_index, _delta, _count);
 }
 
 /// @func GameInputVerbDown(verb)
@@ -238,14 +237,4 @@ function GameInputVerbPressed(_verb) {
     }
 
     return global.game_input.verbs[$ _verb].pressed;
-}
-
-/// @func GameInputVerbReleased(verb)
-/// Returns whether a named verb was released this frame.
-function GameInputVerbReleased(_verb) {
-    if (!variable_global_exists("game_input") || !struct_exists(global.game_input.verbs, _verb)) {
-        return false;
-    }
-
-    return global.game_input.verbs[$ _verb].released;
 }

@@ -1,3 +1,5 @@
+// Automation-only launch detection, persistence isolation, and visual QA tour.
+
 /// @func GameDirectoryPathNormalize(path)
 /// Normalizes a directory path to forward slashes with a trailing slash.
 function GameDirectoryPathNormalize(_path) {
@@ -12,19 +14,6 @@ function GameDirectoryPathNormalize(_path) {
     }
 
     return _path;
-}
-
-/// @func GameProjectDirectoryGet()
-/// Returns the project directory derived from the loaded project filename.
-function GameProjectDirectoryGet() {
-    var _project_path = string_replace_all(GM_project_filename, "\\", "/");
-    var _separator_index = string_last_pos("/", _project_path);
-
-    if (_separator_index <= 0) {
-        return "";
-    }
-
-    return string_copy(_project_path, 1, _separator_index);
 }
 
 /// @func GameWorkingDirectoryGet()

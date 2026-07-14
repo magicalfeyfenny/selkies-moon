@@ -1,0 +1,43 @@
+{
+  "$GMSprite":"v2",
+  "%Name":"spr_shalmii_ship",
+  "bboxMode":0,
+  "bbox_bottom":63,
+  "bbox_left":0,
+  "bbox_right":63,
+  "bbox_top":0,
+  "collisionKind":1,
+  "collisionTolerance":0,
+  "DynamicTexturePage":false,
+  "edgeFiltering":false,
+  "For3D":false,
+  "frames":[
+    {"$GMSpriteFrame":"v1","%Name":"d2d3340e-f2c1-4ebd-8611-dd0763277dcd","name":"d2d3340e-f2c1-4ebd-8611-dd0763277dcd","resourceType":"GMSpriteFrame","resourceVersion":"2.0",},
+  ],
+  "gridX":0,
+  "gridY":0,
+  "height":64,
+  "HTile":false,
+  "layers":[
+    {"$GMImageLayer":"","%Name":"d463a055-62c3-4458-b670-e5477442c95c","blendMode":0,"displayName":"default","isLocked":false,"name":"d463a055-62c3-4458-b670-e5477442c95c","opacity":100.0,"resourceType":"GMImageLayer","resourceVersion":"2.0","visible":true,},
+  ],
+  "name":"spr_shalmii_ship",
+  "nineSlice":null,
+  "origin":4,
+  "parent":{"name":"Selkies Moon","path":"Selkies Moon.yyp",},
+  "preMultiplyAlpha":false,
+  "resourceType":"GMSprite",
+  "resourceVersion":"2.0",
+  "sequence":{
+    "$GMSequence":"v1","%Name":"spr_shalmii_ship","autoRecord":true,"backdropHeight":768,"backdropImageOpacity":0.5,"backdropImagePath":"","backdropWidth":1366,"backdropXOffset":0.0,"backdropYOffset":0.0,
+    "events":{"$KeyframeStore<MessageEventKeyframe>":"","Keyframes":[],"resourceType":"KeyframeStore<MessageEventKeyframe>","resourceVersion":"2.0",},"eventStubScript":null,"eventToFunction":{},"length":1.0,"lockOrigin":false,
+    "moments":{"$KeyframeStore<MomentsEventKeyframe>":"","Keyframes":[],"resourceType":"KeyframeStore<MomentsEventKeyframe>","resourceVersion":"2.0",},
+    "name":"spr_shalmii_ship","playback":1,"playbackSpeed":30.0,"playbackSpeedType":0,"resourceType":"GMSequence","resourceVersion":"2.0","showBackdrop":true,"showBackdropImage":false,"timeUnits":1,
+    "tracks":[
+      {"$GMSpriteFramesTrack":"","builtinName":0,"events":[],"inheritsTrackColour":true,"interpolation":1,"isCreationTrack":false,"keyframes":{"$KeyframeStore<SpriteFrameKeyframe>":"","Keyframes":[
+            {"$Keyframe<SpriteFrameKeyframe>":"","Channels":{"0":{"$SpriteFrameKeyframe":"","Id":{"name":"d2d3340e-f2c1-4ebd-8611-dd0763277dcd","path":"sprites/spr_shalmii_ship/spr_shalmii_ship.yy",},"resourceType":"SpriteFrameKeyframe","resourceVersion":"2.0",},},"Disabled":false,"id":"0d993e11-8cc4-4696-bf8c-f1a81629277e","IsCreationKey":false,"Key":0.0,"Length":1.0,"resourceType":"Keyframe<SpriteFrameKeyframe>","resourceVersion":"2.0","Stretch":false,},
+          ],"resourceType":"KeyframeStore<SpriteFrameKeyframe>","resourceVersion":"2.0",},"modifiers":[],"name":"frames","resourceType":"GMSpriteFramesTrack","resourceVersion":"2.0","spriteId":null,"trackColour":0,"tracks":[],"traits":0,},
+    ],"visibleRange":null,"volume":1.0,"xorigin":32,"yorigin":32,
+  },
+  "swatchColours":null,"swfPrecision":2.525,"textureGroupId":{"name":"Default","path":"texturegroups/Default",},"type":0,"VTile":false,"width":64,
+}
