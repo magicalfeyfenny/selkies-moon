@@ -86,11 +86,25 @@ if (_scene_action == "boss_intro") {
             GameStoryQueueRequest(GameFinalBossStoryFileGet());
         }
     }
+} else if (_scene_action == "stage_complete") {
+    // Chapters without a guardian end cleanly at their last enemy gauntlet.
+    // Their former abstract-boss patterns now belong to elite enemies.
+    GameSceneCombatClear();
+    GameSceneStageClearBegin(scene_state);
 }
 
 if (scene_state.mode == "boss_intro" && !global.game_runtime.signals.dialogue && !scene_state.boss_spawned) {
     var _boss_spawn = GameSceneBossSpawnPositionGet(scene_state.target_x, scene_state.camera_y);
-    instance_create_layer(_boss_spawn.x, _boss_spawn.y, "Instances", obj_boss_sunset);
+    if (GameStageIsDualBoss()) {
+        var _mira_boss = instance_create_layer(_boss_spawn.x - 52, _boss_spawn.y - 6,
+            "Instances", obj_boss_sunset);
+        var _aisha_boss = instance_create_layer(_boss_spawn.x + 52, _boss_spawn.y + 14,
+            "Instances", obj_boss_sunset);
+        GameBossDualConfigure(_mira_boss, "mira");
+        GameBossDualConfigure(_aisha_boss, "aisha");
+    } else {
+        instance_create_layer(_boss_spawn.x, _boss_spawn.y, "Instances", obj_boss_sunset);
+    }
     GameBossSpawnSoundPlay();
     scene_state.boss_spawned = true;
     scene_state.mode = "boss_fight";

@@ -7,6 +7,8 @@ if (GameGameplayIsFrozen()) {
     exit;
 }
 
+bullet_age += 1;
+
 // Bombs cancel every active bullet before any normal bullet processing.
 if (GamePlayerBombActiveGet()) {
     GameBulletCancelMark(id, global.game_runtime.is_berserk);
@@ -25,6 +27,7 @@ if (cancelled) {
 // Advance the bullet and cull it once it leaves the active combat space.
 x += lengthdir_x(move_speed * rank_speed_scale, move_direction);
 y += lengthdir_y(move_speed * rank_speed_scale, move_direction);
+image_angle = move_direction;
 
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone && (abs(x - _camera.x) > 1000 || abs(y - _camera.y) > 1000)) {

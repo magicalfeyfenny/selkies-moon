@@ -12,17 +12,17 @@
 | `autofire` | C | X / face 3 | Focused movement and fire |
 | `pause` | Escape or P | Start | Pause or title confirm |
 
-The last active device owns analog movement and prompt identity. A neutral controller snapshot clears released analog movement without losing the last-device label.
+The last active device owns analog movement and prompt identity. A neutral controller snapshot clears released analog movement without losing the last-device label. Title Options exposes separate scrolling remap pages for keyboard and gamepad. Remaps persist in `config.sav`, duplicate assignments preserve every action by swapping the displaced binding, and controller hot-plug remains active while a gamepad page listens. The left stick remains an analog movement source while its four digital direction verbs can be rebound.
 
 ## Run and stage state
 
-Normal and practice runs share `global.game_runtime`. `GameRunStartInitialize()` resets attempt-scoped values. Normal runs start at stage 1, power 0, three lives, three bombs, meter 0, and rank 50. Practice applies its normalized request and does not record starts, clears, scores, or continues.
+Normal and practice runs share `global.game_runtime`. `GameRunStartInitialize()` resets attempt-scoped values. Normal runs start at stage 1, power 0, three lives, three bombs, meter 0, and rank 0. Practice applies its normalized request and does not record starts, clears, scores, or continues.
 
 `obj_scene_manager.scene_state.mode` is the stage state machine:
 
 | Mode | Behavior |
 | --- | --- |
-| `scroll` | Camera advances, timeline/director waves run |
+| `scroll` | Camera advances and the data-driven stage roster runs |
 | `boss_intro` | Combat actors are cleared; route-specific boss dialogue may run |
 | `boss_fight` | Boss owns completion |
 | `boss_outro` | Post-defeat dialogue holds the scene before stage clear |
@@ -32,9 +32,9 @@ The camera's X target follows the player within a bounded drag region. The visib
 
 ## Rank
 
-Rank is clamped to 0-100 and defaults to 50. It affects spawn intervals, enemy fire intervals, and enemy bullet speed. It does not change enemy health, player damage, or boss phase count.
+Rank is clamped to 0-50. Fresh normal runs and fresh Practice setups start at 0, while Practice remains configurable. Rank affects spawn intervals, enemy fire intervals, and enemy bullet speed. It does not change enemy health, player damage, or boss phase count.
 
-Positive play events and uninterrupted combat raise rank; deaths and continues lower it. Practice may lock rank. `GameRankPressureCreate()` is the single conversion from rank to the three cadence/speed multipliers.
+Uninterrupted combat raises rank by one every ten seconds, every twelve ordinary shootdowns add one point, and boss defeats or entering Hyper raise it more sharply. Only bombing, dying, and continuing lower it. Practice may lock rank. `GameRankPressureCreate()` is the single conversion from rank to the three cadence/speed multipliers.
 
 ## Player weapons
 
@@ -68,16 +68,21 @@ Blade bullets replace linear motion with spiral or redirected motion after the i
 
 Medals add score and cancel meter. At 1,000 meter, Berserk begins and cancels all bullets. While active, only the enhanced sword is available. Meter drains over time, and the ending transition cancels bullets again.
 
-Bombs consume stock, run for 60 frames, cancel bullets throughout their active window, and render a growing bloom around the player.
+Bombs consume stock, run for 60 frames, cancel bullets throughout their active window, and render a stained-glass rosette behind live bullets and the player hitbox. Player death is a pearl-and-petal firework rather than a collision-like red disc.
 
 ## Enemies
 
-`obj_enemy_parent` owns freeze, damage, defeat, score, pickup attempts, and default motion. Children only add specialized behavior:
+`obj_enemy_parent` owns freeze, damage, defeat, score, pickup attempts, and default motion. The live director spawns four `obj_enemy_variant` identities authored for each stage. Chasers make one pass from above and permanently commit downward when the player is absent or behind; anchors enter and hold a lane; dancers follow camera-relative curves; lancers make fast straight passes. Every enemy bullet turns to its actual direction of travel, including spiral blades.
 
-- turret: aimed bead shots;
-- bee: pursuit drift and three-speed aligned diamond bursts;
-- mayfly: camera-lane drop, figure-eight drift, alternating blade spirals;
-- variant: moth, kelp, wisp, needle, and mirror patterns scaled by stage.
+| Stage | Basic-enemy roster | Redistributed pattern ideas |
+| ---: | --- | --- |
+| 1: Shalmii | Forge Spark, Anvil Familiar, Bellows Imp, Hammer Cherub | Tideglass fan/spiral; shockwave; hammerfall |
+| 2: Aster | Ribbon Hare, Winged Staff, Lavender Knot, Saltwind Pinwheel | gale; kelp wall; ribbon loop; spindrift |
+| 3: Mira & Aisha | Spade Familiar, Dealer Mask, Order Talisman, Chaos Shard | four suits; dealer fan; order circle; chaos shards |
+| 4: Caelia | Clockwork Planet, Astrolabe Eye, Constellation Lance, Bloodstar Heart | Bloodtide pulse/hunt; astrolabe; constellation |
+| 5: Moon or Selkie | Violet Bee, Twilight Mayfly, Thorn Reliquary, Chakram Seraph | thorn arc; petal spiral; rose bloom; chakram orbit |
+
+The legacy turret, bee, mayfly, and generic variant objects remain only as isolated regression fixtures; the live stage director never spawns them. Violet Bee and Twilight Mayfly are new stage-five identities with new sprites and dedicated projectile art.
 
 Steady defeat cadence drops score pickups. A point-blank defeat adds recharge toward a bounded resource drop. Resource type selection accounts for current stock/power and a per-stage cap.
 
@@ -92,29 +97,15 @@ Steady defeat cadence drops score pickups. A point-blank defeat adds recharge to
 - draw orientation;
 - phase plan and signature.
 
-Boss plans always demonstrate the complete seed set first, followed by complete variant sets and one boss-exclusive final attack:
-
-| Encounter tier | Seeds | Variant sets | Signature finale | Total phases |
-| --- | ---: | ---: | ---: | ---: |
-| Stages 1-2 | 2 | 1 | 1 | 5 |
-| Stages 3-6 | 3 | 1 | 1 | 7 |
-| Stages 7-9 | 4 | 1 | 1 | 9 |
-| Stage 10 route finale | 5 | 2 | 1 | 16 |
-
-Every stage owns a pattern family. Character encounters use motifs from the character instead of retaining the abstract Core pattern that previously occupied the stage slot:
+There are five stages and no abstract Memory Core boss encounters. Their useful pattern ideas are redistributed across the basic-enemy roster, while the seven named girls retain encounter identity:
 
 | Stage | Encounter | Pattern family | Seed demonstrations | Unique finale |
 | ---: | --- | --- | --- | --- |
-| 1 | Tideglass Core | Tideglass | Spiral; Fan | Maelstrom |
-| 2 | Mira / Wildheart | Poker | Four Suits; Dealer Fan | Royal Flush |
-| 3 | Saltwind Core | Saltwind | Gale; Spindrift; Needles | Eye |
-| 4 | Kelp Core | Kelp | Snare; Bramble; Wall | Abyssal Bloom |
-| 5 | Shalmii / Lockstep | Hex runes and hammer | Hex Runes; Hammerfall; Shockwave | Runebreaker |
-| 6 | Aisha / Wishbound | Order, chaos, and talismans | Order Circle; Chaos Shards; Talisman Seal | Blade of Desires |
-| 7 | Aster / Ribbonstar | Ribbons, bunny arcs, and winged staff | Ribbon Loop; Bunny Hop; Winged Staff; Lavender Knot | Ribbonstar Wish |
-| 8 | Bloodtide Core | Bloodtide | Pulse; Rip; Hunt; Deluge | Heart |
-| 9 | Caelia / Zenith | Astral orrery | Planetary Orbit; Constellation; Astrolabe; Star Cage | Cosmic Zenith |
-| 10 | Moon or Selkie | Rose or chakram | Five route-specific seeds | Rose Eternity or Chakram Apotheosis |
+| 1 | Shalmii / Lockstep | Hex runes and blacksmith hammerwork | Hex Runes; Hammerfall; Shockwave | Runebreaker (3 phases total) |
+| 2 | Aster / Ribbonstar | Ribbons, bunny arcs, and winged staff | Ribbon Loop; Bunny Hop; Winged Staff; Lavender Knot | Ribbonstar Wish (5 phases total) |
+| 3 | Mira & Aisha / Wildheart and Wishbound | Poker chance paired with order, chaos, and talismans | Paired character seeds | Royal Flush and Blade of Desires (3 phases each, simultaneous) |
+| 4 | Caelia / Zenith | Astral orrery | Planetary Orbit; Constellation; Astrolabe; Star Cage | Cosmic Zenith (7 phases total) |
+| 5 | Moon or Selkie | Rose or chakram | Route-specific seeds | Rose Eternity or Chakram Apotheosis (15 phases total) |
 
 A finale is appended after expansion and is never used as a seed or variant. Expanded phase HP and damage scaling keep total endurance near the original curve while giving each phase enough time to express its pattern. Portrait, dialogue, and ship sprites remain presentation data, so replacing provisional character art does not require changing an attack plan.
 
@@ -136,10 +127,22 @@ Score pickups use a diamond silhouette. Earned resource pickups use a ring silho
 
 ## Pause and practice
 
-Pause is a real gameplay freeze signal. Dialogue and Continue block pause because they already own confirm/cancel input. Pause can change display settings, confirm a return to title, and—in practice—edit live power, rank, lives, bombs, and meter or restart the selected segment.
+Pause is a real gameplay freeze signal. Dialogue and Continue block pause because they already own confirm/cancel input. Pause can change display settings and the persisted Master, Music, and SFX meters, confirm a return to title, and—in practice—edit live power, rank, lives, bombs, and meter or restart the selected segment. All three audio values range from 0 to 100 in five-point steps, apply immediately, and clamp instead of wrapping.
 
-Practice configuration is normalized at every boundary. Starting, restarting, completing, or returning to title retains the setup without contaminating persistent run statistics.
+Practice configuration is normalized at every boundary. Starting, restarting, completing, or returning to title retains the setup without contaminating persistent run statistics. Practice never opens the Continue prompt; a terminal practice death returns to title. Character Select explains the charge, focused fire, bomb, and Hyper loop and animates each ship demonstrating its attacks.
+
+The production score and effects share the melodic and interval language in
+`AUDIO_DIRECTION.md`; music is routed by room, character stage, boss state, and
+finale route while every one-shot enters through a semantic helper.
 
 ## Story and ending
 
-Opening and ending rooms auto-start their default story files. Stages 2, 5, 6, 7, and 9 queue a Mira, Shalmii, Aisha, Aster, or Caelia introduction for the active route, run that character's motif-specific phase plan, then hold in `boss_outro` for route-specific defeat dialogue. Practice skips both seams. Stage 10 queues its route-specific introduction inside `rm_game`, so completion does not change rooms before combat. After the final boss, the scene enters the ending; ending completion records the run before credits cache the result. Credits reset runtime only when they finish or are skipped.
+Opening and ending rooms auto-start their default story files. Stages 1-4 queue Shalmii, Aster, Mira and Aisha together, then Caelia; each uses route-specific introduction and defeat dialogue around its motif-specific fight. Practice skips both seams. Stage 5 queues the Moon-or-Selkie confrontation inside `rm_game`, preserving Sunset chasing Sunrise as the spine of both yuri routes. After the final boss, the scene enters the ending; ending completion records the run before credits cache the result. Credits reset runtime only when they finish or are skipped.
+
+## Background and draw hierarchy
+
+The old violet tile layer is hidden. `obj_scene_manager` submits a true-3D modular model in Draw Begin, then restores the 2D matrices and disables depth testing before any actor renders. Three adjacent 64-unit copies cover the current camera path while a compact prebuilt vertex buffer avoids runtime OBJ parsing. The editable Blender source and triangulated OBJ remain beside the runtime buffer.
+
+Each chapter owns a slow looping camera path and a distinct light/fog/effect treatment: Shalmii uses orange forge key light with ember smoke; Aster uses cool coast light, pink rim light, and salt mist; Mira and Aisha split magenta and cyan around wishcourt dust; Caelia uses cold astral light, red rim emission, and deep orrery fog; Moon and Selkie use violet moonlight, horizon gold, pollen, petals, and a continuous field of modeled vines and violets. Quantized shader light and ordered fog stipple preserve the 640x360 pixel grid.
+
+Background scroll never changes collision or spawn coordinates. Background atmosphere remains in Draw Begin. Broad sword, bomb, and death effects draw next; enemy bullets and the player's ship/hitbox always draw above them. Menu backgrounds use silhouettes of all seven girls as decorators.

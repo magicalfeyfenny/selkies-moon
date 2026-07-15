@@ -1,0 +1,61 @@
+{
+  "stage": 4,
+  "slug": "caelia_bloodstar_orrery",
+  "blend_source": "art/3d_stage_sources/stage_04_caelia_bloodstar_orrery/caelia_bloodstar_orrery.blend",
+  "runtime_obj": "stage3d_04_caelia_bloodstar_orrery.obj",
+  "loop_length": 64.0,
+  "camera_path": [
+    [
+      2.0,
+      0.0,
+      11.5
+    ],
+    [
+      -2.5,
+      16.0,
+      12.5
+    ],
+    [
+      1.0,
+      32.0,
+      8.8
+    ],
+    [
+      3.0,
+      48.0,
+      11.8
+    ],
+    [
+      2.0,
+      64.0,
+      11.5
+    ]
+  ],
+  "camera_target_z": 2.4,
+  "scroll_speed": 0.021,
+  "lighting": {
+    "world": [
+      0.008,
+      0.008,
+      0.03
+    ],
+    "sun_color": [
+      0.35,
+      0.58,
+      1.0
+    ],
+    "sun_energy": 1.45
+  },
+  "fog": {
+    "color": [
+      0.04,
+      0.025,
+      0.11
+    ],
+    "start": 18.0,
+    "end": 76.0,
+    "density": 0.38,
+    "effect": "astral_sparks"
+  },
+  "triangles": 3172
+}

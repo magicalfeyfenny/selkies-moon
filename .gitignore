@@ -1,4 +1,9 @@
-/.DS_Store
+.DS_Store
 /cache/
 /output/
 /test-results/
+/.DS_Store
+/tmp/
+/art/audio_production/raw_bounces/
+/art/audio_production/superseded/
+/tools/__pycache__/

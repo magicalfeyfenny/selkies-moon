@@ -1,0 +1,135 @@
+{
+  "tempo_bpm": 120,
+  "slot_seconds": 4.0,
+  "logic_project": "sfx_logic_projects/Selkies Moon SFX Production.logicx",
+  "layers": [
+    "Metal and Glass",
+    "Orchestral Body",
+    "Air and Choir",
+    "Organ and Low Bloom",
+    "Acoustic Transients",
+    "Bells and Motif Tail"
+  ],
+  "cues": [
+    {
+      "index": 1,
+      "slug": "bomb",
+      "title": "Orchestral Night-Bloom",
+      "start_seconds": 0.0,
+      "duration_seconds": 2.3,
+      "family": "low orchestral bloom, reversed glass, choral air"
+    },
+    {
+      "index": 2,
+      "slug": "boss_phase",
+      "title": "Stained-Glass Phase Cadence",
+      "start_seconds": 4.0,
+      "duration_seconds": 1.45,
+      "family": "bell cadence and organ punctuation"
+    },
+    {
+      "index": 3,
+      "slug": "boss_spawn",
+      "title": "Reliquary Gate Opens",
+      "start_seconds": 8.0,
+      "duration_seconds": 2.4,
+      "family": "low organ, iron hinge, distant choir"
+    },
+    {
+      "index": 4,
+      "slug": "enemy_destroy",
+      "title": "Porcelain Familiar Break",
+      "start_seconds": 12.0,
+      "duration_seconds": 0.72,
+      "family": "brittle metal and glass collapse"
+    },
+    {
+      "index": 5,
+      "slug": "enemy_fire_arc",
+      "title": "Occult Ribbon Snap",
+      "start_seconds": 16.0,
+      "duration_seconds": 0.42,
+      "family": "air ribbon, harp snap, muted body"
+    },
+    {
+      "index": 6,
+      "slug": "enemy_fire_needle",
+      "title": "Silver Needle Cast",
+      "start_seconds": 20.0,
+      "duration_seconds": 0.3,
+      "family": "dry metallic needle and tiny glass tail"
+    },
+    {
+      "index": 7,
+      "slug": "ow",
+      "title": "Stained Armor Fracture",
+      "start_seconds": 24.0,
+      "duration_seconds": 0.78,
+      "family": "cloth impact, armor body, glass crack"
+    },
+    {
+      "index": 8,
+      "slug": "player_focus",
+      "title": "Converging Familiar Volley",
+      "start_seconds": 28.0,
+      "duration_seconds": 0.4,
+      "family": "restrained layered strike and focused shimmer"
+    },
+    {
+      "index": 9,
+      "slug": "player_shot_moon",
+      "title": "Moon Rose-Thorn Shot",
+      "start_seconds": 32.0,
+      "duration_seconds": 0.24,
+      "family": "silk thorn transient and quiet glass overtone"
+    },
+    {
+      "index": 10,
+      "slug": "player_shot_selkie",
+      "title": "Selkie Tidal Chakram Shot",
+      "start_seconds": 36.0,
+      "duration_seconds": 0.24,
+      "family": "small metal ring and tidal breath"
+    },
+    {
+      "index": 11,
+      "slug": "powerup_collect",
+      "title": "Votive Glass Collected",
+      "start_seconds": 40.0,
+      "duration_seconds": 0.66,
+      "family": "music-box glass pickup"
+    },
+    {
+      "index": 12,
+      "slug": "stage_clear",
+      "title": "Horizon Seal Flourish",
+      "start_seconds": 44.0,
+      "duration_seconds": 2.2,
+      "family": "short Horizon-theme orchestral flourish"
+    },
+    {
+      "index": 13,
+      "slug": "sword_moon",
+      "title": "Rose-Whip Unsheathed",
+      "start_seconds": 48.0,
+      "duration_seconds": 1.18,
+      "family": "thorn sweep, petal shimmer, velvet body"
+    },
+    {
+      "index": 14,
+      "slug": "sword_selkie",
+      "title": "Chakram Orbit Unsheathed",
+      "start_seconds": 52.0,
+      "duration_seconds": 1.18,
+      "family": "metal orbit, sea-air sweep, bright ring"
+    },
+    {
+      "index": 15,
+      "slug": "typewriter",
+      "title": "Neo-Victorian Clockwork Key",
+      "start_seconds": 56.0,
+      "duration_seconds": 0.18,
+      "family": "quiet mechanical key and felt return"
+    }
+  ]
+}

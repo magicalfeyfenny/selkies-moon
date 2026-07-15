@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Aster",
+    "text": "Enough. Ribbonstar has no more sky left to borrow.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "You could have moved.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aster",
+    "text": "And let you call desperation resolve? No. But you listened when the bullets spoke.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "What did they say?",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aster",
+    "text": "Selkie is afraid, not gone. Reach her without making fear another cage.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I will. Thank you, Aster.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

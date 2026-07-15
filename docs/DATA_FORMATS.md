@@ -28,7 +28,7 @@ Missing assets fall back safely: backgrounds are skipped and portraits become st
 
 Background order matters. Later entries draw over earlier entries. Portraits draw after every background.
 
-Character-boss story files use `<story_id>_<seam>_story_<route>.json`. The seam is `intro` or `defeat`, and the route is `moon_route` or `selkie_route`. Mira (`story_id` `mira`) occupies Stage 2, Shalmii (`shalmii`) Stage 5, Aisha (`aisha`) Stage 6, Aster (`aster`) Stage 7, and Caelia (`caelia`) Stage 9. Each set references its matching portrait sprite; `GameCharacterBossStoryFileGet()` selects the file from the character registry, route, and whether the fight has ended. Story and portrait references do not appear in phase descriptors, so either can be replaced without changing boss mechanics.
+Character-boss story files use `<story_id>_<seam>_story_<route>_v2.json`. The seam is `intro` or `defeat`, and the route is `moon_route` or `selkie_route`. The `v2` suffix deliberately prevents obsolete Included File copies in GameMaker's writable sandbox from shadowing rewritten story data after an upgrade. Shalmii occupies Stage 1, Aster Stage 2, Mira and Aisha share the `mira_aisha` Stage 3 seam, and Caelia occupies Stage 4. Stage 5 uses the versioned final boss story files. Each set references its matching portrait sprites; `GameCharacterBossStoryFileGet()` selects the file from the encounter registry, route, and whether the fight has ended. Story and portrait references do not appear in phase descriptors, so either can be replaced without changing boss mechanics.
 
 ## Persistence JSON
 
@@ -49,7 +49,7 @@ Character-boss story files use `<story_id>_<seam>_story_<route>.json`. The seam 
 
 All four stat tables use ten-entry descending/parallel arrays. The score array is sorted; the continues row is inserted at the matching score index. Ship tables may gain new keys, and migration preserves any recognized per-ship arrays.
 
-`config.sav` contains `version`, `view_width`, `view_height`, `target_fps`, `display_scale`, `fullscreen`, and `input_device`.
+`config.sav` contains `version`, `view_width`, `view_height`, `target_fps`, `display_scale`, `fullscreen`, `input_device`, `input_bindings`, `master_volume`, `music_volume`, and `sfx_volume`. Configuration schema version 5 adds independent `keyboard` and `gamepad` maps beneath `input_bindings`. Every map owns the eight verbs `up`, `down`, `left`, `right`, `fire`, `autofire`, `bomb`, and `pause`; keyboard values are non-empty key-code arrays and gamepad values are digital button codes. Older configurations migrate to the default bindings. The three audio values remain integer percentages from 0 through 100; missing gains default to 100 and present values are rounded and clamped.
 
 Never change a persisted shape without updating its version, default factory, validator, migration, and tests.
 
@@ -74,7 +74,7 @@ Boss plans are arrays of structs created by `GameMemoryCorePhaseCreate()`:
 
 Every `shot_kind` must have one explicit runtime interpreter case. Unknown values log a warning and fire nothing. Phase signatures include all behavior fields and are used by regression tests to enforce unique plans.
 
-Current themes are `tideglass`, `saltwind`, `kelp`, and `bloodtide` for abstract Cores; `poker`, `rune`, `desire`, `ribbon`, and `astral` for character bosses; and `rose` or `chakram` for the route finale. Plan construction must preserve this order:
+Boss themes are `poker`, `rune`, `desire`, `ribbon`, and `astral` for character bosses, and `rose` or `chakram` for the route finale. Tideglass, Saltwind, Kelp, and Bloodtide survive as pattern material on stage-themed basic enemies rather than boss identity. Plan construction preserves seed order when fitting a motif to its encounter's phase count:
 
 1. every base seed in declaration order;
 2. every `_v1` phase in the same order;
@@ -86,10 +86,10 @@ Current themes are `tideglass`, `saltwind`, `kelp`, and `bloodtide` for abstract
 Practice requests contain:
 
 - `ship_id` and `ship_index`;
-- `stage` from 1-10;
+- `stage` from 1-5;
 - `segment`: `full`, `waves`, or `boss`;
 - `power` from 0-5;
-- `rank` from 0-100;
+- `rank` from 0-50;
 - `dynamic_rank` boolean;
 - `lives` and `bombs` from 0-6;
 - `meter` from 0-1,000.

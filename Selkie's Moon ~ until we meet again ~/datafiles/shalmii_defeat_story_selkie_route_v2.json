@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Shalmii",
+    "text": "Ceasefire. You held formation without turning rigid.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Because Moon is not terrain to capture.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Shalmii",
+    "text": "Good. Remember that when fear orders you to close every exit.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "I will leave one open for her, and one for us.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Shalmii",
+    "text": "Then advance. Moonwake recognizes your command.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Thank you.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

@@ -43,6 +43,39 @@ GameUiDrawOutlinedText(_lines[5], _layout.right_panel_left + _layout.panel_paddi
 GameUiDrawOutlinedText(_lines[6], _layout.right_panel_left + _layout.panel_padding, _layout.panel_padding + _layout.line_height, c_white);
 GameUiDrawOutlinedText(_lines[7], _layout.right_panel_left + _layout.panel_padding, _layout.panel_padding + (_layout.line_height * 2), c_white);
 
+// Keep the sword state in the gutter so its activation is unmistakable without
+// placing another opaque meter over the bullet field.
+var _player_charge = instance_find(obj_player, 0);
+if (_player_charge != noone && variable_instance_exists(_player_charge, "player_state")) {
+    var _charge_frames = _player_charge.player_state.fire_hold_frames;
+    var _charge_ratio = global.game_runtime.is_berserk
+        ? 1 : clamp(_charge_frames / FIRE_HOLD_FRAMES, 0, 1);
+    var _charge_active = global.game_runtime.is_berserk || _charge_frames >= FIRE_HOLD_FRAMES;
+    var _charge_label = global.game_runtime.is_berserk ? "HYPER SWEEP"
+        : (_charge_active ? "SWORD ACTIVE" : ((_charge_frames > 0)
+            ? "CHARGE " + string(round(_charge_ratio * 100)) + "%" : "HOLD FIRE"));
+
+    GameUiDrawOrnateFrame(_layout.left_panel_left + 8, 112,
+        (_layout.left_panel_right - _layout.left_panel_left) - 16, 48,
+        _layout.sidebar_color, 0.58,
+        _charge_active ? make_color_rgb(255, 214, 112) : _story_palette.border_color, false);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("SWORD", _layout.left_panel_left + 18, 120,
+        _charge_active ? make_color_rgb(255, 236, 138) : _story_palette.title_color);
+    // Right-align the variable-width state so SWORD never runs into HOLD FIRE
+    // or the longer charging percentage at this bitmap font size.
+    draw_set_halign(fa_right);
+    GameUiDrawOutlinedText(_charge_label, _layout.left_panel_right - 18, 120, c_white);
+    draw_set_halign(fa_left);
+    draw_set_color(_story_palette.shadow_color);
+    draw_rectangle(_layout.left_panel_left + 18, 143, _layout.left_panel_right - 18, 149, false);
+    draw_set_color(_charge_active ? make_color_rgb(255, 214, 112) : make_color_rgb(118, 236, 255));
+    draw_rectangle(_layout.left_panel_left + 18, 143,
+        lerp(_layout.left_panel_left + 18, _layout.left_panel_right - 18, _charge_ratio), 149, false);
+    draw_set_color(_story_palette.inner_border_color);
+    draw_rectangle(_layout.left_panel_left + 18, 143, _layout.left_panel_right - 18, 149, true);
+}
+
 // Score medals are plentiful, while resource recharge is explicitly earned by
 // close-range play. Keep that second economy visible and visually separate.
 if (struct_exists(global.game_runtime, "resource_drop_charge")
@@ -51,17 +84,17 @@ if (struct_exists(global.game_runtime, "resource_drop_charge")
     var _resource_charge = clamp(global.game_runtime.resource_drop_charge, 0, _resource_threshold);
     var _resource_ratio = _resource_charge / _resource_threshold;
 
-    GameUiDrawOutlinedText("PB Recharge: " + string(_resource_charge) + "/" + string(_resource_threshold),
+    GameUiDrawOutlinedText("PB: " + string(_resource_charge) + "/" + string(_resource_threshold),
         _layout.right_panel_left + _layout.panel_padding,
-        _layout.panel_padding + (_layout.line_height * 3), _story_palette.inner_border_color);
+        64, _story_palette.inner_border_color);
 
     draw_set_color(_story_palette.shadow_color);
-    draw_rectangle(_layout.meter_left, 79, _layout.meter_left + _layout.meter_width, 82, false);
+    draw_rectangle(_layout.meter_left, 80, _layout.meter_left + _layout.meter_width, 83, false);
     draw_set_color(_story_palette.ornament_color);
-    draw_rectangle(_layout.meter_left, 79,
-        _layout.meter_left + (_layout.meter_width * _resource_ratio), 82, false);
+    draw_rectangle(_layout.meter_left, 80,
+        _layout.meter_left + (_layout.meter_width * _resource_ratio), 83, false);
     draw_set_color(_story_palette.inner_border_color);
-    draw_rectangle(_layout.meter_left, 79, _layout.meter_left + _layout.meter_width, 82, true);
+    draw_rectangle(_layout.meter_left, 80, _layout.meter_left + _layout.meter_width, 83, true);
 }
 
 // Draw the meter bar beneath the right-side score block.
@@ -73,43 +106,56 @@ draw_set_color(_story_palette.border_color);
 draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + _layout.meter_width, _layout.meter_top + _layout.meter_height, true);
 GameUiDrawOutlinedText(global.game_runtime.is_berserk ? "BERSERK" : "Cancel Meter", _layout.meter_left, _layout.meter_top + _layout.meter_height + 6, c_white);
 
-// Draw the boss health bar segments in the right gutter while a boss is active.
+// The circular ring around each boss owns immediate HP readability. The gutter
+// now uses small hearts solely for encounter structure and transition state.
 var _boss = instance_find(obj_boss_parent, 0);
-if (_boss != noone) {
-    var _segments = GameBossBarSegmentsCreate(_boss.phase_index, _boss.hp, _boss.phase_max_hp, _boss.phase_count);
+var _boss_count = instance_number(obj_boss_parent);
+if (_boss_count > 1) {
+    GameUiDrawOrnateFrame(_layout.right_panel_left + 8, 122,
+        (_layout.right_panel_right - _layout.right_panel_left) - 16, 150,
+        _layout.sidebar_color, 0.50, make_color_rgb(255, 174, 234), false);
+
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText("DUAL ENCOUNTER", _layout.boss_bar_left, 132,
+        make_color_rgb(255, 214, 112));
+
+    for (var dual = 0; dual < _boss_count; dual++) {
+        var _dual_boss = instance_find(obj_boss_parent, dual);
+        var _dual_top = 156 + (dual * 62);
+        var _dual_name = variable_instance_exists(_dual_boss, "boss_display_name")
+            ? _dual_boss.boss_display_name : "Boss";
+        var _dual_transition = variable_instance_exists(_dual_boss, "phase_transition_timer")
+            && _dual_boss.phase_transition_timer > 0;
+
+        draw_set_font(fn_dialogue_speech);
+        GameUiDrawOutlinedText(_dual_name, _layout.boss_bar_left, _dual_top,
+            (dual == 0) ? make_color_rgb(255, 188, 226) : make_color_rgb(168, 222, 255));
+        GameUiDrawBossPhaseHearts(_layout.boss_bar_left, _dual_top + 21,
+            _dual_boss.phase_index, _dual_boss.phase_count);
+        GameUiDrawOutlinedText(_dual_transition ? "REFORMING" : "Pattern "
+            + string(_dual_boss.phase_index + 1), _layout.boss_bar_left, _dual_top + 36,
+            _dual_transition ? _story_palette.title_color : _story_palette.muted_text_color);
+    }
+} else if (_boss != noone) {
     var _boss_label = variable_instance_exists(_boss, "boss_display_name") ? _boss.boss_display_name : "Boss";
-    var _segment_count = array_length(_segments);
-    var _boss_gap = (_segment_count > 9) ? 3 : _layout.boss_bar_gap;
-    var _boss_bar_top = _layout.boss_bar_top + 12;
-    var _boss_available_height = GAME_VIEW_HEIGHT - _boss_bar_top - 16;
-    var _boss_max_height = (_segment_count > 9) ? 5 : _layout.boss_bar_height;
-    var _boss_bar_height = max(3, min(_boss_max_height,
-        floor((_boss_available_height - ((_segment_count - 1) * _boss_gap)) / max(1, _segment_count))));
+    var _boss_transition = variable_instance_exists(_boss, "phase_transition_timer")
+        && _boss.phase_transition_timer > 0;
+    var _heart_rows = ceil(_boss.phase_count / 10);
+    var _boss_panel_height = 66 + ((_heart_rows - 1) * 11);
 
     GameUiDrawOrnateFrame(_layout.right_panel_left + 8, 122,
-        (_layout.right_panel_right - _layout.right_panel_left) - 16, GAME_VIEW_HEIGHT - 130,
+        (_layout.right_panel_right - _layout.right_panel_left) - 16, _boss_panel_height,
         _layout.sidebar_color, 0.46, _story_palette.border_color, false);
 
-    draw_set_font(fn_dialogue_name);
-    GameUiDrawOutlinedText(_boss_label, _layout.boss_bar_left, 126, _story_palette.title_color);
-
-    for (var i = 0; i < _segment_count; i++) {
-        var _top = _boss_bar_top + (i * (_boss_bar_height + _boss_gap));
-        var _fill_color = make_color_rgb(96, 54, 86);
-
-        if (_segments[i] > 0 && _segments[i] < 1) {
-            _fill_color = make_color_rgb(255, 210, 122);
-        } else if (_segments[i] >= 1) {
-            _fill_color = make_color_rgb(255, 126, 108);
-        }
-
-        draw_set_color(make_color_rgb(12, 8, 24));
-        draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + _layout.boss_bar_width, _top + _boss_bar_height, false);
-        draw_set_color(_fill_color);
-        draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + (_layout.boss_bar_width * _segments[i]), _top + _boss_bar_height, false);
-        draw_set_color(_story_palette.inner_border_color);
-        draw_rectangle(_layout.boss_bar_left, _top, _layout.boss_bar_left + _layout.boss_bar_width, _top + _boss_bar_height, true);
-    }
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText(_boss_label, _layout.boss_bar_left, 126,
+        make_color_rgb(255, 226, 166));
+    GameUiDrawBossPhaseHearts(_layout.boss_bar_left, 150,
+        _boss.phase_index, _boss.phase_count);
+    GameUiDrawOutlinedText(_boss_transition ? "REFORMING - INVULNERABLE"
+        : "Pattern " + string(_boss.phase_index + 1) + "/" + string(_boss.phase_count),
+        _layout.boss_bar_left, 166 + ((_heart_rows - 1) * 11),
+        _boss_transition ? _story_palette.title_color : _story_palette.muted_text_color);
 }
 
 // Introduce each attack over the playfield for its first two active seconds.
@@ -127,16 +173,19 @@ if (_boss != noone && !GameGameplayIsFrozen()
     if (_notice_alpha > 0) {
         var _notice_name = GameBossPhaseDisplayNameGet(_notice_phase);
         var _notice_color = GameBossPhaseColorGet(_notice_phase.attack_theme);
+        // Keep the attack name pearl-white even when the motif's frame color
+        // is deliberately dark. The colored border still carries identity.
+        var _notice_text_color = make_color_rgb(246, 232, 255);
         var _notice_left = _layout.playfield_left + 34;
         var _notice_width = (_layout.playfield_right - _layout.playfield_left) - 68;
 
         draw_set_halign(fa_center);
         draw_set_valign(fa_middle);
-        GameUiDrawOrnateFrame(_notice_left, 16, _notice_width, 38,
+        GameUiDrawOrnateFrame(_notice_left, 16, _notice_width, 30,
             _story_palette.fill_color, 0.76, _notice_color, false, _notice_alpha);
-        draw_set_font(fn_dialogue_name);
+        draw_set_font(fn_dialogue_speech);
         GameUiDrawOutlinedText(
-            _notice_name, GAME_VIEW_HALF_WIDTH, 35, _notice_color, c_black, _notice_alpha);
+            _notice_name, GAME_VIEW_HALF_WIDTH, 31, _notice_text_color, c_black, _notice_alpha);
         draw_set_halign(fa_left);
         draw_set_valign(fa_top);
     }
@@ -213,7 +262,8 @@ if (global.game_runtime.signals.continue_request) {
 
         GameUiDrawOutlinedText(_yes_label, 320, 180, c_white);
         GameUiDrawOutlinedText(_no_label, 320, 210, c_white);
-        GameUiDrawOutlinedText("Up/Down choose  Fire confirm", 320, 248, c_white);
+        GameUiDrawOutlinedText("Move up / down to choose   "
+            + GameInputActiveBindingLabel("fire") + " confirms", 320, 248, c_white);
     }
 
     draw_set_halign(fa_left);

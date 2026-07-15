@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Shalmii",
+    "text": "Moon. Halt. The Moonwake line holds until I know what follows your anger.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Selkie follows it. That is enough.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Shalmii",
+    "text": "A soldier who cannot name her objective mistakes momentum for purpose.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "My purpose is to bring her home.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Shalmii",
+    "text": "Home by whose command? Carry that promise without using it as a hammer on her.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Then test me, Shalmii.",
+    "backgrounds": [
+      "spr_story_bg_forge_twilight"
+    ],
+    "portraits": [
+      "spr_shalmii_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

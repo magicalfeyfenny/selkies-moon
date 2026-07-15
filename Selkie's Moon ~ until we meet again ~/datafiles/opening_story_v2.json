@@ -1,0 +1,120 @@
+[
+  {
+    "name": "",
+    "text": "Moon and Selkie fell in love beneath the violet light of the lunar sea.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "If the tide takes me first, keep flying.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Only if you promise to keep chasing me.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "",
+    "text": "Their promise survived the catastrophe. Their courage did not survive it unchanged.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "",
+    "text": "Flowers of impossible light spread over the sea, and every wish left a thorn.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "I named my ship Sunset because it carries every ending I could not accept.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then Sunrise will be the answer. I will bring you back from the dark.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "",
+    "text": "Sunset chased Sunrise; Sunrise circled back for Sunset. Each called it protection.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "",
+    "text": "Five girls guard the long road between them: Mira, Shalmii, Aisha, Aster, and Caelia.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "",
+    "text": "Across five moonlit regions, the chosen chaser must face every friend\u2014and finally her lover.",
+    "backgrounds": [
+      "spr_story_bg_core_chapel"
+    ],
+    "portraits": [],
+    "positions": []
+  }
+]

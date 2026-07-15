@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Caelia",
+    "text": "Selkie! Zenith says you keep plotting Moon's course with your own hands.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "I am trying to reach her, not steer her.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Caelia",
+    "text": "Excellent answer. Rescuers often say it just before grabbing the helm.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then watch me leave it in her hands.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Caelia",
+    "text": "Crescent Gate opens for travelers who can lose the future they imagined.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Test me. I will choose Moon, not choose for her.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

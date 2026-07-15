@@ -21,6 +21,25 @@ suite(function() {
             expect(_config.view_height).toBe(360);
             expect(_config.target_fps).toBe(60);
             expect(_config.input_device).toBe("keyboard");
+            expect(GameInputBindingsIsValid(_config.input_bindings)).toBeTruthy();
+            expect(_config.input_bindings.keyboard.fire[0]).toBe(ord("Z"));
+            expect(_config.input_bindings.gamepad.pause).toBe(gp_start);
+            expect(_config.master_volume).toBe(100);
+            expect(_config.music_volume).toBe(100);
+            expect(_config.sfx_volume).toBe(100);
+        });
+
+        test("Pixel presentation antialiases only fractional fullscreen scales", function() {
+            expect(GamePixelPresentationScaleIsInteger(1280, 720)).toBeTruthy();
+            expect(GamePixelPresentationScaleIsInteger(1920, 1080)).toBeTruthy();
+            expect(GamePixelPresentationScaleIsInteger(1366, 768)).toBeFalsy();
+            expect(GamePixelPresentationScaleIsInteger(2560, 1600)).toBeFalsy();
+
+            expect(GamePixelPresentationLinearFilterGet(false, 1366, 768)).toBeFalsy();
+            expect(GamePixelPresentationLinearFilterGet(true, 1280, 720)).toBeFalsy();
+            expect(GamePixelPresentationLinearFilterGet(true, 1920, 1080)).toBeFalsy();
+            expect(GamePixelPresentationLinearFilterGet(true, 1366, 768)).toBeTruthy();
+            expect(GamePixelPresentationLinearFilterGet(true, 2560, 1600)).toBeTruthy();
         });
 
         test("Default save data starts clean", function() {
@@ -141,6 +160,53 @@ suite(function() {
             expect(file_exists(GamePersistenceBackupPathGet(GameConfigPathGet()))).toBeFalsy();
         });
 
+        test("Config migration preserves and clamps the three audio gains", function() {
+            var _legacy = {
+                version: CONFIG_VERSION - 1,
+                view_width: 640,
+                view_height: 360,
+                target_fps: 60,
+                display_scale: 3,
+                fullscreen: false,
+                input_device: "keyboard",
+                master_volume: 78,
+                music_volume: 180,
+                sfx_volume: -12,
+            };
+
+            var _migrated = GameConfigDataMigrate(_legacy);
+
+            expect(_migrated.version).toBe(CONFIG_VERSION);
+            expect(_migrated.master_volume).toBe(78);
+            expect(_migrated.music_volume).toBe(100);
+            expect(_migrated.sfx_volume).toBe(0);
+            expect(GameInputBindingsIsValid(_migrated.input_bindings)).toBeTruthy();
+            expect(GameConfigDataIsCurrent(_migrated)).toBeTruthy();
+        });
+
+        test("Audio mixer applies independent music and SFX asset gains", function() {
+            global.game_config.master_volume = 80;
+            global.game_config.music_volume = 35;
+            global.game_config.sfx_volume = 65;
+
+            expect(GameAudioVolumesApply()).toBeTruthy();
+            expect(round(audio_sound_get_gain(snd_music_title) * 100)).toBe(35);
+            expect(round(audio_sound_get_gain(snd_player_shot_moon) * 100)).toBe(14);
+            expect(round(audio_sound_get_gain(snd_bomb) * 100)).toBe(51);
+
+            global.game_config = GameConfigCreateDefault();
+            GameAudioVolumesApply();
+        });
+
+        test("Enemy bullet visibility flash stays subtle", function() {
+            var _minimum = GameEnemyBulletFlashAlphaGet(75, 90);
+            var _maximum = GameEnemyBulletFlashAlphaGet(0, 90);
+
+            expect(_minimum >= 0.04).toBeTruthy();
+            expect(_maximum <= 0.11).toBeTruthy();
+            expect(_maximum > _minimum).toBeTruthy();
+        });
+
         test("LoadGameConfig rejects and backs up a future config version", function() {
             var _config = GameConfigCreateDefault();
             _config.version = CONFIG_VERSION + 1;
@@ -207,9 +273,10 @@ suite(function() {
             expect(array_length(_state.main_items)).toBe(7);
             expect(array_length(_state.characters)).toBe(2);
             expect(array_length(_state.gallery_items)).toBeGreaterThan(1);
-            expect(array_length(_state.music_items)).toBe(13);
-            expect(_state.music_items[0].name).toBe("Moonlit Launch");
-            expect(_state.music_items[12].name).toBe("Moonlit Return");
+            expect(array_length(_state.music_items)).toBe(15);
+            expect(_state.music_items[0].name).toBe("A Promise Across the Horizon");
+            expect(_state.music_items[6].name).toBe("Wish and Suit, Entwined");
+            expect(_state.music_items[14].name).toBe("Until We Meet Again");
             expect(_state.options_index).toBe(0);
         });
 
@@ -261,7 +328,7 @@ suite(function() {
 
             _state.practice_index = 4;
             GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, true, false, false));
-            expect(_state.practice_config.rank).toBe(RANK_DEFAULT + 5);
+            expect(_state.practice_config.rank).toBe(RANK_MIN + 5);
 
             _state.practice_index = 5;
             GameTitleStateStep(_state, GameTitleInputSnapshotCreate(false, false, false, false, true, false));
@@ -274,7 +341,7 @@ suite(function() {
             expect(_result.room_name).toBe("rm_game");
             expect(_result.practice_config.stage).toBe(2);
             expect(_result.practice_config.segment).toBe(PRACTICE_SEGMENT_WAVES);
-            expect(_result.practice_config.rank).toBe(RANK_DEFAULT + 5);
+            expect(_result.practice_config.rank).toBe(RANK_MIN + 5);
             expect(_result.practice_config.dynamic_rank).toBeTruthy();
         });
 
@@ -354,13 +421,72 @@ suite(function() {
             expect(_state.gallery_index).toBe(0);
         });
 
-        test("Options menu only exposes fullscreen and display scale", function() {
+        test("Options menu exposes display, audio, and separate control maps", function() {
             var _entries = GameTitleConfigEntriesCreate();
 
-            expect(array_length(_entries)).toBe(2);
+            expect(array_length(_entries)).toBe(7);
             expect(_entries[0].id).toBe("fullscreen");
             expect(_entries[0].value).toBe("Off");
             expect(_entries[1].id).toBe("display_scale");
+            expect(_entries[2].id).toBe("master_volume");
+            expect(_entries[2].meter_ratio).toBe(1);
+            expect(_entries[3].id).toBe("music_volume");
+            expect(_entries[4].id).toBe("sfx_volume");
+            expect(_entries[5].id).toBe("controls_keyboard");
+            expect(_entries[6].id).toBe("controls_gamepad");
+            expect(array_length(GameTitleConfigEntriesCreate(false))).toBe(5);
+        });
+
+        test("Keyboard and gamepad remaps persist separately and swap collisions", function() {
+            var _state = GameTitleStateCreate();
+
+            GameTitleRemapBegin(_state, "keyboard", "bomb");
+            expect(GameTitleRemapCommit(_state, ord("Z"))).toBeTruthy();
+            expect(global.game_config.input_bindings.keyboard.bomb[0]).toBe(ord("Z"));
+            expect(global.game_config.input_bindings.keyboard.fire[0]).toBe(ord("X"));
+            expect(global.game_config.input_bindings.gamepad.bomb).toBe(gp_face2);
+
+            GameTitleRemapBegin(_state, "gamepad", "fire");
+            expect(GameTitleRemapCommit(_state, gp_face2)).toBeTruthy();
+            expect(global.game_config.input_bindings.gamepad.fire).toBe(gp_face2);
+            expect(global.game_config.input_bindings.gamepad.bomb).toBe(gp_face1);
+            expect(global.game_config.input_bindings.keyboard.bomb[0]).toBe(ord("Z"));
+            expect(file_exists(GameConfigPathGet())).toBeTruthy();
+        });
+
+        test("Control submenus enter listening mode and can restore one device", function() {
+            var _state = GameTitleStateCreate();
+            _state.phase = "menu";
+            _state.page = "options";
+            _state.options_index = 5;
+
+            GameTitleStateStep(_state,
+                GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+            expect(_state.page).toBe("controls_keyboard");
+
+            _state.controls_index = 4;
+            GameTitleStateStep(_state,
+                GameTitleInputSnapshotCreate(false, false, false, false, true, false));
+            expect(_state.remap_listening).toBeTruthy();
+            expect(_state.remap_device).toBe("keyboard");
+            expect(_state.remap_verb).toBe("fire");
+
+            expect(GameTitleRemapCancel(_state)).toBeTruthy();
+            GameInputBindingAssign("keyboard", "fire", ord("Q"));
+            expect(global.game_config.input_bindings.keyboard.fire[0]).toBe(ord("Q"));
+            expect(GameInputBindingsResetDevice("keyboard")).toBeTruthy();
+            expect(global.game_config.input_bindings.keyboard.fire[0]).toBe(ord("Z"));
+        });
+
+        test("Volume meters move in five-point steps, clamp, and persist", function() {
+            expect(GameTitleConfigEntryAdjust("master_volume", -1)).toBeTruthy();
+            expect(global.game_config.master_volume).toBe(95);
+            expect(GameTitleConfigEntryAdjust("music_volume", -1)).toBeTruthy();
+            expect(global.game_config.music_volume).toBe(95);
+            global.game_config.sfx_volume = 0;
+            expect(GameTitleConfigEntryAdjust("sfx_volume", -1)).toBeFalsy();
+            expect(global.game_config.sfx_volume).toBe(0);
+            expect(file_exists(GameConfigPathGet())).toBeTruthy();
         });
 
         test("Options menu changes the active setting with up and down", function() {
@@ -484,15 +610,26 @@ suite(function() {
             expect(_clamped.alpha).toBe(1);
         });
 
-        test("Title submenu panels share the same 75 percent purple styling", function() {
+        test("Press-start prompt reflects controller detection without a controls legend", function() {
+            expect(GameTitlePressPromptTextGet(false)).toBe("Press Z");
+            expect(GameTitlePressPromptTextGet(true)).toBe("Press Start");
+
+            GameInputBindingAssign("keyboard", "fire", ord("Q"));
+            GameInputBindingAssign("gamepad", "pause", gp_face4);
+            expect(GameTitlePressPromptTextGet(false)).toBe("Press Q");
+            expect(GameTitlePressPromptTextGet(true)).toBe("Press Y / Triangle");
+        });
+
+        test("Title submenu panels use airy normal and brighter selected styling", function() {
             var _normal = GameTitlePanelStyleCreate(false);
             var _selected = GameTitlePanelStyleCreate(true);
 
-            expect(_normal.fill_alpha).toBe(0.75);
+            expect(_normal.fill_alpha).toBe(0.56);
             expect(_normal.fill_color).toBe(make_color_rgb(58, 18, 92));
-            expect(_selected.fill_alpha).toBe(0.75);
+            expect(_selected.fill_alpha).toBe(0.72);
             expect(_selected.fill_color).toBe(make_color_rgb(78, 28, 116));
         });
+
     });
 
     section("Gameplay", function() {
@@ -531,6 +668,7 @@ suite(function() {
 
             expect(global.game_runtime.selected_ship_id).toBe("ship_A");
             expect(global.game_runtime.selected_ship_index).toBe(0);
+            expect(global.game_runtime.rank).toBe(RANK_MIN);
             expect(global.game_runtime.run_started_recorded).toBeTruthy();
             expect(global.game_save.runs_started.ship_A[0]).toBe(1);
             expect(file_exists(GameSavePathGet())).toBeTruthy();
@@ -574,11 +712,19 @@ suite(function() {
                 expect(_report.estimated_score_pickups).toBeGreaterThan(4);
                 expect(_report.estimated_resource_pickups <= _report.resource_drop_limit).toBeTruthy();
                 expect(_report.max_spawn_pressure).toBeLessThan(42);
-                expect(_report.focus_boss_clear_frames).toBeLessThan(60 * 70);
+                var _phase_count = GameBossPhaseCountForStage(stage);
+                var _expected_with_transitions = _phase_count
+                    * ((GameBossPhaseTargetSecondsGet(stage) * 60) + BOSS_PHASE_TRANSITION_FRAMES);
+                expect(_report.focus_boss_clear_frames <= _expected_with_transitions).toBeTruthy();
+
+                if (stage > 1) {
+                    expect(_report.fastest_phase_clear_frames).toBeGreaterThan(17 * 60);
+                    expect(_report.fastest_phase_clear_frames).toBeLessThan(30 * 60);
+                }
             }
 
             var _final_report = GameStageBalanceReportCreate(STAGE_COUNT);
-            expect(_final_report.fastest_phase_clear_frames).toBeGreaterThan(34);
+            expect(_final_report.fastest_phase_clear_frames).toBeGreaterThan(24 * 60);
         });
 
         test("Stage timeline helpers spawn above the field and stop once scrolling ends", function() {
@@ -608,6 +754,74 @@ suite(function() {
             global.game_runtime.signals.dialogue = true;
             expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
             global.game_runtime.signals.dialogue = false;
+        });
+
+        test("Each consolidated stage owns four unique themed basic enemies", function() {
+            var _all_ids = [];
+
+            for (var _stage = 1; _stage <= STAGE_COUNT; _stage++) {
+                var _roster = GameStageEnemyRosterCreate(_stage);
+                expect(array_length(_roster)).toBe(4);
+
+                for (var _enemy_index = 0; _enemy_index < array_length(_roster); _enemy_index++) {
+                    var _definition = _roster[_enemy_index];
+                    for (var _seen_index = 0; _seen_index < array_length(_all_ids); _seen_index++) {
+                        expect(_definition.id == _all_ids[_seen_index]).toBeFalsy();
+                    }
+                    array_push(_all_ids, _definition.id);
+
+                    if (_stage < STAGE_COUNT) {
+                        expect(_definition.id == ENEMY_VIOLET_BEE).toBeFalsy();
+                        expect(_definition.id == ENEMY_TWILIGHT_MAYFLY).toBeFalsy();
+                    }
+                }
+            }
+
+            expect(array_length(_all_ids)).toBe(20);
+            var _forge_roster = GameStageEnemyRosterCreate(1);
+            expect(_forge_roster[0].id).toBe(ENEMY_FORGE_SPARK);
+            expect(_forge_roster[1].id).toBe(ENEMY_ANVIL_FAMILIAR);
+            expect(_forge_roster[2].id).toBe(ENEMY_BELLOWS_IMP);
+            expect(_forge_roster[3].id).toBe(ENEMY_HAMMER_CHERUB);
+
+            var _final_roster = GameStageEnemyRosterCreate(STAGE_COUNT);
+            expect(_final_roster[0].id).toBe(ENEMY_VIOLET_BEE);
+            expect(_final_roster[1].id).toBe(ENEMY_TWILIGHT_MAYFLY);
+        });
+
+        test("The live director spawns only stage-authored variant enemies", function() {
+            var _state = GameSceneStateCreate();
+            global.game_runtime.current_stage = 3;
+
+            for (var _frame = 45; _frame <= 420; _frame++) {
+                _state.frame = _frame;
+                GameStageDirectorStep(_state);
+            }
+
+            expect(instance_number(obj_enemy_variant)).toBeGreaterThan(0);
+            expect(instance_number(obj_enemy_turret)).toBe(0);
+            expect(instance_number(obj_enemy_bee)).toBe(0);
+            expect(instance_number(obj_enemy_mayfly)).toBe(0);
+
+            with (obj_enemy_parent) { instance_destroy(); }
+        });
+
+        test("Violet bees commit downward without a player and own their projectile art", function() {
+            global.game_runtime.current_stage = STAGE_COUNT;
+            var _bee = instance_create_layer(160, 80, "Instances", obj_enemy_variant);
+            GameEnemyVariantConfigure(_bee, ENEMY_VIOLET_BEE, STAGE_COUNT, 0, 1);
+
+            simulateEvent(ev_step, ev_step_normal, _bee);
+            expect(variable_instance_get(_bee, "variant_role")).toBe("chaser");
+            expect(variable_instance_get(_bee, "flyaway_committed")).toBeTruthy();
+            expect(variable_instance_get(_bee, "move_direction")).toBe(270);
+
+            var _bullet = instance_create_layer(160, 80, "Instances", obj_bullet_diamond);
+            GameStageEnemyBulletDecorate(_bullet, ENEMY_VIOLET_BEE);
+            expect(variable_instance_get(_bullet, "sprite_index")).toBe(spr_violet_bee_bullet);
+
+            with (_bullet) { instance_destroy(); }
+            with (_bee) { instance_destroy(); }
         });
 
         test("Field clamping and camera drag stay inside the intended gameplay bounds", function() {
@@ -790,7 +1004,7 @@ suite(function() {
 
             expect(_shot_count).toBeGreaterThan(10);
             expect(_max_shot_gap).toBeLessThan(SHOT_VOLLEY_INTERVAL + 1);
-            expect(_sword_frame).toBe(FIRE_HOLD_FRAMES);
+            expect(_sword_frame).toBe(FIRE_HOLD_FRAMES - 1);
         });
 
         test("Focused autofire does not accidentally charge the sword", function() {
@@ -843,6 +1057,14 @@ suite(function() {
             var _score_before = global.game_runtime.score;
             expect(GamePowerupRewardApply(POWERUP_SCORE)).toBeTruthy();
             expect(global.game_runtime.score).toBe(_score_before + POWERUP_SCORE_VALUE);
+        });
+
+        test("Every power-up type has a dedicated pixel-art icon", function() {
+            expect(GamePowerupSpriteGet(POWERUP_POWER)).toBe(spr_powerup_power);
+            expect(GamePowerupSpriteGet(POWERUP_BOMB)).toBe(spr_powerup_bomb);
+            expect(GamePowerupSpriteGet(POWERUP_LIFE)).toBe(spr_powerup_life);
+            expect(GamePowerupSpriteGet(POWERUP_METER)).toBe(spr_powerup_meter);
+            expect(GamePowerupSpriteGet(POWERUP_SCORE)).toBe(spr_powerup_score);
         });
 
         test("Point-blank defeats charge bounded resources while ordinary cadence drops score", function() {
@@ -960,7 +1182,7 @@ suite(function() {
 
             expect(_phase_hp).toBeGreaterThan(200);
             expect(_scale).toBe(BOSS_DAMAGE_SCALE_MIN);
-            expect(_fastest_clear_frames).toBeGreaterThan(34);
+            expect(_fastest_clear_frames).toBeGreaterThan(20 * 60);
             expect(GameBossDamageApply(_boss, 60)).toBe(60 * BOSS_DAMAGE_SCALE_MIN);
             expect(variable_instance_get(_boss, "hp")).toBe(_phase_hp - (60 * BOSS_DAMAGE_SCALE_MIN));
 
@@ -969,60 +1191,34 @@ suite(function() {
             }
         });
 
-        test("Stages two, five, six, seven, nine, and ten use character boss identities", function() {
-            var _stage_one = GameBossEncounterInfoCreate(1, SHIP_SUNRISE);
-            var _stage_two = GameBossEncounterInfoCreate(MIRA_BOSS_STAGE, SHIP_SUNRISE);
-            var _stage_five = GameBossEncounterInfoCreate(SHALMII_BOSS_STAGE, SHIP_SUNRISE);
-            var _stage_six = GameBossEncounterInfoCreate(AISHA_BOSS_STAGE, SHIP_SUNRISE);
-            var _stage_seven = GameBossEncounterInfoCreate(ASTER_BOSS_STAGE, SHIP_SUNRISE);
-            var _stage_nine = GameBossEncounterInfoCreate(CAELIA_BOSS_STAGE, SHIP_SUNRISE);
+        test("Five consolidated stages end with the ordered character encounters", function() {
+            var _shalmii = GameBossEncounterInfoCreate(1, SHIP_SUNRISE);
+            var _aster = GameBossEncounterInfoCreate(2, SHIP_SUNRISE);
+            var _duet = GameBossEncounterInfoCreate(3, SHIP_SUNRISE);
+            var _mira = GameDualBossIdentityCreate("mira");
+            var _aisha = GameDualBossIdentityCreate("aisha");
+            var _caelia = GameBossEncounterInfoCreate(4, SHIP_SUNRISE);
             var _moon_route = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SUNRISE);
             var _selkie_route = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SELKIE);
 
-            expect(_stage_one.is_final).toBeFalsy();
-            expect(_stage_one.is_character).toBeFalsy();
-            expect(_stage_one.display_name).toBe("Tideglass Core");
-            expect(_stage_one.sprite_id).toBe(spr_mayfly);
-            expect(_stage_two.is_final).toBeFalsy();
-            expect(_stage_two.is_character).toBeTruthy();
-            expect(_stage_two.display_name).toBe(MIRA_BOSS_NAME);
-            expect(_stage_two.ship_name).toBe(MIRA_SHIP_NAME);
-            expect(_stage_two.sprite_id).toBe(spr_mira_ship);
-            expect(_stage_two.phase_signature).toBe(
-                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(MIRA_BOSS_STAGE))
-            );
-            expect(_stage_five.is_final).toBeFalsy();
-            expect(_stage_five.is_character).toBeTruthy();
-            expect(_stage_five.display_name).toBe(SHALMII_BOSS_NAME);
-            expect(_stage_five.ship_name).toBe(SHALMII_SHIP_NAME);
-            expect(_stage_five.sprite_id).toBe(spr_shalmii_ship);
-            expect(_stage_five.phase_signature).toBe(
-                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(SHALMII_BOSS_STAGE))
-            );
-            expect(_stage_six.is_final).toBeFalsy();
-            expect(_stage_six.is_character).toBeTruthy();
-            expect(_stage_six.display_name).toBe(AISHA_BOSS_NAME);
-            expect(_stage_six.ship_name).toBe(AISHA_SHIP_NAME);
-            expect(_stage_six.sprite_id).toBe(spr_aisha_ship);
-            expect(_stage_six.phase_signature).toBe(
-                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(AISHA_BOSS_STAGE))
-            );
-            expect(_stage_seven.is_final).toBeFalsy();
-            expect(_stage_seven.is_character).toBeTruthy();
-            expect(_stage_seven.display_name).toBe(ASTER_BOSS_NAME);
-            expect(_stage_seven.ship_name).toBe(ASTER_SHIP_NAME);
-            expect(_stage_seven.sprite_id).toBe(spr_aster_ship);
-            expect(_stage_seven.phase_signature).toBe(
-                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(ASTER_BOSS_STAGE))
-            );
-            expect(_stage_nine.is_final).toBeFalsy();
-            expect(_stage_nine.is_character).toBeTruthy();
-            expect(_stage_nine.display_name).toBe(CAELIA_BOSS_NAME);
-            expect(_stage_nine.ship_name).toBe(CAELIA_SHIP_NAME);
-            expect(_stage_nine.sprite_id).toBe(spr_caelia_ship);
-            expect(_stage_nine.phase_signature).toBe(
-                GameMemoryCorePhasePlanSignatureCreate(GameMemoryCorePhasePlanCreate(CAELIA_BOSS_STAGE))
-            );
+            expect(STAGE_COUNT).toBe(5);
+            expect(_shalmii.display_name).toBe(SHALMII_BOSS_NAME);
+            expect(_shalmii.sprite_id).toBe(spr_shalmii_ship);
+            expect(array_length(_shalmii.phase_plan)).toBe(3);
+            expect(_aster.display_name).toBe(ASTER_BOSS_NAME);
+            expect(_aster.sprite_id).toBe(spr_aster_ship);
+            expect(array_length(_aster.phase_plan)).toBe(5);
+            expect(_duet.display_name).toBe("Mira & Aisha");
+            expect(_duet.is_dual).toBeTruthy();
+            expect(_mira.display_name).toBe(MIRA_BOSS_NAME);
+            expect(_mira.sprite_id).toBe(spr_mira_ship);
+            expect(_aisha.display_name).toBe(AISHA_BOSS_NAME);
+            expect(_aisha.sprite_id).toBe(spr_aisha_ship);
+            expect(array_length(_mira.phase_plan)).toBe(3);
+            expect(array_length(_aisha.phase_plan)).toBe(3);
+            expect(_caelia.display_name).toBe(CAELIA_BOSS_NAME);
+            expect(_caelia.sprite_id).toBe(spr_caelia_ship);
+            expect(array_length(_caelia.phase_plan)).toBe(7);
             expect(_moon_route.is_final).toBeTruthy();
             expect(_moon_route.is_character).toBeTruthy();
             expect(_moon_route.opponent_ship_id).toBe(SHIP_SELKIE);
@@ -1039,83 +1235,39 @@ suite(function() {
             expect(_selkie_route.draw_y_scale).toBe(-1);
         });
 
-        test("Non-final bosses play complete seed and variant sets before unique finales", function() {
-            var _signatures = [];
-            var _phase_ids = [];
-            var _seed_kinds = [];
-            var _final_kinds = [];
-            var _stage_one_count = array_length(GameBossEncounterInfoCreate(1, SHIP_SUNRISE).phase_plan);
-            var _stage_five_count = array_length(GameBossEncounterInfoCreate(5, SHIP_SUNRISE).phase_plan);
-            var _stage_nine_count = array_length(GameBossEncounterInfoCreate(9, SHIP_SUNRISE).phase_plan);
+        test("Consolidated boss plans preserve each character's original motif source", function() {
+            var _expected = [
+                { stage: 1, source: 5, count: 3, first: "shalmii_hex_runes" },
+                { stage: 2, source: 7, count: 5, first: "aster_ribbon_loop" },
+                { stage: 4, source: 9, count: 7, first: "caelia_planetary_orbit" },
+            ];
 
-            expect(_stage_one_count).toBe(5);
-            expect(_stage_five_count).toBe(7);
-            expect(_stage_nine_count).toBe(9);
-            expect(_stage_five_count).toBeGreaterThan(_stage_one_count);
-            expect(_stage_nine_count).toBeGreaterThan(_stage_five_count);
-
-            for (var stage = 1; stage < STAGE_COUNT; stage++) {
-                var _core = GameBossEncounterInfoCreate(stage, SHIP_SUNRISE);
-                var _seeds = GameMemoryCoreBasePhasePlanCreate(stage);
-                var _seed_count = array_length(_seeds);
-                var _expected_seed_count = (stage <= 2) ? 2 : ((stage <= 6) ? 3 : 4);
-
-                expect(_core.is_final).toBeFalsy();
-                expect(_seed_count).toBe(_expected_seed_count);
-                expect(array_length(_core.phase_plan)).toBe(GameBossPhaseCountForStage(stage));
-                expect(_core.phase_signature != "").toBeTruthy();
-
-                for (var seed = 0; seed < _seed_count; seed++) {
-                    expect(_core.phase_plan[seed].id).toBe(_seeds[seed].id);
-                    expect(_core.phase_plan[seed + _seed_count].id).toBe(_seeds[seed].id + "_v1");
-
-                    for (var seen_kind = 0; seen_kind < array_length(_seed_kinds); seen_kind++) {
-                        expect(_seeds[seed].shot_kind == _seed_kinds[seen_kind]).toBeFalsy();
-                    }
-
-                    array_push(_seed_kinds, _seeds[seed].shot_kind);
-                }
-
-                var _final_phase = _core.phase_plan[array_length(_core.phase_plan) - 1];
-                expect(string_pos("_finale", _final_phase.id)).toBeGreaterThan(0);
-
-                for (var seen_final = 0; seen_final < array_length(_final_kinds); seen_final++) {
-                    expect(_final_phase.shot_kind == _final_kinds[seen_final]).toBeFalsy();
-                }
-
-                array_push(_final_kinds, _final_phase.shot_kind);
-
-                for (var phase = 0; phase < array_length(_core.phase_plan); phase++) {
-                    expect(_core.phase_plan[phase].id != "").toBeTruthy();
-                    expect(_core.phase_plan[phase].shot_kind != "").toBeTruthy();
-
-                    for (var seen_phase = 0; seen_phase < array_length(_phase_ids); seen_phase++) {
-                        expect(_core.phase_plan[phase].id == _phase_ids[seen_phase]).toBeFalsy();
-                    }
-
-                    array_push(_phase_ids, _core.phase_plan[phase].id);
-                }
-
-                for (var seen = 0; seen < array_length(_signatures); seen++) {
-                    expect(_core.phase_signature == _signatures[seen]).toBeFalsy();
-                }
-
-                array_push(_signatures, _core.phase_signature);
+            for (var i = 0; i < array_length(_expected); i++) {
+                var _entry = _expected[i];
+                var _boss = GameBossEncounterInfoCreate(_entry.stage, SHIP_SUNRISE);
+                expect(array_length(_boss.phase_plan)).toBe(_entry.count);
+                expect(_boss.phase_plan[0].id).toBe(_entry.first);
+                expect(string_pos("_finale", _boss.phase_plan[_entry.count - 1].id)).toBeGreaterThan(0);
             }
 
-            expect(array_length(_signatures)).toBe(STAGE_COUNT - 1);
-            expect(array_length(_seed_kinds)).toBe(28);
-            expect(array_length(_final_kinds)).toBe(9);
-            expect(array_length(_phase_ids)).toBeGreaterThan((STAGE_COUNT - 1) * BOSS_PHASE_COUNT);
+            expect(GameStageLegacyPatternStageGet(1, 0)).toBe(1);
+            expect(GameStageLegacyPatternStageGet(1, STAGE_LENGTH_FRAMES - 1)).toBe(2);
+            expect(GameStageLegacyPatternStageGet(2, 0)).toBe(3);
+            expect(GameStageLegacyPatternStageGet(2, STAGE_LENGTH_FRAMES - 1)).toBe(4);
+            expect(GameStageLegacyPatternStageGet(3, 0)).toBe(5);
+            expect(GameStageLegacyPatternStageGet(3, STAGE_LENGTH_FRAMES - 1)).toBe(7);
+            expect(GameStageLegacyPatternStageGet(4, 0)).toBe(8);
+            expect(GameStageLegacyPatternStageGet(4, STAGE_LENGTH_FRAMES - 1)).toBe(9);
+            expect(GameStageLegacyPatternStageGet(5, 0)).toBe(10);
         });
 
         test("Character bosses use motif-specific seed families and finales", function() {
             var _motifs = [
-                { stage: MIRA_BOSS_STAGE, theme: "poker", first: "mira_four_suits", finale: "mira_royal_flush" },
-                { stage: SHALMII_BOSS_STAGE, theme: "rune", first: "shalmii_hex_runes", finale: "shalmii_runebreaker" },
-                { stage: AISHA_BOSS_STAGE, theme: "desire", first: "aisha_order_circle", finale: "aisha_blade_of_desires" },
-                { stage: ASTER_BOSS_STAGE, theme: "ribbon", first: "aster_ribbon_loop", finale: "aster_ribbonstar_wish" },
-                { stage: CAELIA_BOSS_STAGE, theme: "astral", first: "caelia_planetary_orbit", finale: "caelia_cosmic_zenith" },
+                { stage: 2, theme: "poker", first: "mira_four_suits", finale: "mira_royal_flush" },
+                { stage: 5, theme: "rune", first: "shalmii_hex_runes", finale: "shalmii_runebreaker" },
+                { stage: 6, theme: "desire", first: "aisha_order_circle", finale: "aisha_blade_of_desires" },
+                { stage: 7, theme: "ribbon", first: "aster_ribbon_loop", finale: "aster_ribbonstar_wish" },
+                { stage: 9, theme: "astral", first: "caelia_planetary_orbit", finale: "caelia_cosmic_zenith" },
             ];
 
             for (var motif_index = 0; motif_index < array_length(_motifs); motif_index++) {
@@ -1133,7 +1285,7 @@ suite(function() {
             }
         });
 
-        test("Final bosses play two complete variant sets before unique route finales", function() {
+        test("Final bosses cap at fifteen phases with route-exclusive finales", function() {
             var _selkie_final = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SUNRISE);
             var _moon_final = GameBossEncounterInfoCreate(STAGE_COUNT, SHIP_SELKIE);
             var _selkie_seeds = GameFinalBossBasePhasePlanCreate(SHIP_SELKIE);
@@ -1141,23 +1293,26 @@ suite(function() {
             var _selkie_phase_ids = [];
             var _moon_phase_ids = [];
 
-            expect(array_length(_selkie_final.phase_plan)).toBe(16);
-            expect(array_length(_moon_final.phase_plan)).toBe(16);
+            expect(array_length(_selkie_final.phase_plan)).toBe(15);
+            expect(array_length(_moon_final.phase_plan)).toBe(15);
             expect(_selkie_final.phase_signature == _moon_final.phase_signature).toBeFalsy();
 
             for (var seed = 0; seed < 5; seed++) {
                 expect(_selkie_final.phase_plan[seed].id).toBe(_selkie_seeds[seed].id);
                 expect(_selkie_final.phase_plan[seed + 5].id).toBe(_selkie_seeds[seed].id + "_v1");
-                expect(_selkie_final.phase_plan[seed + 10].id).toBe(_selkie_seeds[seed].id + "_v2");
                 expect(_moon_final.phase_plan[seed].id).toBe(_moon_seeds[seed].id);
                 expect(_moon_final.phase_plan[seed + 5].id).toBe(_moon_seeds[seed].id + "_v1");
-                expect(_moon_final.phase_plan[seed + 10].id).toBe(_moon_seeds[seed].id + "_v2");
+
+                if (seed < 4) {
+                    expect(_selkie_final.phase_plan[seed + 10].id).toBe(_selkie_seeds[seed].id + "_v2");
+                    expect(_moon_final.phase_plan[seed + 10].id).toBe(_moon_seeds[seed].id + "_v2");
+                }
             }
 
-            expect(_selkie_final.phase_plan[15].id).toBe("selkie_chakram_apotheosis_finale");
-            expect(_moon_final.phase_plan[15].id).toBe("moon_rose_eternity_finale");
+            expect(_selkie_final.phase_plan[14].id).toBe("selkie_chakram_apotheosis_finale");
+            expect(_moon_final.phase_plan[14].id).toBe("moon_rose_eternity_finale");
 
-            for (var i = 0; i < 16; i++) {
+            for (var i = 0; i < 15; i++) {
                 expect(_selkie_final.phase_plan[i].attack_theme).toBe("chakram");
                 expect(_moon_final.phase_plan[i].attack_theme).toBe("rose");
 
@@ -1182,7 +1337,7 @@ suite(function() {
 
             expect(GameBossPhaseDisplayNameGet(_seed)).toBe("Tideglass Spiral");
             expect(GameBossPhaseDisplayNameGet(_variant)).toBe("Tideglass Spiral - Variant 1");
-            expect(GameBossPhaseDisplayNameGet(_finale)).toBe("Caelia Cosmic Zenith");
+            expect(GameBossPhaseDisplayNameGet(_finale)).toBe("Cosmic Zenith");
             expect(GameBossPhaseDisplayNameGet({})).toBe("Boss Attack");
             expect(GameBossPhaseNoticeAlphaGet(0)).toBe(0);
             expect(GameBossPhaseNoticeAlphaGet(BOSS_PHASE_NOTICE_FADE_IN_FRAMES)).toBe(1);
@@ -1197,7 +1352,7 @@ suite(function() {
             var _plans = [];
             var _seen_kinds = [];
 
-            for (var stage = 1; stage < STAGE_COUNT; stage++) {
+            for (var stage = 1; stage < LEGACY_STAGE_COUNT; stage++) {
                 array_push(_plans, GameMemoryCorePhasePlanCreate(stage));
             }
 
@@ -1368,7 +1523,16 @@ suite(function() {
             }
         });
 
-        test("Different Memory Core phase plans spawn different bullet mixes", function() {
+        test("Only gap-safe pattern families receive restrained burst variance", function() {
+            expect(GameBossPatternAngleVarianceGet("blade_spiral")).toBe(5);
+            expect(GameBossPatternAngleVarianceGet("diamond_fan")).toBe(3);
+            expect(GameBossPatternAngleVarianceGet("aisha_chaos_shards")).toBe(5);
+            expect(GameBossPatternAngleVarianceGet("blade_cross")).toBe(0);
+            expect(GameBossPatternAngleVarianceGet("caelia_star_cage")).toBe(0);
+            expect(GameBossPatternAngleVarianceGet("kelp_wall")).toBe(0);
+        });
+
+        test("Redistributed Memory Core families give basic enemies different bullet mixes", function() {
             var _player = instance_create_layer(100, 260, "Instances", obj_player);
 
             with (_player) {
@@ -1377,77 +1541,85 @@ suite(function() {
                 y = 260;
             }
 
-            global.game_runtime.current_stage = 1;
-            var _stage_one_boss = instance_create_layer(100, 100, "Instances", obj_boss_sunset);
+            var _anvil = instance_create_layer(100, 100, "Instances", obj_enemy_variant);
+            GameEnemyVariantConfigure(_anvil, ENEMY_ANVIL_FAMILIAR, 1, 0, 1);
+            with (_anvil) { fire_timer = 999; }
+            simulateEvent(ev_step, ev_step_normal, _anvil);
 
-            with (_stage_one_boss) {
-                event_perform(ev_create, 0);
-                phase_index = 0;
-                phase_timer = boss_identity.phase_plan[0].cadence - 1;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _stage_one_boss);
-
-            var _stage_one_blades = instance_number(obj_bullet_blade);
-            var _stage_one_beads = instance_number(obj_bullet_bead);
-            var _stage_one_diamonds = instance_number(obj_bullet_diamond);
-
-            expect(_stage_one_blades).toBeGreaterThan(0);
-            expect(_stage_one_beads).toBe(0);
-            expect(_stage_one_diamonds).toBe(0);
+            expect(instance_number(obj_bullet_blade)).toBeGreaterThan(0);
+            expect(instance_number(obj_bullet_bead)).toBe(0);
+            expect(instance_number(obj_bullet_diamond)).toBe(0);
 
             with (obj_bullet_parent) {
                 instance_destroy();
             }
 
-            with (_stage_one_boss) {
+            with (_anvil) {
                 instance_destroy();
             }
 
-            global.game_runtime.current_stage = 2;
-            var _stage_two_boss = instance_create_layer(100, 100, "Instances", obj_boss_sunset);
+            var _dealer = instance_create_layer(100, 100, "Instances", obj_enemy_variant);
+            GameEnemyVariantConfigure(_dealer, ENEMY_DEALER_MASK, 3, 0, 1);
+            with (_dealer) { fire_timer = 999; }
+            simulateEvent(ev_step, ev_step_normal, _dealer);
 
-            with (_stage_two_boss) {
-                event_perform(ev_create, 0);
-                phase_index = 0;
-                phase_timer = boss_identity.phase_plan[0].cadence - 1;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _stage_two_boss);
-
-            var _stage_two_blades = instance_number(obj_bullet_blade);
-            var _stage_two_beads = instance_number(obj_bullet_bead);
-            var _stage_two_diamonds = instance_number(obj_bullet_diamond);
-
-            expect(_stage_two_blades).toBe(0);
-            expect(_stage_two_beads).toBeGreaterThan(0);
-            expect(_stage_two_diamonds).toBeGreaterThan(0);
+            expect(instance_number(obj_bullet_blade)).toBe(0);
+            expect(instance_number(obj_bullet_bead)).toBe(0);
+            expect(instance_number(obj_bullet_diamond)).toBeGreaterThan(0);
 
             with (obj_bullet_parent) {
                 instance_destroy();
             }
 
-            with (_stage_two_boss) {
+            with (_dealer) {
                 instance_destroy();
             }
+
+            var _order = instance_create_layer(100, 100, "Instances", obj_enemy_variant);
+            GameEnemyVariantConfigure(_order, ENEMY_ORDER_TALISMAN, 3, 0, 1);
+            with (_order) { fire_timer = 999; }
+            simulateEvent(ev_step, ev_step_normal, _order);
+
+            expect(instance_number(obj_bullet_blade)).toBe(0);
+            expect(instance_number(obj_bullet_bead)).toBeGreaterThan(0);
+            expect(instance_number(obj_bullet_diamond)).toBe(0);
+
+            with (obj_bullet_parent) { instance_destroy(); }
+            with (_order) { instance_destroy(); }
 
             with (_player) {
                 instance_destroy();
             }
         });
 
-        test("Music routing selects generated tracks for menus, stages, ending, and credits", function() {
+        test("Music routing selects character stages, guardian cues, and route-specific finales", function() {
             global.game_runtime.current_stage = 1;
+            global.game_runtime.selected_ship_id = SHIP_SUNRISE;
 
             expect(GameMusicForRoomGet(rm_title)).toBe(snd_music_title);
             expect(GameMusicForRoomGet(rm_opening)).toBe(snd_music_title);
-            expect(GameMusicForRoomGet(rm_game)).toBe(snd_music_stage_01);
+            expect(GameGameplayMusicTrackGet(1, "scroll", false, SHIP_SUNRISE)).toBe(snd_music_stage_shalmii);
+            expect(GameGameplayMusicTrackGet(1, "boss_intro", false, SHIP_SUNRISE)).toBe(snd_music_boss_shalmii);
+            expect(GameGameplayMusicTrackGet(1, "boss_fight", true, SHIP_SUNRISE)).toBe(snd_music_boss_shalmii);
+            expect(GameGameplayMusicTrackGet(1, "stage_clear", true, SHIP_SUNRISE)).toBe(snd_music_boss_shalmii);
+            expect(GameGameplayMusicTrackGet(1, "stage_clear", false, SHIP_SUNRISE)).toBe(snd_music_stage_shalmii);
             expect(GameMusicForRoomGet(rm_ending)).toBe(snd_music_ending);
             expect(GameMusicForRoomGet(rm_credits)).toBe(snd_music_credits);
 
-            global.game_runtime.current_stage = 10;
+            global.game_runtime.current_stage = STAGE_COUNT;
 
-            expect(GameMusicForRoomGet(rm_game)).toBe(snd_music_stage_10);
+            expect(GameStageMusicTrackGet(STAGE_COUNT, SHIP_SUNRISE)).toBe(snd_music_stage_moon);
+            expect(GameBossMusicTrackGet(STAGE_COUNT, SHIP_SUNRISE)).toBe(snd_music_boss_selkie);
+            expect(GameStageMusicTrackGet(STAGE_COUNT, SHIP_SELKIE)).toBe(snd_music_stage_selkie);
+            expect(GameBossMusicTrackGet(STAGE_COUNT, SHIP_SELKIE)).toBe(snd_music_boss_moon);
+
+            var _music_assets = GameAudioMusicAssetsCreate();
+            var _sfx_assets = GameAudioSfxAssetsCreate();
+            expect(array_length(_music_assets)).toBe(26);
+            expect(array_length(_sfx_assets)).toBe(15);
+            expect(_music_assets[0]).toBe(snd_music_title);
+            expect(_music_assets[1]).toBe(snd_music_stage_shalmii);
+            expect(_sfx_assets[0]).toBe(snd_bomb);
         });
 
         test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
@@ -1460,7 +1632,7 @@ suite(function() {
             expect(GamePlayerBulletHitCheck(100, 100, 106, 100, 4)).toBeFalsy();
         });
 
-        test("Bee enemies drift toward the player and fire three aligned diamond shots every six frames", function() {
+        test("Bee enemies make one pass toward a player below and fire three aligned diamond shots", function() {
             var _player = instance_create_layer(0, 0, "Instances", obj_player);
             var _bee = instance_create_layer(0, 0, "Instances", obj_enemy_bee);
             var _slow_count = 0;
@@ -1476,7 +1648,7 @@ suite(function() {
             with (_bee) {
                 event_perform(ev_create, 0);
                 x = 100;
-                y = 100;
+                y = 80;
                 move_direction = 0;
                 move_speed = BEE_MOVE_SPEED;
                 fire_interval = BEE_FIRE_INTERVAL;
@@ -1487,9 +1659,11 @@ suite(function() {
 
             expect(variable_instance_get(_bee, "sprite_index")).toBe(spr_bee);
             expect(variable_instance_get(_bee, "x")).toBe(101);
-            expect(variable_instance_get(_bee, "y")).toBe(100);
-            expect(variable_instance_get(_bee, "move_direction")).toBe(0);
-            expect(variable_instance_get(_bee, "image_angle")).toBe(0);
+            expect(variable_instance_get(_bee, "y")).toBe(80);
+            var _aim_direction = point_direction(101, 80, 140, 100);
+            expect(variable_instance_get(_bee, "move_direction")).toBe(_aim_direction);
+            expect(variable_instance_get(_bee, "image_angle")).toBe(_aim_direction);
+            expect(variable_instance_get(_bee, "flyaway_committed")).toBeFalsy();
             expect(instance_number(obj_bullet_diamond)).toBe(3);
 
             for (var i = 0; i < instance_number(obj_bullet_diamond); i++) {
@@ -1497,7 +1671,7 @@ suite(function() {
                 var _speed = variable_instance_get(_bullet, "move_speed");
                 var _direction = variable_instance_get(_bullet, "move_direction");
 
-                expect(_direction).toBe(0);
+                expect(_direction).toBe(_aim_direction);
 
                 if (_speed == BEE_BULLET_SPEED - BEE_BULLET_SPEED_DELTA) {
                     _slow_count += 1;
@@ -1527,6 +1701,65 @@ suite(function() {
             with (_player) {
                 instance_destroy();
             }
+        });
+
+        test("Bees commit downward after passing the player and also leave when no player exists", function() {
+            var _player = instance_create_layer(140, 100, "Instances", obj_player);
+            var _bee = instance_create_layer(100, 100, "Instances", obj_enemy_bee);
+
+            with (_player) {
+                event_perform(ev_create, 0);
+                x = 140;
+                y = 100;
+            }
+
+            with (_bee) {
+                event_perform(ev_create, 0);
+                x = 100;
+                y = 100;
+                move_direction = 0;
+                fire_timer = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _bee);
+            expect(variable_instance_get(_bee, "flyaway_committed")).toBeTruthy();
+            expect(variable_instance_get(_bee, "move_direction")).toBe(270);
+
+            with (_player) {
+                y = 300;
+            }
+            simulateEvent(ev_step, ev_step_normal, _bee);
+            expect(variable_instance_get(_bee, "flyaway_committed")).toBeTruthy();
+            expect(variable_instance_get(_bee, "move_direction")).toBe(270);
+
+            with (_player) { instance_destroy(); }
+
+            var _orphan_bee = instance_create_layer(200, 120, "Instances", obj_enemy_bee);
+            with (_orphan_bee) {
+                event_perform(ev_create, 0);
+                move_direction = 45;
+                fire_timer = 0;
+            }
+            simulateEvent(ev_step, ev_step_normal, _orphan_bee);
+            expect(variable_instance_get(_orphan_bee, "flyaway_committed")).toBeTruthy();
+            expect(variable_instance_get(_orphan_bee, "move_direction")).toBe(270);
+
+            with (_bee) { instance_destroy(); }
+            with (_orphan_bee) { instance_destroy(); }
+        });
+
+        test("Enemy bullet artwork rotates to its movement direction", function() {
+            var _bullet = instance_create_layer(40, 60, "Instances", obj_bullet_bead);
+            with (_bullet) {
+                move_direction = 37;
+                move_speed = 3;
+                image_angle = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _bullet);
+            expect(variable_instance_get(_bullet, "image_angle")).toBe(37);
+
+            with (_bullet) { instance_destroy(); }
         });
 
         test("Mayfly bursts alternate spiral direction while dropping into the y=100 camera lane", function() {
@@ -1662,10 +1895,16 @@ suite(function() {
             simulateEvent(ev_step, ev_step_normal, _counter);
             simulateEvent(ev_step, ev_step_normal, _clockwise);
 
-            expect(round(variable_instance_get(_counter, "x"))).toBe(0);
-            expect(round(variable_instance_get(_counter, "y"))).toBe(-2);
-            expect(round(variable_instance_get(_clockwise, "x"))).toBe(0);
-            expect(round(variable_instance_get(_clockwise, "y"))).toBe(2);
+            expect(variable_instance_get(_counter, "x")).toBeGreaterThan(1);
+            expect(variable_instance_get(_counter, "y")).toBeLessThan(0);
+            expect(variable_instance_get(_clockwise, "x")).toBeGreaterThan(1);
+            expect(variable_instance_get(_clockwise, "y")).toBeGreaterThan(0);
+            expect(point_distance(0, 0,
+                variable_instance_get(_counter, "x"),
+                variable_instance_get(_counter, "y"))).toBeLessThan(BLADE_MAX_SCREEN_SPEED + 0.01);
+            expect(point_distance(0, 0,
+                variable_instance_get(_clockwise, "x"),
+                variable_instance_get(_clockwise, "y"))).toBeLessThan(BLADE_MAX_SCREEN_SPEED + 0.01);
 
             with (_counter) {
                 instance_destroy();
@@ -1676,12 +1915,71 @@ suite(function() {
             }
         });
 
+        test("Blade motion stays within a fair screen-space ceiling at outer radii", function() {
+            var _near = GameBladeMotionStepCreate(0, 1.5, 12, 1);
+            var _outer = GameBladeMotionStepCreate(180, 2.2, 23, 1);
+            var _rank_zero = GameBladeMotionStepCreate(180, 2.2, 23,
+                GameRankBulletSpeedScaleGet(RANK_MIN));
+
+            expect(_near.screen_step).toBeLessThan(BLADE_MAX_SCREEN_SPEED + 0.001);
+            expect(_outer.screen_step).toBeLessThan(BLADE_MAX_SCREEN_SPEED + 0.001);
+            expect(_outer.turn_step).toBeLessThan(23 * BLADE_TURN_RATE_SCALE);
+            expect(_outer.turn_step).toBeGreaterThan(0);
+            expect(_rank_zero.radial_step).toBeLessThan(_outer.radial_step);
+        });
+
+        test("Redirected blades telegraph and cap their eventual travel speed", function() {
+            var _blade = instance_create_layer(0, 0, "Instances", obj_bullet_blade);
+            expect(GameBladeBulletRedirectMark(_blade, 1, 99, 1)).toBeTruthy();
+            expect(variable_instance_get(_blade, "freeze_timer")).toBe(BOSS_PHASE3_FREEZE_FRAMES);
+            var _redirect_screen_speed = variable_instance_get(_blade, "redirect_speed")
+                * variable_instance_get(_blade, "rank_speed_scale");
+            expect(_redirect_screen_speed).toBeLessThan(BLADE_REDIRECT_MAX_SCREEN_SPEED + 0.001);
+
+            with (_blade) {
+                instance_destroy();
+            }
+        });
+
         test("Boss helpers expose segmented life bars", function() {
             var _segments = GameBossBarSegmentsCreate(1, BOSS_PHASE_HP * 0.5, BOSS_PHASE_HP);
 
             expect(_segments[0]).toBe(0);
             expect(_segments[1]).toBe(0.5);
             expect(_segments[2]).toBe(1);
+        });
+
+        test("Boss phase hearts distinguish spent, active, and future patterns", function() {
+            var _hearts = GameBossPhaseHeartStatesCreate(2, 5);
+
+            expect(_hearts[0]).toBe(0);
+            expect(_hearts[1]).toBe(0);
+            expect(_hearts[2]).toBe(2);
+            expect(_hearts[3]).toBe(1);
+            expect(_hearts[4]).toBe(1);
+        });
+
+        test("Boss phase transitions refill health while damage is invulnerable", function() {
+            var _boss = instance_create_layer(0, 0, "Instances", obj_boss_parent);
+            with (_boss) {
+                phase_count = 3;
+                phase_index = 0;
+                phase_max_hp = 600;
+                hp = 0;
+            }
+
+            simulateEvent(ev_step, ev_step_normal, _boss);
+            expect(variable_instance_get(_boss, "phase_index")).toBe(1);
+            expect(variable_instance_get(_boss, "phase_transition_timer")).toBe(BOSS_PHASE_TRANSITION_FRAMES);
+            expect(GameBossDamageApply(_boss, 100)).toBe(0);
+
+            simulateEvent(ev_step, ev_step_normal, _boss);
+            expect(variable_instance_get(_boss, "hp")).toBeGreaterThan(0);
+            expect(variable_instance_get(_boss, "hp")).toBeLessThan(600);
+
+            with (_boss) {
+                instance_destroy();
+            }
         });
 
         test("Boss intro combat clear removes enemies and bullets but keeps bosses and score unchanged", function() {
@@ -1842,11 +2140,13 @@ suite(function() {
         });
 
         test("Cancel meter rewards trigger berserk at one thousand", function() {
+            GameRankSet(5);
             global.game_runtime.meter = 999;
 
             expect(GamePlayerMeterRewardApply(1)).toBeTruthy();
             expect(global.game_runtime.is_berserk).toBeTruthy();
             expect(global.game_runtime.meter).toBe(METER_MAX);
+            expect(GameRankGet()).toBe(5 + RANK_HYPER_GAIN);
             expect(GamePlayerSwordPoseCreate(0, true).length).toBe(SWORD_LENGTH * BERSERK_SWORD_MULTIPLIER);
         });
 
@@ -1950,6 +2250,17 @@ suite(function() {
             var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
             var _logo = asset_get_index("spr_logo");
             var _mayfly = asset_get_index("spr_mayfly");
+            var _violet_bee = asset_get_index("spr_violet_bee");
+            var _violet_bee_bullet = asset_get_index("spr_violet_bee_bullet");
+            var _twilight_mayfly = asset_get_index("spr_twilight_mayfly");
+            var _twilight_mayfly_bullet = asset_get_index("spr_twilight_mayfly_bullet");
+            var _silhouette_moon = asset_get_index("spr_silhouette_moon");
+            var _silhouette_selkie = asset_get_index("spr_silhouette_selkie");
+            var _silhouette_mira = asset_get_index("spr_silhouette_mira");
+            var _silhouette_shalmii = asset_get_index("spr_silhouette_shalmii");
+            var _silhouette_aisha = asset_get_index("spr_silhouette_aisha");
+            var _silhouette_aster = asset_get_index("spr_silhouette_aster");
+            var _silhouette_caelia = asset_get_index("spr_silhouette_caelia");
             var _medal = asset_get_index("spr_medal");
             var _enemy_destroy = asset_get_index("snd_enemy_destroy");
             var _ow = asset_get_index("snd_ow");
@@ -1968,6 +2279,14 @@ suite(function() {
             var _music_stage_10 = asset_get_index("snd_music_stage_10");
             var _music_ending = asset_get_index("snd_music_ending");
             var _music_credits = asset_get_index("snd_music_credits");
+            var _character_music_names = [
+                "snd_music_stage_shalmii", "snd_music_boss_shalmii",
+                "snd_music_stage_aster", "snd_music_boss_aster",
+                "snd_music_stage_mira_aisha", "snd_music_boss_mira_aisha",
+                "snd_music_stage_caelia", "snd_music_boss_caelia",
+                "snd_music_stage_moon", "snd_music_boss_moon",
+                "snd_music_stage_selkie", "snd_music_boss_selkie",
+            ];
             var _player_shot_moon = asset_get_index("snd_player_shot_moon");
             var _player_shot_selkie = asset_get_index("snd_player_shot_selkie");
             var _player_focus = asset_get_index("snd_player_focus");
@@ -1984,9 +2303,17 @@ suite(function() {
             var _sunrise_bullet = asset_get_index("spr_sunrise_bullet");
             var _sunset = asset_get_index("spr_sunset");
             var _sunset_bullet = asset_get_index("spr_sunset_bullet");
+            var _text_arrow = asset_get_index("spr_text_arrow");
             var _textbox = asset_get_index("spr_textbox");
             var _turret = asset_get_index("spr_turret");
             var _violet_tiles = asset_get_index("spr_violet_tiles");
+            var _stage3d_textures = [
+                asset_get_index("tex_stage3d_01"),
+                asset_get_index("tex_stage3d_02"),
+                asset_get_index("tex_stage3d_03"),
+                asset_get_index("tex_stage3d_04"),
+                asset_get_index("tex_stage3d_05")
+            ];
 
             expect(_aisha_portrait != -1 && sprite_exists(_aisha_portrait)).toBeTruthy();
             expect(_aisha_ship != -1 && sprite_exists(_aisha_ship)).toBeTruthy();
@@ -2007,6 +2334,17 @@ suite(function() {
             expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
             expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
+            expect(_violet_bee != -1 && sprite_exists(_violet_bee)).toBeTruthy();
+            expect(_violet_bee_bullet != -1 && sprite_exists(_violet_bee_bullet)).toBeTruthy();
+            expect(_twilight_mayfly != -1 && sprite_exists(_twilight_mayfly)).toBeTruthy();
+            expect(_twilight_mayfly_bullet != -1 && sprite_exists(_twilight_mayfly_bullet)).toBeTruthy();
+            expect(_silhouette_moon != -1 && sprite_exists(_silhouette_moon)).toBeTruthy();
+            expect(_silhouette_selkie != -1 && sprite_exists(_silhouette_selkie)).toBeTruthy();
+            expect(_silhouette_mira != -1 && sprite_exists(_silhouette_mira)).toBeTruthy();
+            expect(_silhouette_shalmii != -1 && sprite_exists(_silhouette_shalmii)).toBeTruthy();
+            expect(_silhouette_aisha != -1 && sprite_exists(_silhouette_aisha)).toBeTruthy();
+            expect(_silhouette_aster != -1 && sprite_exists(_silhouette_aster)).toBeTruthy();
+            expect(_silhouette_caelia != -1 && sprite_exists(_silhouette_caelia)).toBeTruthy();
             expect(_medal != -1 && sprite_exists(_medal)).toBeTruthy();
             expect(_enemy_destroy != -1).toBeTruthy();
             expect(_ow != -1).toBeTruthy();
@@ -2025,6 +2363,9 @@ suite(function() {
             expect(_music_stage_10 != -1).toBeTruthy();
             expect(_music_ending != -1).toBeTruthy();
             expect(_music_credits != -1).toBeTruthy();
+            for (var music = 0; music < array_length(_character_music_names); music++) {
+                expect(asset_get_index(_character_music_names[music]) != -1).toBeTruthy();
+            }
             expect(_player_shot_moon != -1).toBeTruthy();
             expect(_player_shot_selkie != -1).toBeTruthy();
             expect(_player_focus != -1).toBeTruthy();
@@ -2041,9 +2382,15 @@ suite(function() {
             expect(_sunrise_bullet != -1 && sprite_exists(_sunrise_bullet)).toBeTruthy();
             expect(_sunset != -1 && sprite_exists(_sunset)).toBeTruthy();
             expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
+            expect(_text_arrow != -1 && sprite_exists(_text_arrow)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
             expect(_turret != -1 && sprite_exists(_turret)).toBeTruthy();
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
+            for (var texture_index = 0; texture_index < array_length(_stage3d_textures); texture_index++) {
+                expect(_stage3d_textures[texture_index] != -1 && sprite_exists(_stage3d_textures[texture_index])).toBeTruthy();
+                expect(sprite_get_width(_stage3d_textures[texture_index])).toBe(256);
+                expect(sprite_get_height(_stage3d_textures[texture_index])).toBe(256);
+            }
             expect(object_exists(obj_boss_sunset)).toBeTruthy();
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
             expect(object_exists(obj_bullet_blade)).toBeTruthy();
@@ -2085,14 +2432,35 @@ suite(function() {
             expect(sprite_get_width(_mayfly)).toBe(64);
             expect(sprite_get_width(_medal)).toBe(32);
             expect(sprite_get_width(_sunrise)).toBe(64);
-            expect(sprite_get_width(_sunrise_bullet)).toBe(8);
+            expect(sprite_get_width(_sunrise_bullet)).toBe(16);
             expect(sprite_get_width(_sunset)).toBe(64);
-            expect(sprite_get_height(_sunset_bullet)).toBe(8);
+            expect(sprite_get_height(_sunset_bullet)).toBe(16);
+            expect(sprite_get_width(_text_arrow)).toBe(64);
+            expect(sprite_get_height(_text_arrow)).toBe(64);
+            expect(sprite_get_number(_text_arrow)).toBe(8);
             expect(sprite_get_width(_textbox)).toBe(640);
             expect(sprite_get_height(_textbox)).toBe(130);
             expect(sprite_get_width(_turret)).toBe(32);
             expect(sprite_get_width(_violet_tiles)).toBe(128);
             expect(sprite_get_height(_violet_tiles)).toBe(128);
+        });
+
+        test("Five modular 3D stage scenes expose looping camera, lighting, fog, and runtime buffers", function() {
+            var _effects = ["embers", "salt_mist", "duet_dust", "astral_sparks", "violet_pollen"];
+
+            for (var stage = 1; stage <= 5; stage++) {
+                var _config = GameStage3DConfigGet(stage);
+                var _start = GameStage3DPathSample(_config, 0);
+                var _end = GameStage3DPathSample(_config, 64);
+
+                expect(_config.effect).toBe(_effects[stage - 1]);
+                expect(_config.fog_start < _config.fog_end).toBeTruthy();
+                expect(_config.speed > 0 && _config.speed < 0.03).toBeTruthy();
+                expect(_start.x).toBe(_end.x);
+                expect(_start.z).toBe(_end.z);
+                expect(file_exists(_config.buffer_name)).toBeTruthy();
+                expect(asset_get_index("tex_stage3d_0" + string(stage)) != -1).toBeTruthy();
+            }
         });
     });
 
@@ -2169,6 +2537,27 @@ suite(function() {
             expect(_state.verbs.right.released).toBeTruthy();
             expect(_state.verbs.fire.released).toBeTruthy();
             expect(_state.verbs.pause.released).toBeTruthy();
+        });
+
+        test("Text-key impulses preserve sub-frame taps without repeating stale characters", function() {
+            var _state = GameInputStateCreate();
+
+            expect(GameInputTextImpulseConsume(_state, "s")).toBe("S");
+            expect(GameInputTextImpulseConsume(_state, "s")).toBe("");
+            expect(GameInputTextImpulseConsume(_state, "q")).toBe("Q");
+            expect(GameInputTextImpulseConsume(_state, "d")).toBe("D");
+            expect(GameInputTextImpulseConsume(_state, "")).toBe("");
+        });
+
+        test("Keyboard polling consumes the configured binding instead of its old default", function() {
+            GameInputBindingAssign("keyboard", "fire", ord("Q"));
+            simulateKeyHold(ord("Q"));
+
+            var _snapshot = GameInputKeyboardSnapshotCreate();
+            expect(_snapshot.fire).toBeTruthy();
+            expect(_snapshot.bomb).toBeFalsy();
+
+            simulateKeyRelease(ord("Q"));
         });
 
         test("Keyboard and controller verbs combine while the active device owns movement", function() {
@@ -2310,7 +2699,7 @@ suite(function() {
         test("Practice tuning preserves unrelated live values and displays the active state", function() {
             global.game_runtime.run_mode = "practice";
             global.game_runtime.power = 1;
-            global.game_runtime.rank = 85;
+            global.game_runtime.rank = 35;
             global.game_runtime.rank_locked = true;
             global.game_runtime.lives = 1;
             global.game_runtime.bombs = 0;
@@ -2320,7 +2709,7 @@ suite(function() {
             GamePracticeLiveAdjust(0, 1);
 
             expect(global.game_runtime.power).toBe(2);
-            expect(global.game_runtime.rank).toBe(85);
+            expect(global.game_runtime.rank).toBe(35);
             expect(global.game_runtime.rank_locked).toBeTruthy();
             expect(global.game_runtime.lives).toBe(1);
             expect(global.game_runtime.bombs).toBe(0);
@@ -2329,7 +2718,7 @@ suite(function() {
 
             var _entries = GamePracticeLiveEntriesCreate();
             expect(_entries[0].value).toBe("2/" + string(PLAYER_POWER_MAX));
-            expect(_entries[1].value).toBe("85%");
+            expect(_entries[1].value).toBe("35%");
             expect(_entries[2].value).toBe("Off");
             expect(_entries[3].value).toBe("1");
             expect(_entries[4].value).toBe("0");
@@ -2365,24 +2754,24 @@ suite(function() {
             var _request = GamePracticeRunRequestConfigure({
                 ship_id: SHIP_SELKIE,
                 ship_index: 1,
-                stage: 7,
+                stage: 3,
                 segment: PRACTICE_SEGMENT_BOSS,
                 power: PLAYER_POWER_MAX,
-                rank: 80,
+                rank: 40,
                 dynamic_rank: false,
                 lives: 2,
                 bombs: 1,
                 meter: METER_MAX,
             });
 
-            expect(_request.stage).toBe(7);
+            expect(_request.stage).toBe(3);
             expect(GameRunStartInitialize()).toBeTruthy();
             expect(GameRunIsPractice()).toBeTruthy();
             expect(GameRunStatsShouldRecord()).toBeFalsy();
             expect(global.game_runtime.selected_ship_id).toBe(SHIP_SELKIE);
-            expect(global.game_runtime.current_stage).toBe(7);
+            expect(global.game_runtime.current_stage).toBe(3);
             expect(global.game_runtime.power).toBe(PLAYER_POWER_MAX);
-            expect(global.game_runtime.rank).toBe(80);
+            expect(global.game_runtime.rank).toBe(40);
             expect(global.game_runtime.rank_locked).toBeTruthy();
             expect(global.game_runtime.lives).toBe(2);
             expect(global.game_runtime.bombs).toBe(1);
@@ -2401,7 +2790,7 @@ suite(function() {
 
         test("Practice segment selection reaches boss and waves-only seams", function() {
             GamePracticeRunRequestConfigure({
-                stage: 9,
+                stage: 4,
                 segment: PRACTICE_SEGMENT_BOSS,
             });
             GameRunStartInitialize();
@@ -2411,7 +2800,7 @@ suite(function() {
             expect(_boss_state.mode).toBe("boss_intro");
             expect(_boss_state.frame).toBe(STAGE_LENGTH_FRAMES);
             expect(_boss_state.scroll_speed).toBe(0);
-            expect(global.game_runtime.current_stage).toBe(9);
+            expect(global.game_runtime.current_stage).toBe(4);
             expect(global.game_runtime.stage_frame).toBe(STAGE_LENGTH_FRAMES);
             expect(global.game_runtime.stage_notice_timer).toBe(0);
 
@@ -2429,7 +2818,7 @@ suite(function() {
             expect(GamePracticeWavesOnly()).toBeTruthy();
         });
 
-        test("Rank pressure preserves neutral tuning and scales cadence in both directions", function() {
+        test("Rank pressure starts forgiving and reaches the established tuning at fifty", function() {
             var _low = GameRankPressureCreate(RANK_MIN);
             var _neutral = GameRankPressureCreate(RANK_DEFAULT);
             var _high = GameRankPressureCreate(RANK_MAX);
@@ -2440,15 +2829,15 @@ suite(function() {
             expect(_low.spawn_interval_scale).toBeGreaterThan(_neutral.spawn_interval_scale);
             expect(_low.fire_interval_scale).toBeGreaterThan(_neutral.fire_interval_scale);
             expect(_low.bullet_speed_scale).toBeLessThan(_neutral.bullet_speed_scale);
-            expect(_high.spawn_interval_scale).toBeLessThan(_neutral.spawn_interval_scale);
-            expect(_high.fire_interval_scale).toBeLessThan(_neutral.fire_interval_scale);
-            expect(_high.bullet_speed_scale).toBeGreaterThan(_neutral.bullet_speed_scale);
+            expect(_high.spawn_interval_scale).toBe(_neutral.spawn_interval_scale);
+            expect(_high.fire_interval_scale).toBe(_neutral.fire_interval_scale);
+            expect(_high.bullet_speed_scale).toBe(_neutral.bullet_speed_scale);
             expect(GameRankSpawnIntervalGet(100, 1, RANK_MIN)).toBe(120);
             expect(GameRankSpawnIntervalGet(100, 1, RANK_DEFAULT)).toBe(100);
-            expect(GameRankSpawnIntervalGet(100, 1, RANK_MAX)).toBe(80);
+            expect(GameRankSpawnIntervalGet(100, 1, RANK_MAX)).toBe(100);
             expect(GameRankFireIntervalGet(100, 1, RANK_MIN)).toBe(125);
             expect(GameRankFireIntervalGet(100, 1, RANK_DEFAULT)).toBe(100);
-            expect(GameRankFireIntervalGet(100, 1, RANK_MAX)).toBe(75);
+            expect(GameRankFireIntervalGet(100, 1, RANK_MAX)).toBe(100);
             expect(GameRankFireIntervalGet(4, 5, RANK_MAX)).toBe(5);
         });
 
@@ -2466,21 +2855,36 @@ suite(function() {
         });
 
         test("Passive rank rises only after uninterrupted active gameplay", function() {
-            GameRankSet(RANK_DEFAULT);
+            GameRankSet(RANK_MIN);
             global.game_runtime.rank_frame = RANK_PASSIVE_INTERVAL - 1;
 
-            expect(GameRankStep()).toBe(RANK_DEFAULT + 1);
+            expect(GameRankStep()).toBe(RANK_MIN + 1);
             expect(global.game_runtime.rank_frame).toBe(0);
 
             global.game_runtime.rank_frame = RANK_PASSIVE_INTERVAL - 1;
             global.game_runtime.signals.paused = true;
-            expect(GameRankStep()).toBe(RANK_DEFAULT + 1);
+            expect(GameRankStep()).toBe(RANK_MIN + 1);
             expect(global.game_runtime.rank_frame).toBe(RANK_PASSIVE_INTERVAL - 1);
 
             global.game_runtime.signals.paused = false;
             global.game_runtime.rank_locked = true;
-            expect(GameRankStep()).toBe(RANK_DEFAULT + 1);
+            expect(GameRankStep()).toBe(RANK_MIN + 1);
             expect(global.game_runtime.rank_frame).toBe(RANK_PASSIVE_INTERVAL - 1);
+        });
+
+        test("Ordinary shootdowns add one gradual rank point per defeat threshold", function() {
+            GameRankSet(RANK_MIN);
+
+            for (var i = 0; i < RANK_DEFEATS_PER_POINT - 1; i++) {
+                expect(GameRankDefeatRewardApply()).toBe(RANK_MIN);
+            }
+
+            expect(GameRankDefeatRewardApply()).toBe(RANK_MIN + 1);
+            expect(global.game_runtime.rank_defeats).toBe(0);
+
+            global.game_runtime.rank_locked = true;
+            expect(GameRankDefeatRewardApply()).toBe(RANK_MIN + 1);
+            expect(global.game_runtime.rank_defeats).toBe(0);
         });
     });
 
@@ -2545,14 +2949,61 @@ suite(function() {
             expect(global.game_runtime.story.current_file).toBe("");
         });
 
+        test("Story text types in, pauses at punctuation, and reveals before advancing", function() {
+            var _file = file_text_open_write("test_story.json");
+            file_text_write_string(_file, "[{\"name\":\"A\",\"text\":\"Wait, Moon.\",\"portraits\":[],\"positions\":[]},{\"name\":\"B\",\"text\":\"I am here.\",\"portraits\":[],\"positions\":[]}]");
+            file_text_close(_file);
+
+            var _state = GameStoryStateCreate();
+            expect(GameStoryBegin(_state, "test_story.json")).toBeTruthy();
+            expect(_state.reveal_characters).toBe(0);
+            expect(_state.reveal_complete).toBeFalsy();
+
+            expect(GameStoryRevealStep(_state)).toBeTruthy();
+            expect(_state.reveal_characters).toBe(1);
+            expect(GameStoryRevealStep(_state)).toBeFalsy();
+            expect(_state.reveal_characters).toBe(1);
+            expect(GameStoryTypewriterDelayForCharacter(",")).toBeGreaterThan(
+                GameStoryTypewriterDelayForCharacter("W"));
+
+            expect(GameStoryContinue(_state)).toBeTruthy();
+            expect(_state.reveal_complete).toBeTruthy();
+            expect(_state.reveal_characters).toBe(string_length("Wait, Moon."));
+            expect(_state.frame_index).toBe(0);
+
+            expect(GameStoryContinue(_state)).toBeTruthy();
+            expect(_state.frame_index).toBe(1);
+            expect(_state.reveal_characters).toBe(0);
+            expect(_state.reveal_complete).toBeFalsy();
+        });
+
+        test("Story continue arrow follows the imported eight-frame 3 fps loop", function() {
+            expect(GameStoryTextArrowFrameGet(0, 8)).toBe(0);
+            expect(GameStoryTextArrowFrameGet(333, 8)).toBe(0);
+            expect(GameStoryTextArrowFrameGet(334, 8)).toBe(1);
+            expect(GameStoryTextArrowFrameGet(2666, 8)).toBe(7);
+            expect(GameStoryTextArrowFrameGet(2667, 8)).toBe(0);
+        });
+
+        test("Typewriter text keeps the final two-line wrapping stable", function() {
+            draw_set_font(fn_dialogue_speech);
+            var _text = "Moonlight gathers over the water while Selkie keeps the bow pointed straight into the tide.";
+            var _full = GameStoryTextLinesCreate(_text, 240, 2);
+            var _partial = GameStoryVisibleLinesCreate(_text, 240, 2, 20);
+
+            expect(array_length(_partial)).toBe(array_length(_full));
+            expect(string_length(_partial[0])).toBe(20);
+            expect(_partial[1]).toBe("");
+        });
+
         test("Opening story included file loads from the project datafiles", function() {
-            var _frames = GameStoryLoadFramesFromFile("opening_story.json");
+            var _frames = GameStoryLoadFramesFromFile("opening_story_v2.json");
 
             expect(array_length(_frames)).toBe(10);
             expect(_frames[0].name).toBe("");
             expect(array_length(_frames[0].portraits)).toBe(0);
             expect(array_length(_frames[0].backgrounds)).toBe(1);
-            expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
+            expect(_frames[0].backgrounds[0]).toBe("spr_story_bg_core_chapel");
             expect(_frames[1].name).toBe("Moon");
             expect(_frames[2].name).toBe("Selkie");
             expect(_frames[5].text).toBe("I named my ship Sunset because it carries every ending I could not accept.");
@@ -2560,34 +3011,35 @@ suite(function() {
         });
 
         test("Final boss stories stay in rm_game and match the selected route", function() {
-            var _moon_route = GameStoryLoadFramesFromFile("boss_intro_story.json");
-            var _selkie_route = GameStoryLoadFramesFromFile("boss_intro_story_selkie_route.json");
+            var _moon_route = GameStoryLoadFramesFromFile("boss_intro_story_v2.json");
+            var _selkie_route = GameStoryLoadFramesFromFile("boss_intro_story_selkie_route_v2.json");
 
             expect(array_length(_moon_route)).toBe(10);
             expect(array_length(_selkie_route)).toBe(10);
             expect(_moon_route[0].name).toBe("Moon");
             expect(_moon_route[2].name).toBe("Selkie");
-            expect(array_length(_moon_route[0].backgrounds)).toBe(0);
+            expect(array_length(_moon_route[0].backgrounds)).toBe(1);
+            expect(_moon_route[0].backgrounds[0]).toBe("spr_story_bg_violet_horizon");
             expect(array_length(_moon_route[2].portraits)).toBe(2);
             expect(_selkie_route[0].name).toBe("Selkie");
             expect(_selkie_route[2].name).toBe("Moon");
-            expect(array_length(_selkie_route[0].backgrounds)).toBe(0);
+            expect(array_length(_selkie_route[0].backgrounds)).toBe(1);
+            expect(_selkie_route[0].backgrounds[0]).toBe("spr_story_bg_violet_horizon");
             expect(array_length(_selkie_route[2].portraits)).toBe(2);
 
             global.game_runtime.selected_ship_id = SHIP_SUNRISE;
-            expect(GameFinalBossStoryFileGet()).toBe("boss_intro_story.json");
+            expect(GameFinalBossStoryFileGet()).toBe("boss_intro_story_v2.json");
 
             global.game_runtime.selected_ship_id = SHIP_SELKIE;
-            expect(GameFinalBossStoryFileGet()).toBe("boss_intro_story_selkie_route.json");
+            expect(GameFinalBossStoryFileGet()).toBe("boss_intro_story_selkie_route_v2.json");
         });
 
         test("Character bosses have route-specific dialogue around motif-specific fights", function() {
             var _bosses = [
-                { stage: MIRA_BOSS_STAGE, story_id: "mira", name: MIRA_BOSS_NAME, portrait: "spr_mira_portrait" },
-                { stage: SHALMII_BOSS_STAGE, story_id: "shalmii", name: SHALMII_BOSS_NAME, portrait: "spr_shalmii_portrait" },
-                { stage: AISHA_BOSS_STAGE, story_id: "aisha", name: AISHA_BOSS_NAME, portrait: "spr_aisha_portrait" },
-                { stage: ASTER_BOSS_STAGE, story_id: "aster", name: ASTER_BOSS_NAME, portrait: "spr_aster_portrait" },
-                { stage: CAELIA_BOSS_STAGE, story_id: "caelia", name: CAELIA_BOSS_NAME, portrait: "spr_caelia_portrait" },
+                { stage: 1, story_id: "shalmii", name: SHALMII_BOSS_NAME, portrait: "spr_shalmii_portrait", second_moon: "Moon", second_selkie: "Selkie" },
+                { stage: 2, story_id: "aster", name: ASTER_BOSS_NAME, portrait: "spr_aster_portrait", second_moon: "Moon", second_selkie: "Selkie" },
+                { stage: 3, story_id: "mira_aisha", name: MIRA_BOSS_NAME, portrait: "spr_mira_portrait", second_moon: "Aisha", second_selkie: "Aisha" },
+                { stage: 4, story_id: "caelia", name: CAELIA_BOSS_NAME, portrait: "spr_caelia_portrait", second_moon: "Moon", second_selkie: "Selkie" },
             ];
 
             for (var i = 0; i < array_length(_bosses); i++) {
@@ -2601,23 +3053,23 @@ suite(function() {
                 var _selkie_intro = GameStoryLoadFramesFromFile(_selkie_intro_file);
                 var _selkie_defeat = GameStoryLoadFramesFromFile(_selkie_defeat_file);
 
-                expect(_moon_intro_file).toBe(_boss.story_id + "_intro_story_moon_route.json");
-                expect(_moon_defeat_file).toBe(_boss.story_id + "_defeat_story_moon_route.json");
-                expect(_selkie_intro_file).toBe(_boss.story_id + "_intro_story_selkie_route.json");
-                expect(_selkie_defeat_file).toBe(_boss.story_id + "_defeat_story_selkie_route.json");
+                expect(_moon_intro_file).toBe(_boss.story_id + "_intro_story_moon_route_v2.json");
+                expect(_moon_defeat_file).toBe(_boss.story_id + "_defeat_story_moon_route_v2.json");
+                expect(_selkie_intro_file).toBe(_boss.story_id + "_intro_story_selkie_route_v2.json");
+                expect(_selkie_defeat_file).toBe(_boss.story_id + "_defeat_story_selkie_route_v2.json");
                 expect(array_length(_moon_intro)).toBe(6);
                 expect(array_length(_moon_defeat)).toBe(6);
                 expect(array_length(_selkie_intro)).toBe(6);
                 expect(array_length(_selkie_defeat)).toBe(6);
                 expect(_moon_intro[0].name).toBe(_boss.name);
                 expect(_moon_intro[0].portraits[0]).toBe(_boss.portrait);
-                expect(_moon_intro[1].name).toBe("Moon");
+                expect(_moon_intro[1].name).toBe(_boss.second_moon);
                 expect(_moon_defeat[5].name).toBe("Moon");
-                expect(_selkie_intro[1].name).toBe("Selkie");
+                expect(_selkie_intro[1].name).toBe(_boss.second_selkie);
                 expect(_selkie_defeat[5].name).toBe("Selkie");
             }
 
-            expect(GameCharacterBossStoryFileGet(3, false, SHIP_SUNRISE)).toBe("");
+            expect(GameCharacterBossStoryFileGet(STAGE_COUNT, false, SHIP_SUNRISE)).toBe("");
         });
 
         test("Story textbox wrapping never exceeds two lines", function() {
@@ -2628,15 +3080,14 @@ suite(function() {
             expect(array_length(_lines)).toBe(2);
         });
 
-        test("Ending story keeps flower in front of core but behind portraits", function() {
-            var _frames = GameStoryLoadFramesFromFile("ending_story.json");
-            var _selkie_route = GameStoryLoadFramesFromFile("ending_story_selkie_route.json");
+        test("Ending story uses the authored morning reunion behind its portraits", function() {
+            var _frames = GameStoryLoadFramesFromFile("ending_story_v2.json");
+            var _selkie_route = GameStoryLoadFramesFromFile("ending_story_selkie_route_v2.json");
 
             expect(array_length(_frames)).toBe(7);
             expect(array_length(_selkie_route)).toBe(7);
-            expect(array_length(_frames[0].backgrounds)).toBe(2);
-            expect(_frames[0].backgrounds[0]).toBe("spr_dialogue_bg_core");
-            expect(_frames[0].backgrounds[1]).toBe("spr_dialogue_bg_flower");
+            expect(array_length(_frames[0].backgrounds)).toBe(1);
+            expect(_frames[0].backgrounds[0]).toBe("spr_story_bg_morning_reunion");
             expect(_frames[0].name).toBe("");
             expect(array_length(_frames[0].portraits)).toBe(0);
             expect(array_length(_frames[4].portraits)).toBe(2);
@@ -2644,10 +3095,10 @@ suite(function() {
             expect(_selkie_route[2].name).toBe("Moon");
 
             global.game_runtime.selected_ship_id = SHIP_SUNRISE;
-            expect(GameEndingStoryFileGet()).toBe("ending_story.json");
+            expect(GameEndingStoryFileGet()).toBe("ending_story_v2.json");
 
             global.game_runtime.selected_ship_id = SHIP_SELKIE;
-            expect(GameEndingStoryFileGet()).toBe("ending_story_selkie_route.json");
+            expect(GameEndingStoryFileGet()).toBe("ending_story_selkie_route_v2.json");
         });
 
         test("Opening story completion transitions into rm_game", function() {

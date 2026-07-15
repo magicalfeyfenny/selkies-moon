@@ -1,6 +1,6 @@
 // Boot, persistence, migration, display configuration, and runtime defaults.
 // Increment these schema versions only when persisted or runtime data changes shape.
-#macro CONFIG_VERSION 3
+#macro CONFIG_VERSION 5
 #macro SAVE_VERSION 2
 #macro RUNTIME_VERSION 7
 
@@ -28,6 +28,10 @@ function GameConfigCreateDefault() {
         display_scale: 2,
         fullscreen: false,
         input_device: "keyboard",
+        input_bindings: GameInputBindingsCreateDefault(),
+        master_volume: 100,
+        music_volume: 100,
+        sfx_volume: 100,
     };
 }
 
@@ -83,7 +87,7 @@ function GameRuntimeDataCreateDefault() {
         bomb_active: false,
         bomb_timer: 0,
         current_stage: 1,
-        stage_count: 10,
+        stage_count: STAGE_COUNT,
         stage_notice_timer: 0,
         stage_frame: 0,
         stage_complete: false,
@@ -371,6 +375,22 @@ function GameConfigDataMigrate(_source) {
         _result.input_device = _source.input_device;
     }
 
+    if (struct_exists(_source, "input_bindings")) {
+        _result.input_bindings = GameInputBindingsNormalize(_source.input_bindings);
+    }
+
+    if (struct_exists(_source, "master_volume") && is_real(_source.master_volume)) {
+        _result.master_volume = clamp(round(_source.master_volume), 0, 100);
+    }
+
+    if (struct_exists(_source, "music_volume") && is_real(_source.music_volume)) {
+        _result.music_volume = clamp(round(_source.music_volume), 0, 100);
+    }
+
+    if (struct_exists(_source, "sfx_volume") && is_real(_source.sfx_volume)) {
+        _result.sfx_volume = clamp(round(_source.sfx_volume), 0, 100);
+    }
+
     _result.version = CONFIG_VERSION;
     return _result;
 }
@@ -392,7 +412,18 @@ function GameConfigDataIsCurrent(_source) {
         && _source.display_scale >= 1 && _source.display_scale <= 6
         && round(_source.display_scale) == _source.display_scale
         && struct_exists(_source, "fullscreen") && is_bool(_source.fullscreen)
-        && struct_exists(_source, "input_device") && is_string(_source.input_device);
+        && struct_exists(_source, "input_device") && is_string(_source.input_device)
+        && struct_exists(_source, "input_bindings")
+        && GameInputBindingsIsValid(_source.input_bindings)
+        && struct_exists(_source, "master_volume") && is_real(_source.master_volume)
+        && _source.master_volume >= 0 && _source.master_volume <= 100
+        && round(_source.master_volume) == _source.master_volume
+        && struct_exists(_source, "music_volume") && is_real(_source.music_volume)
+        && _source.music_volume >= 0 && _source.music_volume <= 100
+        && round(_source.music_volume) == _source.music_volume
+        && struct_exists(_source, "sfx_volume") && is_real(_source.sfx_volume)
+        && _source.sfx_volume >= 0 && _source.sfx_volume <= 100
+        && round(_source.sfx_volume) == _source.sfx_volume;
 }
 
 /// @func LoadGameSave()
@@ -683,6 +714,8 @@ function GameWindowCenterStep() {
 /// Applies the current config values to the active game window.
 function GameConfigApply() {
     window_set_fullscreen(global.game_config.fullscreen);
+    GameAudioVolumesApply();
+    GamePixelPresentationApply();
 
     if (!global.game_config.fullscreen) {
         // macOS applies fullscreen transitions asynchronously, so resize after it settles.
@@ -695,6 +728,53 @@ function GameConfigApply() {
     }
 
     game_set_speed(global.game_config.target_fps, gamespeed_fps);
+}
+
+/// @func GamePixelPresentationScaleIsInteger(output_width, output_height, view_width, view_height)
+/// Returns whether both output axes are exact integer multiples of the low-res canvas.
+function GamePixelPresentationScaleIsInteger(_output_width, _output_height,
+    _view_width = 640, _view_height = 360) {
+    var _scale_x = max(1, _output_width) / max(1, _view_width);
+    var _scale_y = max(1, _output_height) / max(1, _view_height);
+    var _epsilon = 0.0001;
+
+    return abs(_scale_x - round(_scale_x)) <= _epsilon
+        && abs(_scale_y - round(_scale_y)) <= _epsilon;
+}
+
+/// @func GamePixelPresentationLinearFilterGet(fullscreen, output_width, output_height)
+/// Uses nearest-neighbour at integer scales and antialiases fractional fullscreen output.
+function GamePixelPresentationLinearFilterGet(_fullscreen = undefined,
+    _output_width = undefined, _output_height = undefined) {
+    if (_fullscreen == undefined) {
+        _fullscreen = variable_global_exists("game_config")
+            && global.game_config.fullscreen;
+    }
+    if (_output_width == undefined) {
+        _output_width = window_get_width();
+    }
+    if (_output_height == undefined) {
+        _output_height = window_get_height();
+    }
+
+    return _fullscreen && !GamePixelPresentationScaleIsInteger(
+        _output_width, _output_height, 640, 360);
+}
+
+/// @func GamePixelPresentationApply()
+/// Pins every sprite, primitive, and GUI element to the authored 640x360 pixel grid.
+function GamePixelPresentationApply() {
+    gpu_set_texfilter(false);
+    display_set_gui_size(640, 360);
+
+    if (surface_exists(application_surface)) {
+        if (surface_get_width(application_surface) != 640
+            || surface_get_height(application_surface) != 360) {
+            surface_resize(application_surface, 640, 360);
+        }
+    }
+
+    return true;
 }
 
 /// @func GameInitialize()

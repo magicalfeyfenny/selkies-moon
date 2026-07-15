@@ -7,4 +7,5 @@ hit_radius = 16;
 move_speed = BEE_MOVE_SPEED;
 fire_interval = BEE_FIRE_INTERVAL;
 fire_timer = 0;
+flyaway_committed = false;
 image_angle = move_direction;

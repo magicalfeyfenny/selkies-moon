@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Mira",
+    "text": "Selkie, Wildheart and Wishbound hold this court together.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "You chase Sunset with hope in one hand and fear in the other.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Both are mine. Neither gives you the right to keep me from Moon.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Mira",
+    "text": "Good answer. It still has to survive the deal.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "And the blade. Love is not made kinder by refusing to name its cost.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then test all of it. Sunrise has room for both your answers.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_selkie_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "center",
+      "right"
+    ]
+  }
+]

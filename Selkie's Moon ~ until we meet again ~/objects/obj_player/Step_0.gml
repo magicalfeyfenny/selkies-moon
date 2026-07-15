@@ -56,6 +56,8 @@ if (player_state.hit) {
             GamePlayerRespawnStateApply(player_state);
             x = _respawn.x;
             y = _respawn.y;
+        } else if (GameRunIsPractice()) {
+            GamePracticeReturnToTitle();
         } else {
             GamePlayerContinueRequestBegin();
         }

@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Caelia",
+    "text": "Ha! You knocked every orbit crooked and still found north.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I told you my course was chosen.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Caelia",
+    "text": "Yes, but you corrected it when I moved the stars. That matters more than certainty.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Will the gate open?",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Caelia",
+    "text": "Yes. Take hope to Selkie, but let her name the constellation you become.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Together, if she wants it.",
+    "backgrounds": [
+      "spr_story_bg_bloodstar_orrery"
+    ],
+    "portraits": [
+      "spr_caelia_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]
