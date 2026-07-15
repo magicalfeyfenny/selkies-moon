@@ -76,7 +76,7 @@ Tests that create instances must destroy them before returning. Persistence test
 
 ## Visual QA tour
 
-`scr_test_helpers` contains an opt-in 25-capture tour covering title pages (including the three audio meters), every stage notice, representative combat (including the final-stage insects), the sisters' shared dual-boss finale on its alternate background route, the final boss, story, credits, practice, and pause pages.
+`scr_test_helpers` contains an opt-in 26-capture tour covering title pages (including the three audio meters), every stage notice, representative combat (including the final-stage insects), the sisters' shared dual-boss finale on its alternate background route, the final boss, story, credits, practice, pause pages, and the continue prompt.
 
 Launch with `--visual-tour` or create `.visual-tour.txt` in GameMaker's runtime working directory. Captures are saved under the runtime sandbox's `visual-tour/` directory. The debug log prints the sandbox paths and capture progress. The marker is deleted when all captures finish.
 

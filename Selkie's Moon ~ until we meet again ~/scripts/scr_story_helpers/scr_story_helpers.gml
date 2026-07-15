@@ -1058,7 +1058,7 @@ function GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color = -1, _fill_alpha = 0
     var _bottom = round(_y + _h);
     _frame_alpha = clamp(_frame_alpha, 0, 1);
 
-    // Soft offset shadow and translucent ink-dark fill preserve contrast over
+    // Soft offset shadow and refractive ink-dark crystal preserve contrast over
     // art. Compact rows are inset and feathered so their silhouettes do not
     // become a stack of hard purple bricks.
     if (_h < 34) {
@@ -1066,20 +1066,22 @@ function GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color = -1, _fill_alpha = 0
         draw_set_color(_palette.shadow_color);
         draw_rectangle(_left + 7, _top + 5, _right - 1, _bottom + 3, false);
 
-        draw_set_alpha(_fill_alpha * _frame_alpha);
-        draw_set_color(_fill);
-        draw_rectangle(_left + 6, _top + 3, _right - 6, _bottom - 3, false);
-        draw_set_alpha(_fill_alpha * 0.42 * _frame_alpha);
-        draw_rectangle(_left + 2, _top + 6, _left + 5, _bottom - 6, false);
-        draw_rectangle(_right - 5, _top + 6, _right - 2, _bottom - 6, false);
+        GameUiDrawCrystalPane(_left + 6, _top + 3,
+            _right - 6, _bottom - 3, _fill,
+            _fill_alpha * _frame_alpha, _selected ? 1.55 : 1.05);
+        GameUiDrawCrystalPane(_left + 2, _top + 6,
+            _left + 5, _bottom - 6, _fill,
+            _fill_alpha * 0.42 * _frame_alpha, 0.85);
+        GameUiDrawCrystalPane(_right - 5, _top + 6,
+            _right - 2, _bottom - 6, _fill,
+            _fill_alpha * 0.42 * _frame_alpha, 0.85);
     } else {
         draw_set_alpha(min(0.5, _fill_alpha * 0.7) * _frame_alpha);
         draw_set_color(_palette.shadow_color);
         draw_rectangle(_left + 3, _top + 3, _right + 3, _bottom + 3, false);
 
-        draw_set_alpha(_fill_alpha * _frame_alpha);
-        draw_set_color(_fill);
-        draw_rectangle(_left, _top, _right, _bottom, false);
+        GameUiDrawCrystalPane(_left, _top, _right, _bottom, _fill,
+            _fill_alpha * _frame_alpha, _selected ? 1.65 : 1.18);
     }
 
     // Open, broken flourishes replace the former doubled rectangles. Small
@@ -1199,7 +1201,9 @@ function GameStoryDraw(_state) {
         return;
     }
 
+    var _crystal_capture = GameUiCrystalBackdropBegin();
     GameStoryDrawBackground(_state.current_frame);
+    GameUiCrystalBackdropEnd(_crystal_capture);
     GameStoryDrawBox(_state.current_frame, _state.reveal_characters,
         _state.reveal_complete);
 }

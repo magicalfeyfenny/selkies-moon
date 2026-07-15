@@ -42,6 +42,20 @@ suite(function() {
             expect(GamePixelPresentationLinearFilterGet(true, 2560, 1600)).toBeTruthy();
         });
 
+        test("Crystal UI maps GUI panels onto matching backdrop pixels", function() {
+            var _region = GameUiCrystalSourceRegionCreate(
+                10, 20, 110, 70, 1280, 720, 640, 360);
+
+            expect(_region.source_x).toBe(20);
+            expect(_region.source_y).toBe(40);
+            expect(_region.source_width).toBe(200);
+            expect(_region.source_height).toBe(100);
+            expect(_region.target_x).toBe(10);
+            expect(_region.target_y).toBe(20);
+            expect(_region.target_width).toBe(100);
+            expect(_region.target_height).toBe(50);
+        });
+
         test("Default save data starts clean", function() {
             var _save = GameSaveDataCreateDefault();
 
