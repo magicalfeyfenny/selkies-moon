@@ -39,10 +39,10 @@ jobs:
 
       - name: Set up GameMaker Igor
         id: igor
-        uses: bscotch/igor-setup@v3.0.1
+        uses: bscotch/igor-setup@b7126413204dfd85b2e26c6276940ee78d70cb29
         with:
           access-key: ${{ secrets.ACCESS_KEY }}
-          runtime-version: 2024.14.4.268
+          runtime-version: 2026.0.0.23
           modules: windows
           cache: true
 
