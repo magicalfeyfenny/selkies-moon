@@ -69,7 +69,7 @@ jobs:
         uses: bscotch/igor-build@v1.3.3
         with:
           user-dir: ${{ steps.game_maker_user.outputs.path }}
-          yyp-path: Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp
+          yyp-path: ${{ github.workspace }}\Selkie's Moon ~ until we meet again ~\Selkies Moon.yyp
           platform: windows
           config: Default
           yyc: false
