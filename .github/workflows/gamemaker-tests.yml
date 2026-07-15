@@ -1,0 +1,80 @@
+name: GameMaker unit tests
+
+on:
+  pull_request:
+    branches:
+      - dev
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gamemaker-unit-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gmtl:
+    name: GMTL unit tests
+    runs-on: windows-2022
+    timeout-minutes: 30
+    # GitHub does not expose repository secrets to pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Require GameMaker CI access key
+        shell: pwsh
+        env:
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY)) {
+            throw "Add the GameMaker access key as the repository Actions secret ACCESS_KEY."
+          }
+
+      - name: Set up GameMaker Igor
+        id: igor
+        uses: bscotch/igor-setup@v3.0.1
+        with:
+          access-key: ${{ secrets.ACCESS_KEY }}
+          runtime-version: 2026.0.0.23
+          modules: windows
+          cache: true
+
+      - name: Build Windows VM test runner
+        id: build
+        uses: bscotch/igor-build@v1.3.3
+        with:
+          user-dir: ${{ steps.igor.outputs.user-dir }}
+          yyp-path: Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp
+          platform: windows
+          config: Default
+          yyc: false
+          name: SelkiesMoonTests.zip
+          save-logs: true
+
+      - name: Run GMTL unit tests
+        shell: pwsh
+        run: |
+          ./tools/run_gmtl_tests_ci.ps1 `
+            -BuildDirectory '${{ steps.build.outputs.out-dir }}' `
+            -BuildName '${{ steps.build.outputs.out-name }}'
+
+      - name: Upload test and compiler logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gamemaker-unit-test-logs
+          path: |
+            test-results/github-actions-gmtl.log
+            test-results/github-actions-gmtl-stdout.log
+            test-results/github-actions-gmtl-stderr.log
+            test-results/github-actions-game/debug.log
+            ${{ steps.build.outputs.log-dir }}
+          if-no-files-found: warn
+          retention-days: 14
