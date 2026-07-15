@@ -13,7 +13,7 @@ function GameInputVerbStateCreate() {
 /// @func GameInputVerbNamesCreate()
 /// Returns the stable action order shared by polling, persistence, and remapping UI.
 function GameInputVerbNamesCreate() {
-    return ["up", "down", "left", "right", "fire", "autofire", "bomb", "pause"];
+    return ["up", "down", "left", "right", "fire", "autofire", "focus", "bomb", "pause"];
 }
 
 /// @func GameInputBindingsCreateDefault()
@@ -27,6 +27,7 @@ function GameInputBindingsCreateDefault() {
             right: [vk_right, ord("D")],
             fire: [ord("Z")],
             autofire: [ord("C")],
+            focus: [vk_shift],
             bomb: [ord("X")],
             pause: [vk_escape, ord("P")],
         },
@@ -37,6 +38,7 @@ function GameInputBindingsCreateDefault() {
             right: gp_padr,
             fire: gp_face1,
             autofire: gp_face3,
+            focus: gp_shoulderl,
             bomb: gp_face2,
             pause: gp_start,
         },
@@ -367,6 +369,7 @@ function GameInputStateCreate() {
             right: GameInputVerbStateCreate(),
             fire: GameInputVerbStateCreate(),
             autofire: GameInputVerbStateCreate(),
+            focus: GameInputVerbStateCreate(),
             bomb: GameInputVerbStateCreate(),
             pause: GameInputVerbStateCreate()
         }
@@ -417,6 +420,7 @@ function GameInputKeyboardSnapshotCreate(_state = undefined) {
         right: GameInputKeyboardBindingDown(_bindings.right, _typed),
         fire: GameInputKeyboardBindingDown(_bindings.fire, _typed),
         autofire: GameInputKeyboardBindingDown(_bindings.autofire, _typed),
+        focus: GameInputKeyboardBindingDown(_bindings.focus, _typed),
         bomb: GameInputKeyboardBindingDown(_bindings.bomb, _typed),
         pause: GameInputKeyboardBindingDown(_bindings.pause, _typed),
         move_x: 0,
@@ -427,7 +431,8 @@ function GameInputKeyboardSnapshotCreate(_state = undefined) {
     _snapshot.move_x = (_snapshot.right ? 1 : 0) - (_snapshot.left ? 1 : 0);
     _snapshot.move_y = (_snapshot.down ? 1 : 0) - (_snapshot.up ? 1 : 0);
     _snapshot.activity = _snapshot.up || _snapshot.down || _snapshot.left || _snapshot.right
-        || _snapshot.fire || _snapshot.autofire || _snapshot.bomb || _snapshot.pause;
+        || _snapshot.fire || _snapshot.autofire || _snapshot.focus
+        || _snapshot.bomb || _snapshot.pause;
 
     return _snapshot;
 }
@@ -468,6 +473,7 @@ function GameInputGamepadSnapshotCreate(_state) {
         right: false,
         fire: false,
         autofire: false,
+        focus: false,
         bomb: false,
         pause: false,
         move_x: 0,
@@ -502,6 +508,7 @@ function GameInputGamepadSnapshotCreate(_state) {
     _snapshot.down = _pad_down || _axis_y >= _deadzone;
     _snapshot.fire = gamepad_button_check(_slot, _bindings.fire) == true;
     _snapshot.autofire = gamepad_button_check(_slot, _bindings.autofire) == true;
+    _snapshot.focus = gamepad_button_check(_slot, _bindings.focus) == true;
     _snapshot.bomb = gamepad_button_check(_slot, _bindings.bomb) == true;
     _snapshot.pause = gamepad_button_check(_slot, _bindings.pause) == true;
     _snapshot.move_x = (_pad_right ? 1 : 0) - (_pad_left ? 1 : 0);
@@ -515,7 +522,8 @@ function GameInputGamepadSnapshotCreate(_state) {
     }
 
     _snapshot.activity = _snapshot.up || _snapshot.down || _snapshot.left || _snapshot.right
-        || _snapshot.fire || _snapshot.autofire || _snapshot.bomb || _snapshot.pause;
+        || _snapshot.fire || _snapshot.autofire || _snapshot.focus
+        || _snapshot.bomb || _snapshot.pause;
 
     return _snapshot;
 }
@@ -529,6 +537,7 @@ function GameInputSnapshotApply(_state, _keyboard, _gamepad) {
     GameInputVerbAssignFromDown(_state, "right", _keyboard.right || _gamepad.right);
     GameInputVerbAssignFromDown(_state, "fire", _keyboard.fire || _gamepad.fire);
     GameInputVerbAssignFromDown(_state, "autofire", _keyboard.autofire || _gamepad.autofire);
+    GameInputVerbAssignFromDown(_state, "focus", _keyboard.focus || _gamepad.focus);
     GameInputVerbAssignFromDown(_state, "bomb", _keyboard.bomb || _gamepad.bomb);
     GameInputVerbAssignFromDown(_state, "pause", _keyboard.pause || _gamepad.pause);
 

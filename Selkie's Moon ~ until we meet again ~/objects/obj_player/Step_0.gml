@@ -84,6 +84,9 @@ if (_input.bomb_pressed) {
 
 // Consume volley shots and sword sweeps from the current fire state.
 var _fire = GamePlayerFireStep(player_state, _input);
+GamePlayerBerserkAttackMeterStep(player_state,
+    _input.fire_down || _input.autofire_down || _fire.sword_active);
+
 if (_fire.spawn_shots) {
     var _ship_id = GameRunShipIdGet();
     var _power = GamePlayerPowerGet();

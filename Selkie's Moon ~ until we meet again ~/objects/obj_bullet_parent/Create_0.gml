@@ -1,7 +1,7 @@
 // Initialize the default bullet state used by sword cancels and player collisions.
 cancelled = false;
-medal_score_value = CANCEL_BONUS;
-medal_meter_value = CANCEL_METER;
+medal_score_value = BULLET_CANCEL_SCORE_BONUS;
+medal_meter_value = BULLET_CANCEL_BERSERK_GAIN;
 move_direction = 270;
 move_speed = 4;
 draw_radius = 4;

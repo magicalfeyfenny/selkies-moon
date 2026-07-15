@@ -47,6 +47,7 @@
 #macro PLAYER_RESPAWN_OFFSET_Y 120
 #macro PLAYER_DEATH_ANIMATION_FRAMES 45
 #macro BOMB_DURATION_FRAMES 60
+#macro BOMB_INVULN_FRAMES 120
 #macro BOMB_VISUAL_MAX_RADIUS 220
 #macro PLAYER_POWER_MAX 5
 #macro PLAYER_LIFE_MAX 6
@@ -54,7 +55,7 @@
 
 #macro SHOT_SPEED 13
 #macro PLAYER_SHOT_DAMAGE 1
-#macro SWORD_SWEEP_SHOT_EQUIVALENT 20
+#macro SWORD_SWEEP_SHOT_EQUIVALENT 240
 #macro SWORD_SWEEP_DAMAGE (PLAYER_SHOT_DAMAGE * SWORD_SWEEP_SHOT_EQUIVALENT)
 #macro SHOT_VOLLEY_SIZE 6
 #macro SHOT_VOLLEY_INTERVAL 3
@@ -90,10 +91,18 @@
 #macro SWORD_END_ANGLE 585
 #macro SWORD_LENGTH 128
 #macro BERSERK_SWORD_MULTIPLIER 1.5
+#macro BERSERK_SWORD_DAMAGE_MULTIPLIER 2
 
 #macro INVULN_TIME 300
-#macro CANCEL_BONUS 100
-#macro CANCEL_METER 1
+#macro BERSERK_ACTIVATION_INVULN_FRAMES 3
+#macro BERSERK_PASSIVE_ATTACK_INTERVAL 30
+#macro BERSERK_PASSIVE_ATTACK_GAIN 1
+#macro BERSERK_POINT_BLANK_RADIUS 108
+#macro BERSERK_POINT_BLANK_SHOT_GAIN 1
+#macro BERSERK_POINT_BLANK_SWORD_GAIN 24
+#macro ENEMY_MEDAL_BERSERK_GAIN 8
+#macro BULLET_CANCEL_SCORE_BONUS 100
+#macro BULLET_CANCEL_BERSERK_GAIN 1
 #macro METER_MAX 1000
 
 // Continue and boss encounter flow.
@@ -129,8 +138,8 @@
 #macro POWERUP_SCORE "score"
 #macro POWERUP_METER_VALUE 240
 #macro POWERUP_SCORE_VALUE 5000
-#macro POINT_BLANK_RESOURCE_RADIUS 96
 #macro RESOURCE_DROP_CHARGE_BASE 4
+#macro RESOURCE_DROP_DEFEAT_MULTIPLIER 6
 #macro RESOURCE_DROP_LIMIT_BASE 3
 #macro SCORE_PICKUP_DROP_PERIOD_BASE 9
 #macro RANK_MIN 0
@@ -347,7 +356,7 @@ function GamePracticeLiveEntriesCreate() {
         { label: "Dynamic Rank", value: GameRankDynamicEnabled() ? "On" : "Off" },
         { label: "Lives", value: string(global.game_runtime.lives) },
         { label: "Bombs", value: string(global.game_runtime.bombs) },
-        { label: "Cancel Meter", value: string(global.game_runtime.meter) },
+        { label: "Berserk Meter", value: string(global.game_runtime.meter) },
     ];
 }
 
@@ -653,7 +662,7 @@ function GameRuntimeGameplayEnsure() {
     }
 
     if (_resource_threshold_missing) {
-        global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(
+        global.game_runtime.resource_drop_threshold = GameResourceDropDefeatPeriodGet(
             clamp(global.game_runtime.current_stage, 1, STAGE_COUNT));
     }
 
@@ -924,7 +933,7 @@ function GameRunStartInitialize() {
         global.game_runtime.is_berserk = _practice.meter >= METER_MAX;
         global.game_runtime.rank = _practice.rank;
         global.game_runtime.rank_locked = !_practice.dynamic_rank;
-        global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(_practice.stage);
+        global.game_runtime.resource_drop_threshold = GameResourceDropDefeatPeriodGet(_practice.stage);
         global.game_runtime.run_started_recorded = false;
         return true;
     }
@@ -942,7 +951,7 @@ function GameRunStartInitialize() {
     global.game_runtime.is_berserk = false;
     global.game_runtime.rank = RANK_MIN;
     global.game_runtime.rank_locked = false;
-    global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(1);
+    global.game_runtime.resource_drop_threshold = GameResourceDropDefeatPeriodGet(1);
 
     if (!global.game_runtime.run_started_recorded) {
         var _ship_id = GameRunShipIdGet();
@@ -1171,7 +1180,7 @@ function GameSceneNextStageBegin(_state) {
     global.game_runtime.stage_frame = 0;
     global.game_runtime.stage_complete = false;
     global.game_runtime.resource_drop_charge = 0;
-    global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(global.game_runtime.current_stage);
+    global.game_runtime.resource_drop_threshold = GameResourceDropDefeatPeriodGet(global.game_runtime.current_stage);
     global.game_runtime.resource_drops_this_stage = 0;
     GameStageNoticeRestart();
 
@@ -1243,7 +1252,7 @@ function GameScenePlayerClampPosition(_camera_x, _camera_y, _x, _y) {
 function GamePlayerMovementDeltaCreate(_input) {
     var _axis_x = _input.right_down - _input.left_down;
     var _axis_y = _input.down_down - _input.up_down;
-    var _speed = PLAYER_MOVE_SPEED * (_input.autofire_down ? PLAYER_FOCUS_SPEED_MULTIPLIER : 1);
+    var _speed = PLAYER_MOVE_SPEED * (_input.focus_down ? PLAYER_FOCUS_SPEED_MULTIPLIER : 1);
 
     if (_axis_x != 0 && _axis_y != 0) {
         var _diagonal_scale = 1 / sqrt(2);
@@ -1698,7 +1707,7 @@ function GameStageBalanceReportCreate(_stage, _rank = RANK_DEFAULT) {
 
     var _total_enemy_count = _chaser_count + _anchor_count + _dancer_count + _lancer_count;
     var _score_drop_period = GameScorePickupDropPeriodGet(_stage);
-    var _resource_drop_threshold = GameResourceDropChargeThresholdGet(_stage);
+    var _resource_drop_threshold = GameResourceDropDefeatPeriodGet(_stage);
     var _resource_drop_limit = GameResourceDropLimitGet(_stage);
     var _estimated_score_pickups = _total_enemy_count div _score_drop_period;
     var _estimated_resource_pickups = min(_resource_drop_limit, _total_enemy_count div _resource_drop_threshold);
@@ -1787,6 +1796,8 @@ function GameGameplayInputSnapshotCreate() {
         fire_pressed: false,
         autofire_down: false,
         autofire_pressed: false,
+        focus_down: false,
+        focus_pressed: false,
         bomb_down: false,
         bomb_pressed: false,
     };
@@ -1807,6 +1818,8 @@ function GameGameplayInputSnapshotRead() {
     _input.fire_pressed = GameInputVerbPressed("fire");
     _input.autofire_down = GameInputVerbDown("autofire");
     _input.autofire_pressed = GameInputVerbPressed("autofire");
+    _input.focus_down = GameInputVerbDown("focus");
+    _input.focus_pressed = GameInputVerbPressed("focus");
     _input.bomb_down = GameInputVerbDown("bomb");
     _input.bomb_pressed = GameInputVerbPressed("bomb");
 
@@ -1827,6 +1840,7 @@ function GamePlayerStateCreate() {
         sweep_frame: 0,
         sword_pose: undefined,
         sword_sweep_id: 0,
+        attack_meter_timer: 0,
     };
 }
 
@@ -2070,13 +2084,13 @@ function GameBossPhaseHpGet(_stage, _phase_count = undefined) {
 /// Returns the intended full-power focused-fire lifetime of one attack pattern.
 function GameBossPhaseTargetSecondsGet(_stage) {
     switch (clamp(_stage, 1, STAGE_COUNT)) {
-        case 1: return 12;
-        case 2: return 20;
-        case 3: return 22;
-        case 4: return 25;
+        case 1: return 4;
+        case 2: return 5;
+        case 3: return 6;
+        case 4: return 7;
     }
 
-    return 28;
+    return 8;
 }
 
 /// @func GameBossDamageScaleGet(phase_count)
@@ -2593,6 +2607,7 @@ function GameBossDualFinaleTryBegin() {
         _member.phase_transition_total = BOSS_PHASE_TRANSITION_FRAMES;
         _member.destruction_active = false;
         _member.destruction_timer = 0;
+        _member.last_medal_drop_phase = -1;
         _member.hit_radius = 28;
         _member.image_alpha = 1;
         _member.pattern_clockwise_first = (_member.dual_role == "mira");
@@ -2613,6 +2628,7 @@ function GameBossDualIndividualDefeatBegin(_boss) {
         return false;
     }
 
+    GameBossPhaseMedalsDrop(_boss);
     _boss.dual_individual_defeated = true;
     _boss.hp = 0;
     _boss.hit_radius = 0;
@@ -2975,9 +2991,109 @@ function GamePlayerSwordShouldCancelBullet(_player_x, _player_y, _bullet_x, _bul
 /// Returns the score and meter reward carried by a cancelled bullet medal.
 function GameMedalRewardCreate(_is_berserk) {
     return {
-        score_value: CANCEL_BONUS * (_is_berserk ? 10 : 1),
-        meter_value: _is_berserk ? 0 : CANCEL_METER,
+        score_value: BULLET_CANCEL_SCORE_BONUS * (_is_berserk ? 10 : 1),
+        meter_value: _is_berserk ? 0 : BULLET_CANCEL_BERSERK_GAIN,
     };
+}
+
+/// @func GameEnemyMedalDropCountGet(role, points, seed)
+/// Gives small familiars one or two medals and substantial enemies five to ten.
+function GameEnemyMedalDropCountGet(_role, _points, _seed = 0) {
+    var _offset = abs(round(_seed)) mod 6;
+
+    if (_role == "anchor") {
+        return 8 + (_offset mod 3);
+    }
+
+    if (_role == "dancer" || _points >= 1500) {
+        return 5 + _offset;
+    }
+
+    return 1 + (_offset mod 2);
+}
+
+/// @func GameBossPhaseMedalDropCountGet(stage, phase_index)
+/// Gives every defeated boss phase a deterministic five-to-ten-medal shower.
+function GameBossPhaseMedalDropCountGet(_stage, _phase_index) {
+    return 5 + (abs(round((_stage * 7) + (_phase_index * 3))) mod 6);
+}
+
+/// @func GameMedalsSpawnSpread(x, y, count, score_value, meter_value, seed)
+/// Spawns a readable radial medal shower with a short non-homing launch.
+function GameMedalsSpawnSpread(_x, _y, _count, _score_value = BULLET_CANCEL_SCORE_BONUS,
+    _meter_value = ENEMY_MEDAL_BERSERK_GAIN, _seed = 0) {
+    _count = max(0, round(_count));
+
+    for (var _index = 0; _index < _count; _index++) {
+        var _direction = 90 + ((_index * 360) / max(1, _count)) + ((_seed * 17) mod 23);
+        var _radius = 2 + ((_index + abs(round(_seed))) mod 4);
+        var _medal = instance_create_layer(
+            _x + lengthdir_x(_radius, _direction),
+            _y + lengthdir_y(_radius, _direction),
+            "Instances", obj_medal);
+        _medal.score_value = _score_value;
+        _medal.meter_value = _meter_value;
+        _medal.launch_direction = _direction;
+        _medal.launch_speed = 2.4 + ((_index + abs(round(_seed))) mod 5) * 0.35;
+        _medal.launch_timer = 12 + ((_index * 3 + abs(round(_seed))) mod 9);
+    }
+
+    return _count;
+}
+
+/// @func GameEnemyMedalsDrop(enemy)
+/// Resolves one ordinary enemy's size class and emits its medal reward.
+function GameEnemyMedalsDrop(_enemy) {
+    if (!instance_exists(_enemy)) {
+        return 0;
+    }
+
+    var _role = variable_instance_exists(_enemy, "variant_role")
+        ? _enemy.variant_role : "chaser";
+    var _points = variable_instance_exists(_enemy, "points") ? _enemy.points : 0;
+    var _seed = variable_instance_exists(_enemy, "slot_index")
+        ? _enemy.slot_index + (GameCurrentStageGet() * 5) : GameCurrentStageGet();
+    var _count = GameEnemyMedalDropCountGet(_role, _points, _seed);
+    return GameMedalsSpawnSpread(_enemy.x, _enemy.y, _count,
+        BULLET_CANCEL_SCORE_BONUS, ENEMY_MEDAL_BERSERK_GAIN, _seed);
+}
+
+/// @func GameBossPhaseMedalsDrop(boss)
+/// Emits exactly one medal shower for one defeated phase, including the shared finale.
+function GameBossPhaseMedalsDrop(_boss) {
+    if (!instance_exists(_boss)) {
+        return 0;
+    }
+
+    var _phase_index = variable_instance_exists(_boss, "phase_index") ? _boss.phase_index : 0;
+    if (variable_instance_exists(_boss, "last_medal_drop_phase")
+        && _boss.last_medal_drop_phase == _phase_index) {
+        return 0;
+    }
+
+    if (variable_instance_exists(_boss, "dual_finale_active") && _boss.dual_finale_active) {
+        var _members = GameBossDualMembersCreate();
+        for (var _check = 0; _check < array_length(_members); _check++) {
+            var _candidate = _members[_check];
+            if (variable_instance_exists(_candidate, "last_medal_drop_phase")
+                && _candidate.last_medal_drop_phase == _phase_index) {
+                return 0;
+            }
+        }
+
+        for (var _mark = 0; _mark < array_length(_members); _mark++) {
+            _members[_mark].last_medal_drop_phase = _phase_index;
+        }
+    } else {
+        _boss.last_medal_drop_phase = _phase_index;
+    }
+
+    var _stage = variable_instance_exists(_boss, "stage_rank")
+        ? _boss.stage_rank : GameCurrentStageGet();
+    var _count = GameBossPhaseMedalDropCountGet(_stage, _phase_index);
+    return GameMedalsSpawnSpread(_boss.x, _boss.y, _count,
+        BULLET_CANCEL_SCORE_BONUS, ENEMY_MEDAL_BERSERK_GAIN,
+        (_stage * 11) + _phase_index);
 }
 
 /// @func GameBulletCancelMark(bullet_id, is_berserk)
@@ -3009,8 +3125,32 @@ function GameBulletsCancelAll(_is_berserk) {
     }
 }
 
+/// @func GamePlayerBerserkActivate()
+/// Starts Berserk, cancels the screen, and grants only a three-frame safety flash.
+function GamePlayerBerserkActivate() {
+    GameRuntimeGameplayEnsure();
+
+    if (global.game_runtime.is_berserk) {
+        return false;
+    }
+
+    global.game_runtime.meter = METER_MAX;
+    global.game_runtime.is_berserk = true;
+    GameRankEventApply(RANK_HYPER_GAIN);
+    GameBulletsCancelAll(true);
+
+    var _player = instance_find(obj_player, 0);
+    if (_player != noone && variable_instance_exists(_player, "player_state")) {
+        _player.player_state.invuln_timer = max(
+            _player.player_state.invuln_timer,
+            BERSERK_ACTIVATION_INVULN_FRAMES);
+    }
+
+    return true;
+}
+
 /// @func GamePlayerMeterRewardApply(meter_amount)
-/// Adds to the cancel meter and returns whether berserk just started.
+/// Adds to the unified Berserk meter and returns whether Berserk just started.
 function GamePlayerMeterRewardApply(_meter_amount) {
     GameRuntimeGameplayEnsure();
 
@@ -3021,12 +3161,48 @@ function GamePlayerMeterRewardApply(_meter_amount) {
     global.game_runtime.meter = clamp(global.game_runtime.meter + _meter_amount, 0, METER_MAX);
 
     if (global.game_runtime.meter >= METER_MAX) {
-        global.game_runtime.is_berserk = true;
-        GameRankEventApply(RANK_HYPER_GAIN);
-        return true;
+        return GamePlayerBerserkActivate();
     }
 
     return false;
+}
+
+/// @func GamePlayerBerserkAttackMeterStep(state, attacking)
+/// Adds a deliberately tiny Berserk trickle during sustained ordinary attacks.
+function GamePlayerBerserkAttackMeterStep(_state, _attacking) {
+    if (!_attacking || global.game_runtime.is_berserk) {
+        return 0;
+    }
+
+    _state.attack_meter_timer += 1;
+    if (_state.attack_meter_timer < BERSERK_PASSIVE_ATTACK_INTERVAL) {
+        return 0;
+    }
+
+    _state.attack_meter_timer -= BERSERK_PASSIVE_ATTACK_INTERVAL;
+    GamePlayerMeterRewardApply(BERSERK_PASSIVE_ATTACK_GAIN);
+    return BERSERK_PASSIVE_ATTACK_GAIN;
+}
+
+/// @func GamePlayerPointBlankAttackRewardApply(target_x, target_y, amount)
+/// Rewards a damaging hit inside Selkie's normal chakram reach.
+function GamePlayerPointBlankAttackRewardApply(_target_x, _target_y, _amount) {
+    if (global.game_runtime.is_berserk || _amount <= 0) {
+        return false;
+    }
+
+    var _player = instance_find(obj_player, 0);
+    if (_player == noone || _player.player_state.hit) {
+        return false;
+    }
+
+    if (point_distance(_player.x, _player.y, _target_x, _target_y)
+        > BERSERK_POINT_BLANK_RADIUS) {
+        return false;
+    }
+
+    GamePlayerMeterRewardApply(_amount);
+    return true;
 }
 
 /// @func GamePlayerBerserkDrainStep()
@@ -3094,6 +3270,7 @@ function GamePlayerRespawnStateApply(_state) {
     _state.sweep_frame = 0;
     _state.sword_pose = GamePlayerSwordPoseCreate(0, false, GameRunShipIdGet());
     _state.sword_sweep_id = 0;
+    _state.attack_meter_timer = 0;
 
     GamePlayerBombStateSync(_state);
 }
@@ -3160,6 +3337,7 @@ function GamePlayerBombTryStart(_state) {
     global.game_runtime.bombs -= 1;
     GameRankEventApply(-4);
     _state.bomb_timer = BOMB_DURATION_FRAMES;
+    _state.invuln_timer = max(_state.invuln_timer, BOMB_INVULN_FRAMES);
     GamePlayerBombStateSync(_state);
     GameBulletsCancelAll(global.game_runtime.is_berserk);
     GamePlayerBombSoundPlay();
@@ -3262,14 +3440,26 @@ function GamePlayerSwordDamageTryApply(_target_id, _sweep_id) {
 
     variable_instance_set(_target_id, "last_sword_sweep_id", _sweep_id);
 
+    var _damage = SWORD_SWEEP_DAMAGE
+        * (global.game_runtime.is_berserk ? BERSERK_SWORD_DAMAGE_MULTIPLIER : 1);
+    var _damage_applied = false;
+
     if (variable_instance_exists(_target_id, "phase_count")
         && variable_instance_exists(_target_id, "phase_max_hp")) {
-        GameBossDamageApply(_target_id, SWORD_SWEEP_DAMAGE);
+        _damage_applied = GameBossDamageApply(_target_id, _damage) > 0;
     } else {
-        variable_instance_set(_target_id, "hp", variable_instance_get(_target_id, "hp") - SWORD_SWEEP_DAMAGE);
+        variable_instance_set(_target_id, "hp", variable_instance_get(_target_id, "hp") - _damage);
+        _damage_applied = true;
     }
 
-    return true;
+    if (_damage_applied) {
+        GamePlayerPointBlankAttackRewardApply(
+            variable_instance_get(_target_id, "x"),
+            variable_instance_get(_target_id, "y"),
+            BERSERK_POINT_BLANK_SWORD_GAIN);
+    }
+
+    return _damage_applied;
 }
 
 /// @func GamePlayerFireStep(state, input)
@@ -3287,7 +3477,7 @@ function GamePlayerFireStep(_state, _input) {
     var _use_sword = false;
     var _ship_id = GameRunShipIdGet();
 
-    _result.focused_attack = _input.autofire_down;
+    _result.focused_attack = _input.focus_down;
 
     if (global.game_runtime.is_berserk) {
         _state.fire_hold_frames = FIRE_HOLD_FRAMES + 1;
@@ -3397,9 +3587,9 @@ function GameGameplayHudLinesCreate() {
 
     var _rank_label = "Rank: " + string(GameRankGet()) + " "
         + (GameRankDynamicEnabled() ? "Dynamic" : "Fixed");
-    var _meter_label = "Meter: " + string(global.game_runtime.meter) + "/" + string(METER_MAX);
+    var _meter_label = "Berserk: " + string(global.game_runtime.meter) + "/" + string(METER_MAX);
     if (global.game_runtime.is_berserk) {
-        _meter_label = "Meter: BERSERK " + string(global.game_runtime.meter) + "/" + string(METER_MAX);
+        _meter_label = "Berserk: ACTIVE " + string(global.game_runtime.meter) + "/" + string(METER_MAX);
     }
 
     return [
@@ -3515,7 +3705,7 @@ function GameScorePickupDropPeriodGet(_stage) {
 }
 
 /// @func GameResourceDropChargeThresholdGet(stage)
-/// Returns how many point-blank defeats are required to earn one resource pickup.
+/// Returns the stage-scaled base used by the ordinary-defeat resource cadence.
 function GameResourceDropChargeThresholdGet(_stage) {
     _stage = clamp(_stage, 1, STAGE_COUNT);
     return max(2, RESOURCE_DROP_CHARGE_BASE - ((_stage - 1) div 4));
@@ -3528,10 +3718,10 @@ function GameResourceDropLimitGet(_stage) {
     return RESOURCE_DROP_LIMIT_BASE + ((_stage - 1) div 4);
 }
 
-/// @func GameEnemyPointBlankResourceCheck(enemy_x, enemy_y, player_x, player_y)
-/// Returns whether an enemy was defeated close enough to charge resource recovery.
-function GameEnemyPointBlankResourceCheck(_enemy_x, _enemy_y, _player_x, _player_y) {
-    return point_distance(_enemy_x, _enemy_y, _player_x, _player_y) <= POINT_BLANK_RESOURCE_RADIUS;
+/// @func GameResourceDropDefeatPeriodGet(stage)
+/// Returns the ordinary-defeat cadence for one bounded stock/power pickup.
+function GameResourceDropDefeatPeriodGet(_stage) {
+    return GameResourceDropChargeThresholdGet(_stage) * RESOURCE_DROP_DEFEAT_MULTIPLIER;
 }
 
 /// @func GamePowerupResourceDropTypeChoose(counter)
@@ -3561,7 +3751,7 @@ function GamePowerupResourceDropTypeChoose(_counter) {
 }
 
 /// @func GameEnemyPowerupDropTry(x, y, points)
-/// Drops sparse score bonuses, while point-blank defeats charge bounded resource recovery.
+/// Drops sparse score bonuses and bounded resources without a second PB meter.
 function GameEnemyPowerupDropTry(_x, _y, _points) {
     GameRuntimeGameplayEnsure();
 
@@ -3569,29 +3759,22 @@ function GameEnemyPowerupDropTry(_x, _y, _points) {
 
     var _counter = global.game_runtime.powerup_drop_counter;
     var _stage = GameCurrentStageGet();
-    var _resource_threshold = GameResourceDropChargeThresholdGet(_stage);
+    var _resource_threshold = GameResourceDropDefeatPeriodGet(_stage);
     var _resource_limit = GameResourceDropLimitGet(_stage);
     global.game_runtime.resource_drop_threshold = _resource_threshold;
     var _drop_type = POWERUP_SCORE;
     var _pickup_class = "score";
     var _should_drop = false;
-    var _player = instance_find(obj_player, 0);
-    var _point_blank = _player != noone && !_player.player_state.hit
-        && GameEnemyPointBlankResourceCheck(_x, _y, _player.x, _player.y);
+    global.game_runtime.resource_drop_charge = _counter mod _resource_threshold;
 
-    if (_point_blank && global.game_runtime.resource_drops_this_stage < _resource_limit) {
-        global.game_runtime.resource_drop_charge += 1;
-
-        if (global.game_runtime.resource_drop_charge >= _resource_threshold) {
-            global.game_runtime.resource_drop_charge = 0;
-            global.game_runtime.resource_drops_this_stage += 1;
-            global.game_runtime.resource_drop_counter += 1;
-            _drop_type = GamePowerupResourceDropTypeChoose(global.game_runtime.resource_drop_counter);
-            _pickup_class = "resource";
-            _should_drop = true;
-        }
-    } else if (global.game_runtime.resource_drops_this_stage >= _resource_limit) {
+    if ((_counter mod _resource_threshold) == 0
+        && global.game_runtime.resource_drops_this_stage < _resource_limit) {
         global.game_runtime.resource_drop_charge = 0;
+        global.game_runtime.resource_drops_this_stage += 1;
+        global.game_runtime.resource_drop_counter += 1;
+        _drop_type = GamePowerupResourceDropTypeChoose(global.game_runtime.resource_drop_counter);
+        _pickup_class = "resource";
+        _should_drop = true;
     }
 
     if (!_should_drop && ((_counter mod GameScorePickupDropPeriodGet(_stage)) == 0)) {

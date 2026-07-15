@@ -11,4 +11,5 @@ phase_transition_timer = 0;
 phase_transition_total = BOSS_PHASE_TRANSITION_FRAMES;
 destruction_active = false;
 destruction_timer = 0;
+last_medal_drop_phase = -1;
 combat_step_blocked = false;
