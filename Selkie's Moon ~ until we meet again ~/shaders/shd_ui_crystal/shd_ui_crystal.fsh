@@ -52,7 +52,11 @@ void main() {
     float seam_light = max(diagonal_seam * 0.38, cell_seam * 0.24)
         * (0.28 + (facing_light * 0.72)) * shimmer;
 
-    vec3 crystal_color = mix(refracted, v_vColour.rgb, u_tint_amount);
+    // Dark stained crystal keeps text and meters legible over busy location
+    // art. The source remains recognizable, but no longer competes with UI.
+    vec3 dark_backdrop = refracted * 0.62;
+    vec3 dark_tint = v_vColour.rgb * 0.64;
+    vec3 crystal_color = mix(dark_backdrop, dark_tint, u_tint_amount);
     crystal_color += vec3(0.42, 0.68, 1.0) * seam_light * 0.28;
     crystal_color += vec3(0.24, 0.07, 0.30)
         * diagonal_seam * (1.0 - facing_light) * 0.10;

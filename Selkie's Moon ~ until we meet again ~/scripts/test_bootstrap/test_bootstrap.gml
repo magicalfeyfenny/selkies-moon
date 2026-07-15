@@ -54,6 +54,10 @@ suite(function() {
             expect(_region.target_y).toBe(20);
             expect(_region.target_width).toBe(100);
             expect(_region.target_height).toBe(50);
+            expect(GameUiCrystalPaneAlphaGet(0)).toBe(0);
+            expect(GameUiCrystalPaneAlphaGet(0.30)).toBeGreaterThan(0.30);
+            expect(GameUiCrystalPaneAlphaGet(0.30)).toBeLessThan(0.50);
+            expect(GameUiCrystalPaneAlphaGet(0.94)).toBe(0.98);
         });
 
         test("Default save data starts clean", function() {

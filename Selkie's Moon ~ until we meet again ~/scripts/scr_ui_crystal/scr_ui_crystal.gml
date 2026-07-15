@@ -27,6 +27,17 @@ function GameUiCrystalSourceRegionCreate(_left, _top, _right, _bottom,
     };
 }
 
+/// @func GameUiCrystalPaneAlphaGet(alpha)
+/// Raises visible pane opacity while preserving fully transparent fades.
+function GameUiCrystalPaneAlphaGet(_alpha) {
+    var _base_alpha = clamp(_alpha, 0, 1);
+    if (_base_alpha <= 0) {
+        return 0;
+    }
+
+    return min(0.98, _base_alpha + 0.12);
+}
+
 /// @func GameUiCrystalSourceSet(surface)
 /// Selects the clean scene or menu backdrop sampled by later crystal panes.
 function GameUiCrystalSourceSet(_surface) {
@@ -161,7 +172,7 @@ function GameUiDrawCrystalPane(_left, _top, _right, _bottom, _tint,
     _alpha = 0.76, _strength = 1.0) {
     var _source = GameUiCrystalSourceGet();
     var _shader = asset_get_index("shd_ui_crystal");
-    var _clamped_alpha = clamp(_alpha, 0, 1);
+    var _clamped_alpha = GameUiCrystalPaneAlphaGet(_alpha);
     var _can_refract = surface_exists(_source)
         && _shader != -1
         && shader_is_compiled(_shader);
@@ -192,7 +203,7 @@ function GameUiDrawCrystalPane(_left, _top, _right, _bottom, _tint,
     shader_set_uniform_f(_uniforms.time, current_time * 0.001);
     shader_set_uniform_f(_uniforms.strength, max(0, _strength));
     shader_set_uniform_f(_uniforms.tint_amount,
-        clamp(0.16 + (_clamped_alpha * 0.24), 0.16, 0.42));
+        clamp(0.34 + (_clamped_alpha * 0.26), 0.34, 0.60));
 
     draw_surface_part_ext(_source,
         _region.source_x, _region.source_y,
