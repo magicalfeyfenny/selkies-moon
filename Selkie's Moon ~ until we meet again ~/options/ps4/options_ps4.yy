@@ -32,7 +32,6 @@
   "option_ps4_trophy00trp_file":"${options_dir}\\ps4\\sce_sys\\trophy\\trophy00.trp",
   "option_ps4_trophy_screen":"${base_options_dir}/ps4/sce_sys/pic0.png",
   "option_ps4_trophyedit":"",
-  "option_ps4_version":"01.00",
   "resourceType":"GMPS4Options",
   "resourceVersion":"2.0",
 }
