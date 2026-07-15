@@ -4,6 +4,10 @@ if (instance_exists(camera_id)) {
     camera_id.y = scene_state.camera_y;
 }
 
+// The native 3D route is presentation-only and keeps advancing through boss
+// dialogue, phase transitions, and combat while the 2D playfield stays anchored.
+GameSceneBackgroundStep(scene_state);
+
 // The data-driven stage director owns wave spawning; the legacy timeline stays idle.
 timeline_running = false;
 
@@ -14,14 +18,8 @@ if (GameGameplayIsFrozen()) {
 
 GameRankStep();
 
-// Apply berserk-wide bullet cancellation and meter drain side effects.
-if (global.game_runtime.is_berserk && global.game_runtime.meter == METER_MAX) {
-    GameBulletsCancelAll(true);
-}
-
-if (GamePlayerBerserkDrainStep()) {
-    GameBulletsCancelAll(false);
-}
+// Activation performs the one full-screen cancel; the scene only owns drain.
+GamePlayerBerserkDrainStep();
 
 GameStageNoticeStep();
 

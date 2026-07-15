@@ -11,6 +11,9 @@ function GameBossPhaseColorGet(_attack_theme) {
         case "poker":
             return make_color_rgb(58, 174, 112);
 
+        case "casino":
+            return make_color_rgb(255, 196, 82);
+
         case "saltwind":
             return make_color_rgb(140, 238, 255);
 
@@ -22,6 +25,12 @@ function GameBossPhaseColorGet(_attack_theme) {
 
         case "desire":
             return make_color_rgb(106, 208, 255);
+
+        case "sorcery":
+            return make_color_rgb(126, 204, 255);
+
+        case "sisters":
+            return make_color_rgb(238, 132, 255);
 
         case "ribbon":
             return make_color_rgb(194, 142, 255);
@@ -95,11 +104,14 @@ function GameBossPatternAngleVarianceGet(_shot_kind) {
         case "redirect_spiral":
         case "diamond_sweep":
         case "aisha_chaos_shards":
+        case "aisha_mirrored_hex":
             return 5;
 
         case "bead_arc":
         case "diamond_fan":
         case "mira_dealer_fan":
+        case "mira_three_card_monte":
+        case "mira_loaded_dice":
         case "saltwind_gale":
         case "shalmii_hammerfall":
         case "aster_bunny_hop":
@@ -124,6 +136,67 @@ function GameBossMiraPatternFire(_boss, _phase, _timer, _target_x, _target_y,
     var _gold = make_color_rgb(255, 214, 104);
 
     switch (_phase.shot_kind) {
+        case "mira_three_card_monte":
+            var _monte_count = max(7, _phase.burst_count);
+            var _monte_aim = point_direction(_x, _y, _target_x, _target_y);
+            var _monte_step = _phase.spread / max(1, _monte_count - 1);
+            var _monte_start = _monte_aim - (_phase.spread * 0.5);
+            var _safe_card = floor(_timer / max(1, _phase.cadence)) mod _monte_count;
+
+            for (var monte = 0; monte < _monte_count; monte++) {
+                // The apparent safe card swaps every deal; paired slow decoys
+                // advertise the trick without erasing the real escape lane.
+                if (monte == _safe_card) {
+                    continue;
+                }
+                var _monte_angle = _monte_start + (monte * _monte_step);
+                var _monte_color = ((monte + _safe_card) mod 2 == 0) ? _red : _gold;
+                GameBossLinearBulletSpawn(obj_bullet_diamond,
+                    _x + (((monte mod 2) == 0) ? -18 : 18), _y,
+                    _monte_angle, _phase.speed + ((monte mod 3) * 0.24), _monte_color);
+                if (abs(monte - _safe_card) == 1) {
+                    GameBossLinearBulletSpawn(obj_bullet_bead, _x, _y,
+                        _monte_angle, _phase.speed * 0.62, _color);
+                }
+            }
+            return true;
+
+        case "mira_loaded_dice":
+            var _dice_aim = point_direction(_x, _y, _target_x, _target_y);
+            var _roll = 4 + (floor(_timer / max(1, _phase.cadence)) mod 3);
+            for (var die = 0; die < 2; die++) {
+                var _die_x = _x + ((die == 0) ? -29 : 29);
+                var _die_center = _dice_aim + ((die == 0) ? -24 : 24);
+                for (var pip = 0; pip < _roll; pip++) {
+                    var _pip_angle = _die_center
+                        + ((pip - ((_roll - 1) * 0.5)) * 9)
+                        + dsin((_timer * 5) + (pip * 72)) * 4;
+                    GameBossLinearBulletSpawn(
+                        ((pip + die) mod 2 == 0) ? obj_bullet_bead : obj_bullet_diamond,
+                        _die_x, _y, _pip_angle,
+                        _phase.speed + ((pip mod 3) * 0.31),
+                        ((pip + die) mod 2 == 0) ? _gold : _red);
+                }
+            }
+            return true;
+
+        case "mira_house_always_wins":
+            var _wheel_count = max(12, _phase.burst_count);
+            var _wheel_step = 360 / _wheel_count;
+            var _wheel_base = _phase.base_angle + (_timer * _phase.angle_step);
+            for (var wheel = 0; wheel < _wheel_count; wheel++) {
+                var _wheel_angle = _wheel_base + (wheel * _wheel_step);
+                var _wheel_speed = _phase.speed * (0.64 + ((wheel mod 3) * 0.16));
+                GameBossLinearBulletSpawn(
+                    (wheel mod 2 == 0) ? obj_bullet_diamond : obj_bullet_bead,
+                    _x, _y, _wheel_angle, _wheel_speed,
+                    (wheel mod 2 == 0) ? _red : _gold);
+            }
+            var _house_aim = point_direction(_x, _y, _target_x, _target_y);
+            GameBossLinearFanSpawn(obj_bullet_diamond, _x, _y, _house_aim,
+                _phase.spread * 0.66, 7, _phase.speed + 0.45, _color);
+            return true;
+
         case "mira_four_suits":
             var _suit_count = 4;
             var _cards_per_suit = max(2, ceil(_phase.burst_count / _suit_count));
@@ -368,8 +441,85 @@ function GameBossAishaPatternFire(_boss, _phase, _timer, _target_x, _target_y,
     var _y = _boss.y;
     var _chaos = make_color_rgb(176, 54, 88);
     var _gold = make_color_rgb(255, 210, 104);
+    var _violet = make_color_rgb(196, 112, 255);
 
     switch (_phase.shot_kind) {
+        case "aisha_arcane_circle":
+            var _arcane_count = max(8, _phase.burst_count);
+            var _arcane_step = 360 / _arcane_count;
+            var _arcane_base = _phase.base_angle + (_timer * _phase.angle_step);
+            for (var rune = 0; rune < _arcane_count; rune++) {
+                var _rune_angle = _arcane_base + (rune * _arcane_step);
+                var _rune_color = (rune mod 2 == 0) ? _color : _violet;
+                GameBossLinearBulletSpawn(obj_bullet_bead, _x, _y,
+                    _rune_angle, _phase.speed + ((rune mod 3) * 0.22), _rune_color);
+                if (rune mod 3 == 0) {
+                    GameBossBladeBulletSpawn(_x, _y,
+                        _rune_angle + (_arcane_step * 0.5), rune mod 2 == 0,
+                        _phase.turn_speed, _phase.radial_speed, _gold, 24);
+                }
+            }
+            return true;
+
+        case "aisha_mirrored_hex":
+            var _hex_base = _phase.base_angle + (_timer * _phase.angle_step);
+            var _hex_aim = point_direction(_x, _y, _target_x, _target_y);
+            for (var hex = 0; hex < 6; hex++) {
+                var _hex_angle = _hex_base + (hex * 60);
+                GameBossLinearBulletSpawn(obj_bullet_diamond, _x, _y,
+                    _hex_angle, _phase.speed + ((hex mod 2) * 0.42),
+                    (hex mod 2 == 0) ? _violet : _color);
+                GameBossLinearBulletSpawn(obj_bullet_bead, _x, _y,
+                    _hex_angle + 180, _phase.speed * 0.68, _gold);
+            }
+            var _mirror_count = max(3, _phase.burst_count div 3);
+            GameBossLinearFanSpawn(obj_bullet_diamond, _x - 28, _y,
+                _hex_aim - 16, _phase.spread * 0.42, _mirror_count,
+                _phase.speed + 0.28, _color);
+            GameBossLinearFanSpawn(obj_bullet_diamond, _x + 28, _y,
+                _hex_aim + 16, _phase.spread * 0.42, _mirror_count,
+                _phase.speed + 0.28, _violet);
+            return true;
+
+        case "aisha_grand_grimoire":
+            var _page_count = max(5, _phase.burst_count div 2);
+            var _page_aim = point_direction(_x, _y, _target_x, _target_y);
+            for (var page = 0; page < 2; page++) {
+                var _page_side = (page == 0) ? -1 : 1;
+                GameBossLinearFanSpawn(obj_bullet_diamond,
+                    _x + (_page_side * 34), _y + 8,
+                    _page_aim + (_page_side * 14),
+                    _phase.spread * 0.48, _page_count,
+                    _phase.speed + (page * 0.24),
+                    (page == 0) ? _violet : _color);
+            }
+            var _script_angle = _phase.base_angle + (_timer * _phase.angle_step);
+            for (var glyph = 0; glyph < 4; glyph++) {
+                GameBossBladeBulletSpawn(_x, _y, _script_angle + (glyph * 90),
+                    glyph mod 2 == 0, _phase.turn_speed,
+                    _phase.radial_speed, _gold, 18 + glyph * 12);
+            }
+            return true;
+
+        case "aisha_grand_sorcery":
+            var _sorcery_layers = max(2, ceil(_phase.burst_count / 10));
+            var _sorcery_base = _phase.base_angle + (_timer * _phase.angle_step);
+            for (var spell_layer = 0; spell_layer < _sorcery_layers; spell_layer++) {
+                for (var star_point = 0; star_point < 5; star_point++) {
+                    var _star_angle = _sorcery_base + (star_point * 144) + (spell_layer * 9);
+                    GameBossLinearBulletSpawn(obj_bullet_diamond, _x, _y,
+                        _star_angle, _phase.speed + (spell_layer * 0.45),
+                        (star_point mod 2 == 0) ? _color : _violet);
+                    GameBossBladeBulletSpawn(_x, _y, _star_angle + 72,
+                        star_point mod 2 == 0, _phase.turn_speed,
+                        _phase.radial_speed, _gold, 20 + spell_layer * 18);
+                }
+            }
+            var _sorcery_aim = point_direction(_x, _y, _target_x, _target_y);
+            GameBossLinearFanSpawn(obj_bullet_bead, _x, _y, _sorcery_aim,
+                _phase.spread * 0.55, 7, _phase.speed * 0.78, _gold);
+            return true;
+
         case "aisha_order_circle":
             var _order_count = max(6, _phase.burst_count);
             var _order_step = 360 / _order_count;
@@ -429,6 +579,75 @@ function GameBossAishaPatternFire(_boss, _phase, _timer, _target_x, _target_y,
     }
 
     return false;
+}
+
+/// @func GameBossSistersPatternFire(boss, phase, timer, target_x, target_y, stage_pressure, color)
+/// Synchronizes Mira's rigged casino lanes with Aisha's grand-stage sorcery.
+/// Both bodies share one timer and one life pool, but each role contributes a
+/// distinct half of the Grand Illusion instead of duplicating the same burst.
+function GameBossSistersPatternFire(_boss, _phase, _timer, _target_x, _target_y,
+    _stage_pressure, _color) {
+    if (_phase.shot_kind != "sisters_grand_illusion") {
+        return false;
+    }
+
+    var _x = _boss.x;
+    var _y = _boss.y;
+    var _aim = point_direction(_x, _y, _target_x, _target_y);
+    var _is_mira = variable_instance_exists(_boss, "dual_role")
+        && _boss.dual_role == "mira";
+    var _gold = make_color_rgb(255, 216, 96);
+    var _casino_red = make_color_rgb(255, 72, 126);
+    var _arcane_blue = make_color_rgb(92, 202, 255);
+    var _arcane_violet = make_color_rgb(202, 112, 255);
+
+    if (_is_mira) {
+        // A roulette wheel hides a rotating card-lane gap. Aisha's mirrored
+        // spell arcs arrive on the opposite beat and frame that safe route.
+        var _card_count = max(9, _phase.burst_count div 2);
+        var _card_step = _phase.spread / max(1, _card_count - 1);
+        var _card_start = _aim - (_phase.spread * 0.5);
+        var _open_lane = floor(_timer / max(1, _phase.cadence)) mod _card_count;
+        for (var card = 0; card < _card_count; card++) {
+            if (card != _open_lane) {
+                GameBossLinearBulletSpawn(obj_bullet_diamond, _x, _y,
+                    _card_start + (card * _card_step),
+                    _phase.speed + ((card mod 3) * 0.25),
+                    (card mod 2 == 0) ? _casino_red : _gold);
+            }
+        }
+        var _roulette_base = _phase.base_angle + (_timer * _phase.angle_step);
+        for (var pocket = 0; pocket < 10; pocket++) {
+            GameBossLinearBulletSpawn(obj_bullet_bead, _x, _y,
+                _roulette_base + (pocket * 36),
+                _phase.speed * (0.58 + (pocket mod 2) * 0.16),
+                (pocket mod 2 == 0) ? _gold : _casino_red);
+        }
+    } else {
+        // Two counter-rotating spell circles and an aimed pentagram answer
+        // Mira's deal, visibly completing one coordinated stage trick.
+        var _circle_base = _phase.base_angle - (_timer * _phase.angle_step);
+        for (var rune = 0; rune < 12; rune++) {
+            var _circle_angle = _circle_base + (rune * 30);
+            if (rune mod 3 == 0) {
+                GameBossBladeBulletSpawn(_x, _y, _circle_angle,
+                    rune mod 2 == 0, _phase.turn_speed,
+                    _phase.radial_speed, _gold, 28);
+            } else {
+                GameBossLinearBulletSpawn(obj_bullet_bead, _x, _y,
+                    _circle_angle, _phase.speed * 0.72,
+                    (rune mod 2 == 0) ? _arcane_blue : _arcane_violet);
+            }
+        }
+        for (var star = 0; star < 5; star++) {
+            GameBossLinearBulletSpawn(obj_bullet_diamond, _x, _y,
+                _aim + ((star - 2) * 16) + ((star mod 2) * 5),
+                _phase.speed + (star * 0.22),
+                (star mod 2 == 0) ? _arcane_blue : _arcane_violet);
+        }
+    }
+
+    return true;
 }
 
 /// @func GameBossAsterPatternFire(boss, phase, timer, target_x, target_y, stage_pressure, color)
@@ -971,6 +1190,8 @@ function GameBossPhasePatternFire(_boss, _phase, _timer, _target_x, _target_y, _
         || GameBossShalmiiPatternFire(
             _boss, _phase, _timer, _target_x, _target_y, _stage_pressure, _theme_color)
         || GameBossAishaPatternFire(
+            _boss, _phase, _timer, _target_x, _target_y, _stage_pressure, _theme_color)
+        || GameBossSistersPatternFire(
             _boss, _phase, _timer, _target_x, _target_y, _stage_pressure, _theme_color)
         || GameBossAsterPatternFire(
             _boss, _phase, _timer, _target_x, _target_y, _stage_pressure, _theme_color)

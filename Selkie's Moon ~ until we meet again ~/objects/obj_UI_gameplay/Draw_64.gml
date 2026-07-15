@@ -51,7 +51,7 @@ if (_player_charge != noone && variable_instance_exists(_player_charge, "player_
     var _charge_ratio = global.game_runtime.is_berserk
         ? 1 : clamp(_charge_frames / FIRE_HOLD_FRAMES, 0, 1);
     var _charge_active = global.game_runtime.is_berserk || _charge_frames >= FIRE_HOLD_FRAMES;
-    var _charge_label = global.game_runtime.is_berserk ? "HYPER SWEEP"
+    var _charge_label = global.game_runtime.is_berserk ? "BERSERK SWEEP"
         : (_charge_active ? "SWORD ACTIVE" : ((_charge_frames > 0)
             ? "CHARGE " + string(round(_charge_ratio * 100)) + "%" : "HOLD FIRE"));
 
@@ -76,35 +76,14 @@ if (_player_charge != noone && variable_instance_exists(_player_charge, "player_
     draw_rectangle(_layout.left_panel_left + 18, 143, _layout.left_panel_right - 18, 149, true);
 }
 
-// Score medals are plentiful, while resource recharge is explicitly earned by
-// close-range play. Keep that second economy visible and visually separate.
-if (struct_exists(global.game_runtime, "resource_drop_charge")
-    && struct_exists(global.game_runtime, "resource_drop_threshold")) {
-    var _resource_threshold = max(1, global.game_runtime.resource_drop_threshold);
-    var _resource_charge = clamp(global.game_runtime.resource_drop_charge, 0, _resource_threshold);
-    var _resource_ratio = _resource_charge / _resource_threshold;
-
-    GameUiDrawOutlinedText("PB: " + string(_resource_charge) + "/" + string(_resource_threshold),
-        _layout.right_panel_left + _layout.panel_padding,
-        64, _story_palette.inner_border_color);
-
-    draw_set_color(_story_palette.shadow_color);
-    draw_rectangle(_layout.meter_left, 80, _layout.meter_left + _layout.meter_width, 83, false);
-    draw_set_color(_story_palette.ornament_color);
-    draw_rectangle(_layout.meter_left, 80,
-        _layout.meter_left + (_layout.meter_width * _resource_ratio), 83, false);
-    draw_set_color(_story_palette.inner_border_color);
-    draw_rectangle(_layout.meter_left, 80, _layout.meter_left + _layout.meter_width, 83, true);
-}
-
-// Draw the meter bar beneath the right-side score block.
+// The single Berserk economy replaces the old Cancel and point-blank bars.
 draw_set_color(c_black);
 draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + _layout.meter_width, _layout.meter_top + _layout.meter_height, false);
 draw_set_color(global.game_runtime.is_berserk ? c_yellow : c_aqua);
 draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + ((_layout.meter_width * global.game_runtime.meter) / METER_MAX), _layout.meter_top + _layout.meter_height, false);
 draw_set_color(_story_palette.border_color);
 draw_rectangle(_layout.meter_left, _layout.meter_top, _layout.meter_left + _layout.meter_width, _layout.meter_top + _layout.meter_height, true);
-GameUiDrawOutlinedText(global.game_runtime.is_berserk ? "BERSERK" : "Cancel Meter", _layout.meter_left, _layout.meter_top + _layout.meter_height + 6, c_white);
+GameUiDrawOutlinedText(global.game_runtime.is_berserk ? "BERSERK ACTIVE" : "Berserk Meter", _layout.meter_left, _layout.meter_top + _layout.meter_height + 6, c_white);
 
 // The circular ring around each boss owns immediate HP readability. The gutter
 // now uses small hearts solely for encounter structure and transition state.
@@ -116,7 +95,10 @@ if (_boss_count > 1) {
         _layout.sidebar_color, 0.50, make_color_rgb(255, 174, 234), false);
 
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("DUAL ENCOUNTER", _layout.boss_bar_left, 132,
+    var _dual_finale = variable_instance_exists(_boss, "dual_finale_active")
+        && _boss.dual_finale_active;
+    GameUiDrawOutlinedText(_dual_finale ? "SISTERS' GRAND FINALE" : "DUAL ENCOUNTER",
+        _layout.boss_bar_left, 132,
         make_color_rgb(255, 214, 112));
 
     for (var dual = 0; dual < _boss_count; dual++) {
@@ -126,15 +108,23 @@ if (_boss_count > 1) {
             ? _dual_boss.boss_display_name : "Boss";
         var _dual_transition = variable_instance_exists(_dual_boss, "phase_transition_timer")
             && _dual_boss.phase_transition_timer > 0;
+        var _dual_waiting = variable_instance_exists(_dual_boss, "dual_individual_defeated")
+            && _dual_boss.dual_individual_defeated
+            && (!variable_instance_exists(_dual_boss, "dual_finale_active")
+                || !_dual_boss.dual_finale_active);
 
         draw_set_font(fn_dialogue_speech);
         GameUiDrawOutlinedText(_dual_name, _layout.boss_bar_left, _dual_top,
             (dual == 0) ? make_color_rgb(255, 188, 226) : make_color_rgb(168, 222, 255));
         GameUiDrawBossPhaseHearts(_layout.boss_bar_left, _dual_top + 21,
             _dual_boss.phase_index, _dual_boss.phase_count);
-        GameUiDrawOutlinedText(_dual_transition ? "REFORMING" : "Pattern "
-            + string(_dual_boss.phase_index + 1), _layout.boss_bar_left, _dual_top + 36,
-            _dual_transition ? _story_palette.title_color : _story_palette.muted_text_color);
+        var _dual_status = _dual_waiting ? "DEFEATED - SISTER STANDS"
+            : (_dual_transition ? "REFORMING TOGETHER"
+                : (_dual_finale ? "SHARED FINAL ATTACK" : "Pattern "
+                    + string(_dual_boss.phase_index + 1)));
+        GameUiDrawOutlinedText(_dual_status, _layout.boss_bar_left, _dual_top + 36,
+            (_dual_transition || _dual_waiting)
+                ? _story_palette.title_color : _story_palette.muted_text_color);
     }
 } else if (_boss != noone) {
     var _boss_label = variable_instance_exists(_boss, "boss_display_name") ? _boss.boss_display_name : "Boss";
@@ -237,34 +227,80 @@ if (_scene != noone && _scene.scene_state.mode == "stage_clear") {
 
 // Draw the continue and game-over overlay over the playable area when requested.
 if (global.game_runtime.signals.continue_request) {
-    GameUiDrawOrnateFrame(112, 66, 416, 228,
-        _story_palette.fill_color, 0.88, _story_palette.border_color, false);
+    // The old prompt sprawled across both HUD gutters. Keep the contract card
+    // inside the playfield and veil the paused action behind it instead.
+    draw_set_alpha(0.70);
+    draw_set_color(make_color_rgb(5, 3, 14));
+    draw_rectangle(0, 0, GAME_VIEW_WIDTH, GAME_VIEW_HEIGHT, false);
+    draw_set_alpha(1);
+
+    var _continue_left = _layout.playfield_left + 10;
+    var _continue_width = (_layout.playfield_right - _layout.playfield_left) - 20;
+    GameUiDrawOrnateFrame(_continue_left, 54, _continue_width, 252,
+        _story_palette.fill_color, 0.94, _story_palette.border_color, false);
+
+    GameUiDrawOrnamentDiamond(_continue_left + 18, 78, 4,
+        _story_palette.ornament_color);
+    GameUiDrawOrnamentDiamond(_continue_left + _continue_width - 18, 78, 4,
+        _story_palette.ornament_color);
 
     draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
     draw_set_font(fn_title);
-    GameUiDrawOutlinedText("Continue?", 320, 108, c_white);
+    GameUiDrawOutlinedText("CONTINUE?", GAME_VIEW_HALF_WIDTH, 92,
+        _story_palette.title_color);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Score: " + string(global.game_runtime.score), 320, 136, c_white);
+    GameUiDrawOutlinedText("The route is waiting.", GAME_VIEW_HALF_WIDTH, 126,
+        _story_palette.muted_text_color);
+    GameUiDrawOutlinedText("Score  " + string(global.game_runtime.score),
+        GAME_VIEW_HALF_WIDTH, 151, c_white);
 
     if (global.game_runtime.continue_screen.mode == "game_over") {
         draw_set_font(fn_dialogue_name);
-        GameUiDrawOutlinedText("Game Over", 320, 186, c_red);
-    } else {
+        GameUiDrawOutlinedText("GAME OVER", GAME_VIEW_HALF_WIDTH, 202,
+            make_color_rgb(255, 104, 148));
         draw_set_font(fn_dialogue_speech);
-        var _yes_label = "Yes";
-        var _no_label = "No";
+        GameUiDrawOutlinedText("Returning to the title...", GAME_VIEW_HALF_WIDTH, 238,
+            _story_palette.muted_text_color);
 
-        if (global.game_runtime.continue_screen.selected_index == CONTINUE_OPTION_YES) {
-            _yes_label = "> Yes <";
-        } else {
-            _no_label = "> No <";
-        }
+        var _game_over_ratio = clamp(
+            global.game_runtime.continue_screen.game_over_timer
+                / max(1, GAME_OVER_DELAY_FRAMES), 0, 1);
+        draw_set_color(_story_palette.shadow_color);
+        draw_rectangle(_continue_left + 30, 266,
+            _continue_left + _continue_width - 30, 272, false);
+        draw_set_color(make_color_rgb(255, 104, 148));
+        draw_rectangle(_continue_left + 30, 266,
+            lerp(_continue_left + 30, _continue_left + _continue_width - 30,
+                1 - _game_over_ratio), 272, false);
+    } else {
+        var _yes_selected = global.game_runtime.continue_screen.selected_index
+            == CONTINUE_OPTION_YES;
+        var _yes_border = _yes_selected
+            ? make_color_rgb(255, 218, 122) : _story_palette.inner_border_color;
+        var _no_border = !_yes_selected
+            ? make_color_rgb(255, 138, 186) : _story_palette.inner_border_color;
 
-        GameUiDrawOutlinedText(_yes_label, 320, 180, c_white);
-        GameUiDrawOutlinedText(_no_label, 320, 210, c_white);
-        GameUiDrawOutlinedText("Move up / down to choose   "
-            + GameInputActiveBindingLabel("fire") + " confirms", 320, 248, c_white);
+        GameUiDrawOrnateFrame(_continue_left + 18, 178, 82, 48,
+            _story_palette.fill_color, _yes_selected ? 0.96 : 0.62,
+            _yes_border, _yes_selected);
+        GameUiDrawOrnateFrame(_continue_left + _continue_width - 100, 178, 82, 48,
+            _story_palette.fill_color, !_yes_selected ? 0.96 : 0.62,
+            _no_border, !_yes_selected);
+
+        draw_set_font(fn_dialogue_name);
+        GameUiDrawOutlinedText("YES", _continue_left + 59, 202,
+            _yes_selected ? make_color_rgb(255, 238, 166) : c_white);
+        GameUiDrawOutlinedText("NO", _continue_left + _continue_width - 59, 202,
+            !_yes_selected ? make_color_rgb(255, 178, 210) : c_white);
+
+        draw_set_font(fn_dialogue_speech);
+        GameUiDrawOutlinedText("Up / Down selects", GAME_VIEW_HALF_WIDTH, 254,
+            _story_palette.muted_text_color);
+        GameUiDrawOutlinedText(GameInputActiveBindingLabel("fire") + " confirms",
+            GAME_VIEW_HALF_WIDTH, 276, c_white);
     }
 
     draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
 }

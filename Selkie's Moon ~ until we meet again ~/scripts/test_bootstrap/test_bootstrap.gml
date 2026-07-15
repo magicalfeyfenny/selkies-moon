@@ -659,7 +659,8 @@ suite(function() {
             expect(_runtime.power).toBe(0);
             expect(_runtime.stage_frame).toBe(0);
             expect(_runtime.resource_drop_charge).toBe(0);
-            expect(_runtime.resource_drop_threshold).toBe(RESOURCE_DROP_CHARGE_BASE);
+            expect(_runtime.resource_drop_threshold).toBe(
+                RESOURCE_DROP_CHARGE_BASE * RESOURCE_DROP_DEFEAT_MULTIPLIER);
             expect(_runtime.resource_drops_this_stage).toBe(0);
         });
 
@@ -682,8 +683,30 @@ suite(function() {
             expect(GameSceneStageAdvance(_state)).toBe("boss_intro");
             expect(_state.mode).toBe("boss_intro");
             expect(_state.scroll_speed).toBe(0);
+            expect(_state.background_route).toBe("boss");
             expect(_state.stage_length_frames).toBe(STAGE_LENGTH_FRAMES);
             expect(global.game_runtime.stage_frame).toBe(STAGE_LENGTH_FRAMES);
+
+            var _background_before = _state.background_frame;
+            GameSceneBackgroundStep(_state);
+            expect(_state.background_frame).toBe(_background_before + 1);
+            expect(_state.background_route_blend).toBeGreaterThan(0);
+        });
+
+        test("Every 3D stage has valid travel and boss loops plus billboard scenery", function() {
+            for (var stage = 1; stage <= STAGE_COUNT; stage++) {
+                var _config = GameStage3DConfigGet(stage);
+                expect(GameStage3DPathLoopIsValid(_config, false)).toBeTruthy();
+                expect(GameStage3DPathLoopIsValid(_config, true)).toBeTruthy();
+                expect(array_length(_config.billboards)).toBeGreaterThan(15);
+
+                var _travel = GameStage3DPathSample(_config, 18, false);
+                var _boss = GameStage3DPathSample(_config, 18, true);
+                var _blend = GameStage3DPathBlendSample(_config, 18, 0.5);
+                expect(_blend.y).toBe(18);
+                expect(_blend.x >= min(_travel.x, _boss.x)
+                    && _blend.x <= max(_travel.x, _boss.x)).toBeTruthy();
+            }
         });
 
         test("Stage clear advances to the next stage and restarts scroll state", function() {
@@ -718,13 +741,13 @@ suite(function() {
                 expect(_report.focus_boss_clear_frames <= _expected_with_transitions).toBeTruthy();
 
                 if (stage > 1) {
-                    expect(_report.fastest_phase_clear_frames).toBeGreaterThan(17 * 60);
-                    expect(_report.fastest_phase_clear_frames).toBeLessThan(30 * 60);
+                    expect(_report.fastest_phase_clear_frames).toBeGreaterThan(3 * 60);
+                    expect(_report.fastest_phase_clear_frames).toBeLessThan(9 * 60);
                 }
             }
 
             var _final_report = GameStageBalanceReportCreate(STAGE_COUNT);
-            expect(_final_report.fastest_phase_clear_frames).toBeGreaterThan(24 * 60);
+            expect(_final_report.fastest_phase_clear_frames).toBeGreaterThan(7 * 60);
         });
 
         test("Stage timeline helpers spawn above the field and stop once scrolling ends", function() {
@@ -849,7 +872,7 @@ suite(function() {
             _diagonal_input.down_down = true;
             _focus_input.right_down = true;
             _focus_input.down_down = true;
-            _focus_input.autofire_down = true;
+            _focus_input.focus_down = true;
 
             var _straight = GamePlayerMovementDeltaCreate(_straight_input);
             var _diagonal = GamePlayerMovementDeltaCreate(_diagonal_input);
@@ -961,17 +984,25 @@ suite(function() {
             expect(_selkie_high[0].scale).toBeGreaterThan(_selkie_low[0].scale);
         });
 
-        test("Autofire produces focused volley ticks", function() {
-            var _state = GamePlayerStateCreate();
-            var _input = GameGameplayInputSnapshotCreate();
-            _input.autofire_down = true;
-            _state.volley_timer = SHOT_VOLLEY_INTERVAL - 1;
+        test("Autofire follows the independent focus switch", function() {
+            var _normal_state = GamePlayerStateCreate();
+            var _focused_state = GamePlayerStateCreate();
+            var _normal_input = GameGameplayInputSnapshotCreate();
+            var _focused_input = GameGameplayInputSnapshotCreate();
+            _normal_input.autofire_down = true;
+            _focused_input.autofire_down = true;
+            _focused_input.focus_down = true;
+            _normal_state.volley_timer = SHOT_VOLLEY_INTERVAL - 1;
+            _focused_state.volley_timer = SHOT_VOLLEY_INTERVAL - 1;
 
-            var _result = GamePlayerFireStep(_state, _input);
+            var _normal_result = GamePlayerFireStep(_normal_state, _normal_input);
+            var _focused_result = GamePlayerFireStep(_focused_state, _focused_input);
 
-            expect(_result.spawn_shots).toBeTruthy();
-            expect(_result.focused_attack).toBeTruthy();
-            expect(_state.volley_queue).toBe(SHOT_VOLLEY_SIZE - 1);
+            expect(_normal_result.spawn_shots).toBeTruthy();
+            expect(_normal_result.focused_attack).toBeFalsy();
+            expect(_focused_result.spawn_shots).toBeTruthy();
+            expect(_focused_result.focused_attack).toBeTruthy();
+            expect(_focused_state.volley_queue).toBe(SHOT_VOLLEY_SIZE - 1);
         });
 
         test("Held fire sustains volleys until the sword wind-up takes over", function() {
@@ -1017,6 +1048,7 @@ suite(function() {
                 _input.fire_down = true;
                 _input.fire_pressed = (frame == 0);
                 _input.autofire_down = true;
+                _input.focus_down = true;
 
                 var _result = GamePlayerFireStep(_state, _input);
 
@@ -1067,20 +1099,16 @@ suite(function() {
             expect(GamePowerupSpriteGet(POWERUP_SCORE)).toBe(spr_powerup_score);
         });
 
-        test("Point-blank defeats charge bounded resources while ordinary cadence drops score", function() {
-            with (obj_player) {
-                instance_destroy();
-            }
+        test("Defeat cadence drops bounded resources while ordinary cadence drops score", function() {
             with (obj_powerup) {
                 instance_destroy();
             }
 
-            var _player = instance_create_layer(100, 100, "Instances", obj_player);
             var _resource = noone;
-            var _threshold = GameResourceDropChargeThresholdGet(1);
+            var _threshold = GameResourceDropDefeatPeriodGet(1);
 
             for (var i = 0; i < _threshold; i++) {
-                _resource = GameEnemyPowerupDropTry(100, 100, 1200);
+                _resource = GameEnemyPowerupDropTry(400, 300, 1200);
             }
 
             expect(instance_exists(_resource)).toBeTruthy();
@@ -1099,15 +1127,29 @@ suite(function() {
             expect(instance_exists(_score_pickup)).toBeTruthy();
             expect(variable_instance_get(_score_pickup, "pickup_class")).toBe("score");
             expect(variable_instance_get(_score_pickup, "powerup_type")).toBe(POWERUP_SCORE);
-            expect(GameEnemyPointBlankResourceCheck(100, 100, 100, 100)).toBeTruthy();
-            expect(GameEnemyPointBlankResourceCheck(400, 300, 100, 100)).toBeFalsy();
 
             with (obj_powerup) {
                 instance_destroy();
             }
-            with (_player) {
-                instance_destroy();
-            }
+        });
+
+        test("Small and large enemies drop spread Berserk medals in their authored ranges", function() {
+            with (obj_medal) { instance_destroy(); }
+
+            expect(GameEnemyMedalDropCountGet("chaser", 900, 0)).toBe(1);
+            expect(GameEnemyMedalDropCountGet("lancer", 1100, 1)).toBe(2);
+            expect(GameEnemyMedalDropCountGet("dancer", 1400, 0)).toBe(5);
+            expect(GameEnemyMedalDropCountGet("anchor", 1700, 2)).toBe(10);
+            expect(GameBossPhaseMedalDropCountGet(1, 0)).toBeGreaterThan(4);
+            expect(GameBossPhaseMedalDropCountGet(5, 14)).toBeLessThan(11);
+
+            expect(GameMedalsSpawnSpread(100, 100, 7)).toBe(7);
+            expect(instance_number(obj_medal)).toBe(7);
+            var _medal = instance_find(obj_medal, 0);
+            expect(variable_instance_get(_medal, "launch_timer")).toBeGreaterThan(0);
+            expect(variable_instance_get(_medal, "meter_value")).toBe(ENEMY_MEDAL_BERSERK_GAIN);
+
+            with (obj_medal) { instance_destroy(); }
         });
 
         test("Holding fire long enough switches the player from volleys into sword swings", function() {
@@ -1128,7 +1170,7 @@ suite(function() {
             expect(GamePlayerSwordPeriodFramesGet(true)).toBeLessThan(GamePlayerSwordPeriodFramesGet(false));
         });
 
-        test("One sword sweep deals twenty shots of damage only once per target", function() {
+        test("One sword sweep deals boosted damage only once per target", function() {
             var _state = GamePlayerStateCreate();
             var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
             var _first_sweep = 0;
@@ -1149,6 +1191,7 @@ suite(function() {
 
             expect(_first_sweep).toBe(1);
             expect(_same_sweep).toBe(1);
+            expect(SWORD_SWEEP_DAMAGE).toBeGreaterThan(PLAYER_SHOT_DAMAGE * 100);
             expect(GamePlayerSwordDamageTryApply(_enemy, _first_sweep)).toBeTruthy();
             expect(variable_instance_get(_enemy, "hp")).toBe(50 - SWORD_SWEEP_DAMAGE);
             expect(GamePlayerSwordDamageTryApply(_enemy, _first_sweep)).toBeFalsy();
@@ -1167,7 +1210,7 @@ suite(function() {
             }
         });
 
-        test("Expanded boss phases normalize damage so the fastest final phase survives its opening cadence", function() {
+        test("Expanded boss phases normalize damage without overstaying their attack cadence", function() {
             var _boss = instance_create_layer(0, 0, "Instances", obj_boss_parent);
             var _phase_count = GameBossPhaseCountForStage(STAGE_COUNT);
             var _phase_hp = GameBossPhaseHpGet(STAGE_COUNT, _phase_count);
@@ -1182,7 +1225,8 @@ suite(function() {
 
             expect(_phase_hp).toBeGreaterThan(200);
             expect(_scale).toBe(BOSS_DAMAGE_SCALE_MIN);
-            expect(_fastest_clear_frames).toBeGreaterThan(20 * 60);
+            expect(_fastest_clear_frames).toBeGreaterThan(6 * 60);
+            expect(_fastest_clear_frames).toBeLessThan(10 * 60);
             expect(GameBossDamageApply(_boss, 60)).toBe(60 * BOSS_DAMAGE_SCALE_MIN);
             expect(variable_instance_get(_boss, "hp")).toBe(_phase_hp - (60 * BOSS_DAMAGE_SCALE_MIN));
 
@@ -1235,6 +1279,46 @@ suite(function() {
             expect(_selkie_route.draw_y_scale).toBe(-1);
         });
 
+        test("Mira and Aisha unlock one shared finale only after both personal defeats", function() {
+            with (obj_boss_parent) {
+                instance_destroy();
+            }
+
+            var _mira = instance_create_layer(250, 80, "Instances", obj_boss_parent);
+            var _aisha = instance_create_layer(390, 80, "Instances", obj_boss_parent);
+            GameBossDualConfigure(_mira, "mira");
+            GameBossDualConfigure(_aisha, "aisha");
+
+            expect(GameBossDualIndividualDefeatBegin(_mira)).toBeFalsy();
+            expect(_mira.dual_individual_defeated).toBeTruthy();
+            expect(_mira.dual_finale_active).toBeFalsy();
+            expect(_aisha.dual_individual_defeated).toBeFalsy();
+
+            expect(GameBossDualIndividualDefeatBegin(_aisha)).toBeTruthy();
+            expect(_mira.dual_finale_active).toBeTruthy();
+            expect(_aisha.dual_finale_active).toBeTruthy();
+            expect(_mira.phase_count).toBe(1);
+            expect(_aisha.phase_count).toBe(1);
+            expect(_mira.boss_identity.phase_plan[0].shot_kind).toBe("sisters_grand_illusion");
+            expect(_aisha.boss_identity.phase_plan[0].attack_theme).toBe("sisters");
+
+            _mira.phase_transition_timer = 0;
+            _aisha.phase_transition_timer = 0;
+            _mira.hp = _mira.phase_max_hp;
+            _aisha.hp = _aisha.phase_max_hp;
+            var _shared_hp = _mira.hp;
+            expect(GameBossDamageApply(_mira, 40)).toBe(40);
+            expect(_mira.hp).toBe(_shared_hp - 40);
+            expect(_aisha.hp).toBe(_shared_hp - 40);
+
+            with (_mira) {
+                instance_destroy();
+            }
+            with (_aisha) {
+                instance_destroy();
+            }
+        });
+
         test("Consolidated boss plans preserve each character's original motif source", function() {
             var _expected = [
                 { stage: 1, source: 5, count: 3, first: "shalmii_hex_runes" },
@@ -1263,9 +1347,9 @@ suite(function() {
 
         test("Character bosses use motif-specific seed families and finales", function() {
             var _motifs = [
-                { stage: 2, theme: "poker", first: "mira_four_suits", finale: "mira_royal_flush" },
+                { stage: 2, theme: "casino", first: "mira_three_card_monte", finale: "mira_house_always_wins" },
                 { stage: 5, theme: "rune", first: "shalmii_hex_runes", finale: "shalmii_runebreaker" },
-                { stage: 6, theme: "desire", first: "aisha_order_circle", finale: "aisha_blade_of_desires" },
+                { stage: 6, theme: "sorcery", first: "aisha_arcane_circle", finale: "aisha_grand_sorcery" },
                 { stage: 7, theme: "ribbon", first: "aster_ribbon_loop", finale: "aster_ribbonstar_wish" },
                 { stage: 9, theme: "astral", first: "caelia_planetary_orbit", finale: "caelia_cosmic_zenith" },
             ];
@@ -1960,6 +2044,7 @@ suite(function() {
         });
 
         test("Boss phase transitions refill health while damage is invulnerable", function() {
+            with (obj_medal) { instance_destroy(); }
             var _boss = instance_create_layer(0, 0, "Instances", obj_boss_parent);
             with (_boss) {
                 phase_count = 3;
@@ -1971,6 +2056,8 @@ suite(function() {
             simulateEvent(ev_step, ev_step_normal, _boss);
             expect(variable_instance_get(_boss, "phase_index")).toBe(1);
             expect(variable_instance_get(_boss, "phase_transition_timer")).toBe(BOSS_PHASE_TRANSITION_FRAMES);
+            expect(instance_number(obj_medal)).toBeGreaterThan(4);
+            expect(instance_number(obj_medal)).toBeLessThan(11);
             expect(GameBossDamageApply(_boss, 100)).toBe(0);
 
             simulateEvent(ev_step, ev_step_normal, _boss);
@@ -1980,6 +2067,7 @@ suite(function() {
             with (_boss) {
                 instance_destroy();
             }
+            with (obj_medal) { instance_destroy(); }
         });
 
         test("Boss intro combat clear removes enemies and bullets but keeps bosses and score unchanged", function() {
@@ -2014,6 +2102,7 @@ suite(function() {
         });
 
         test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
+            with (obj_medal) { instance_destroy(); }
             var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
             var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
 
@@ -2026,7 +2115,7 @@ suite(function() {
             }
 
             expect(variable_instance_get(_bead, "cancelled")).toBeFalsy();
-            expect(variable_instance_get(_bead, "medal_score_value")).toBe(CANCEL_BONUS);
+            expect(variable_instance_get(_bead, "medal_score_value")).toBe(BULLET_CANCEL_SCORE_BONUS);
             expect(variable_instance_get(_bead, "move_speed")).toBe(TURRET_BULLET_SPEED);
             expect(variable_instance_get(_bead, "collision_radius")).toBe(4);
 
@@ -2057,6 +2146,7 @@ suite(function() {
 
             expect(global.game_runtime.score).toBe(750);
             expect(instance_exists(_enemy)).toBeFalsy();
+            expect(instance_number(obj_medal)).toBe(2);
 
             with (_bead) {
                 instance_destroy();
@@ -2067,6 +2157,7 @@ suite(function() {
                     instance_destroy();
                 }
             }
+            with (obj_medal) { instance_destroy(); }
         });
 
         test("Inherited combat children stop after parent freeze and destruction guards", function() {
@@ -2139,7 +2230,13 @@ suite(function() {
             with (obj_medal) { instance_destroy(); }
         });
 
-        test("Cancel meter rewards trigger berserk at one thousand", function() {
+        test("Berserk meter activation cancels the screen and grants only three safe frames", function() {
+            with (obj_player) { instance_destroy(); }
+            with (obj_bullet_parent) { instance_destroy(); }
+
+            var _player = instance_create_layer(100, 100, "Instances", obj_player);
+            var _bullet = instance_create_layer(110, 80, "Instances", obj_bullet_bead);
+            _player.player_state.invuln_timer = 0;
             GameRankSet(5);
             global.game_runtime.meter = 999;
 
@@ -2148,6 +2245,31 @@ suite(function() {
             expect(global.game_runtime.meter).toBe(METER_MAX);
             expect(GameRankGet()).toBe(5 + RANK_HYPER_GAIN);
             expect(GamePlayerSwordPoseCreate(0, true).length).toBe(SWORD_LENGTH * BERSERK_SWORD_MULTIPLIER);
+            expect(variable_instance_get(_player, "player_state").invuln_timer).toBe(BERSERK_ACTIVATION_INVULN_FRAMES);
+            expect(variable_instance_get(_bullet, "cancelled")).toBeTruthy();
+
+            with (_player) { instance_destroy(); }
+            with (_bullet) { instance_destroy(); }
+        });
+
+        test("Sustained fire trickles Berserk while point-blank hits build it quickly", function() {
+            with (obj_player) { instance_destroy(); }
+            var _player = instance_create_layer(100, 100, "Instances", obj_player);
+            _player.player_state.invuln_timer = 0;
+            global.game_runtime.meter = 0;
+            global.game_runtime.is_berserk = false;
+            _player.player_state.attack_meter_timer = BERSERK_PASSIVE_ATTACK_INTERVAL - 1;
+
+            expect(GamePlayerBerserkAttackMeterStep(_player.player_state, true)).toBe(BERSERK_PASSIVE_ATTACK_GAIN);
+            expect(global.game_runtime.meter).toBe(BERSERK_PASSIVE_ATTACK_GAIN);
+            expect(GamePlayerPointBlankAttackRewardApply(100 + BERSERK_POINT_BLANK_RADIUS, 100,
+                BERSERK_POINT_BLANK_SWORD_GAIN)).toBeTruthy();
+            expect(global.game_runtime.meter).toBe(BERSERK_PASSIVE_ATTACK_GAIN
+                + BERSERK_POINT_BLANK_SWORD_GAIN);
+            expect(GamePlayerPointBlankAttackRewardApply(100 + BERSERK_POINT_BLANK_RADIUS + 1, 100,
+                BERSERK_POINT_BLANK_SWORD_GAIN)).toBeFalsy();
+
+            with (_player) { instance_destroy(); }
         });
 
         test("Continue accept resets the run state and respawns the player", function() {
@@ -2184,6 +2306,7 @@ suite(function() {
             expect(global.game_runtime.bombs).toBe(0);
             expect(GamePlayerBombActiveGet()).toBeTruthy();
             expect(GamePlayerIsInvulnerable(_state)).toBeTruthy();
+            expect(_state.invuln_timer).toBe(BOMB_INVULN_FRAMES);
             expect(GamePlayerBombTryStart(_state)).toBeFalsy();
 
             _bullet = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
@@ -2201,6 +2324,8 @@ suite(function() {
             }
 
             expect(GamePlayerBombActiveGet()).toBeFalsy();
+            expect(GamePlayerIsInvulnerable(_state)).toBeTruthy();
+            _state.invuln_timer = 0;
             expect(GamePlayerIsInvulnerable(_state)).toBeFalsy();
             expect(GamePlayerBombTryStart(_state)).toBeFalsy();
 
@@ -2388,8 +2513,8 @@ suite(function() {
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
             for (var texture_index = 0; texture_index < array_length(_stage3d_textures); texture_index++) {
                 expect(_stage3d_textures[texture_index] != -1 && sprite_exists(_stage3d_textures[texture_index])).toBeTruthy();
-                expect(sprite_get_width(_stage3d_textures[texture_index])).toBe(256);
-                expect(sprite_get_height(_stage3d_textures[texture_index])).toBe(256);
+                expect(sprite_get_width(_stage3d_textures[texture_index])).toBe(1024);
+                expect(sprite_get_height(_stage3d_textures[texture_index])).toBe(1024);
             }
             expect(object_exists(obj_boss_sunset)).toBeTruthy();
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
@@ -2446,7 +2571,7 @@ suite(function() {
         });
 
         test("Five modular 3D stage scenes expose looping camera, lighting, fog, and runtime buffers", function() {
-            var _effects = ["embers", "salt_mist", "duet_dust", "astral_sparks", "violet_pollen"];
+            var _effects = ["embers", "forest_fireflies", "vegas_magic_dust", "deep_space", "violet_pollen"];
 
             for (var stage = 1; stage <= 5; stage++) {
                 var _config = GameStage3DConfigGet(stage);
@@ -2488,6 +2613,7 @@ suite(function() {
                 right: false,
                 fire: false,
                 autofire: false,
+                focus: false,
                 bomb: false,
                 pause: false,
                 move_x: 0,
@@ -2501,6 +2627,7 @@ suite(function() {
                 right: true,
                 fire: true,
                 autofire: false,
+                focus: false,
                 bomb: false,
                 pause: true,
                 move_x: 0.75,
@@ -2569,6 +2696,7 @@ suite(function() {
                 right: false,
                 fire: false,
                 autofire: false,
+                focus: false,
                 bomb: true,
                 pause: false,
                 move_x: -1,
@@ -2582,6 +2710,7 @@ suite(function() {
                 right: false,
                 fire: true,
                 autofire: true,
+                focus: true,
                 bomb: false,
                 pause: false,
                 move_x: 0,
@@ -2599,12 +2728,14 @@ suite(function() {
             expect(GameInputVerbDown("down")).toBeTruthy();
             expect(GameInputVerbPressed("fire")).toBeTruthy();
             expect(GameInputVerbDown("autofire")).toBeTruthy();
+            expect(GameInputVerbDown("focus")).toBeTruthy();
             expect(GameInputVerbDown("bomb")).toBeTruthy();
             expect(GameInputVerbDown("not_a_real_verb")).toBeFalsy();
             expect(GameInputVerbPressed("not_a_real_verb")).toBeFalsy();
             _gamepad.down = false;
             _gamepad.fire = false;
             _gamepad.autofire = false;
+            _gamepad.focus = false;
             _gamepad.move_y = 0;
             _gamepad.activity = false;
             GameInputSnapshotApply(_state, _keyboard, _gamepad);
@@ -2800,6 +2931,7 @@ suite(function() {
             expect(_boss_state.mode).toBe("boss_intro");
             expect(_boss_state.frame).toBe(STAGE_LENGTH_FRAMES);
             expect(_boss_state.scroll_speed).toBe(0);
+            expect(_boss_state.background_route).toBe("boss");
             expect(global.game_runtime.current_stage).toBe(4);
             expect(global.game_runtime.stage_frame).toBe(STAGE_LENGTH_FRAMES);
             expect(global.game_runtime.stage_notice_timer).toBe(0);

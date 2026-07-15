@@ -1,7 +1,7 @@
 [
   {
     "name": "Mira",
-    "text": "There. The bluff broke, and she kept flying anyway.",
+    "text": "There, sister. The bluff broke, and she kept flying through our final illusion anyway.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -16,7 +16,7 @@
   },
   {
     "name": "Aisha",
-    "text": "Her desire is frightened, selfish, and honest. That will have to do.",
+    "text": "For once, Mira, your crooked deal revealed the truth. That will have to do.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -44,7 +44,7 @@
   },
   {
     "name": "Mira",
-    "text": "Then stop performing tragedy and tell her plainly.",
+    "text": "Then stop performing tragedy and tell her plainly. My sister and I already spent our best act.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -59,7 +59,7 @@
   },
   {
     "name": "Aisha",
-    "text": "Caelia guards the last orbit. Beyond her, Sunrise is waiting.",
+    "text": "My sister is right. Caelia guards the last orbit; beyond her, Sunrise is waiting.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],

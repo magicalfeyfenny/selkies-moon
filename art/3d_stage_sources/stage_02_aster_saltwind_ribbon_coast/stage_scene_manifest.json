@@ -1,6 +1,7 @@
 {
   "stage": 2,
   "slug": "aster_saltwind_ribbon_coast",
+  "location": "Aster's Moonrabbit Forest",
   "blend_source": "art/3d_stage_sources/stage_02_aster_saltwind_ribbon_coast/aster_saltwind_ribbon_coast.blend",
   "runtime_obj": "stage3d_02_aster_saltwind_ribbon_coast.obj",
   "loop_length": 64.0,
@@ -31,31 +32,59 @@
       11.0
     ]
   ],
+  "boss_camera_path": [
+    [
+      -4.0,
+      0.0,
+      11.0
+    ],
+    [
+      4.8,
+      16.0,
+      8.0
+    ],
+    [
+      -3.8,
+      32.0,
+      9.2
+    ],
+    [
+      2.2,
+      48.0,
+      7.8
+    ],
+    [
+      -4.0,
+      64.0,
+      11.0
+    ]
+  ],
   "camera_target_z": 0.2,
   "scroll_speed": 0.025,
   "lighting": {
     "world": [
-      0.035,
-      0.04,
-      0.1
+      0.018,
+      0.045,
+      0.035
     ],
     "sun_color": [
-      0.55,
-      0.82,
-      1.0
+      0.62,
+      0.94,
+      0.72
     ],
-    "sun_energy": 1.8
+    "sun_energy": 2.1
   },
   "fog": {
     "color": [
-      0.18,
-      0.16,
-      0.34
+      0.08,
+      0.19,
+      0.13
     ],
-    "start": 24.0,
-    "end": 92.0,
-    "density": 0.3,
-    "effect": "salt_mist_ribbons"
+    "start": 20.0,
+    "end": 88.0,
+    "density": 0.34,
+    "effect": "forest_fireflies"
   },
-  "triangles": 1108
+  "triangles": 12604,
+  "billboard_proxy_count": 16
 }
