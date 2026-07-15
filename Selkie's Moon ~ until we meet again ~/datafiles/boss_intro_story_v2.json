@@ -1,0 +1,144 @@
+[
+  {
+    "name": "Moon",
+    "text": "Stage five... so this is where Sunrise kept leading me.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "",
+    "text": "Shalmii, Aster, Mira, Aisha, and Caelia had stood aside. Only the girl Moon loved remained.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Selkie",
+    "text": "You always make it sound like I was the one running.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "You left before I could ask you to stay.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "And you turned every apology into another battlefield.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I thought if Sunset reached you, I could undo the night I made.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "You cannot undo it. You can only choose what follows.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Then I choose to stop letting the sea decide for us.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Good. Sunrise will not move aside for words alone.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Then let this be the last time two girls in love confuse chasing with leaving.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

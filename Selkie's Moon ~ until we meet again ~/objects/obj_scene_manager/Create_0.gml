@@ -4,6 +4,16 @@ if (instance_number(obj_scene_manager) > 1) {
     exit;
 }
 
+depth = 10000;
+
+// The background model is loaded lazily for the current stage and replaced as
+// chapters change. Keeping it here guarantees it draws before every 2D actor.
+stage3d_vertex_format = GameStage3DVertexFormatCreate();
+stage3d_uniforms = GameStage3DUniformsCreate();
+stage3d_stage = -1;
+stage3d_buffer = -1;
+stage3d_config = undefined;
+
 // Initialize the run state and reusable stage scroll state.
 GameRunStartInitialize();
 scene_state = GameSceneStateCreate();

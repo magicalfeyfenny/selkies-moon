@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Mira",
+    "text": "Moon, the Velvet Wishcourt does not permit solitary wagers.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Mira tests chance. I test desire. You will answer us together.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Then ask together. Sunset will not abandon the girl ahead of me.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Mira",
+    "text": "Still calling pursuit devotion? Wildheart will expose that bluff.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Wishbound will show whether your love can survive being understood.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I am done hiding behind noble words. Come at me\u2014both of you.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "center",
+      "right"
+    ]
+  }
+]

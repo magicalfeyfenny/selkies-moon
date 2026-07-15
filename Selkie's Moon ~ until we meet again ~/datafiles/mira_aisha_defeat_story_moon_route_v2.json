@@ -1,0 +1,88 @@
+[
+  {
+    "name": "Mira",
+    "text": "There. The bluff broke, and she kept flying anyway.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Her desire is frightened, selfish, and honest. That will have to do.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I never claimed it was pure. Only that Selkie deserved the truth.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Mira",
+    "text": "Then stop performing tragedy and tell her plainly.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Caelia guards the last orbit. Beyond her, Sunrise is waiting.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Selkie, I am coming\u2014not to possess you, but to finally answer you.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  }
+]

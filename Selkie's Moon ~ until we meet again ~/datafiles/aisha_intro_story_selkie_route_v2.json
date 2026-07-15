@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Aisha",
+    "text": "Selkie. Mira warned me you would call pursuit a rescue.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Did she also tell you I learned to ask what Moon wants?",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "She said you were learning. My blade is less forgiving than my sister.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then ask it.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Order would make Moon yours. Chaos would leave her alone. What do you choose?",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "To stay close enough to hear her choose.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

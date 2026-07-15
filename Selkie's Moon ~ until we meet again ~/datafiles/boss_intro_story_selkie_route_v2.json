@@ -1,0 +1,144 @@
+[
+  {
+    "name": "Selkie",
+    "text": "Stage five... Sunset, I know you are here.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "",
+    "text": "Their five friends had tested Sunrise and stood aside. Moon's wake crossed the violet garden alone.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [],
+    "positions": []
+  },
+  {
+    "name": "Moon",
+    "text": "You should have turned back before the last gate.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "I did turn back. Every stage was me turning back toward you.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I named this ship Sunset so no one would have to follow it into night.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then I named mine Sunrise because I refuse to leave you there.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "If you catch me, you will have to see what I became.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "I already see you. That is why I am still here.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Words will not stop Sunset.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then Sunrise will. I love you too much to let Sunset vanish alone.",
+    "backgrounds": [
+      "spr_story_bg_violet_horizon"
+    ],
+    "portraits": [
+      "spr_selkie_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

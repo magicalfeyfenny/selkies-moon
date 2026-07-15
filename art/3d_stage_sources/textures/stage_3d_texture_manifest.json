@@ -1,0 +1,82 @@
+[
+  {
+    "stage": 1,
+    "theme": "forge",
+    "sprite": "tex_stage3d_01",
+    "openraster_source": "art/3d_stage_sources/textures/stage_01_forge/forge_texture.ora",
+    "krita_source": "art/3d_stage_sources/textures/stage_01_forge/forge_texture.kra",
+    "runtime_png": "art/3d_stage_sources/textures/stage_01_forge/forge_runtime_texture.png",
+    "layers": [
+      "Base Materials",
+      "Masonry",
+      "Dither Texture",
+      "Stage Motifs",
+      "Emissive Details",
+      "Highlights"
+    ]
+  },
+  {
+    "stage": 2,
+    "theme": "saltwind",
+    "sprite": "tex_stage3d_02",
+    "openraster_source": "art/3d_stage_sources/textures/stage_02_saltwind/saltwind_texture.ora",
+    "krita_source": "art/3d_stage_sources/textures/stage_02_saltwind/saltwind_texture.kra",
+    "runtime_png": "art/3d_stage_sources/textures/stage_02_saltwind/saltwind_runtime_texture.png",
+    "layers": [
+      "Base Materials",
+      "Masonry",
+      "Dither Texture",
+      "Stage Motifs",
+      "Emissive Details",
+      "Highlights"
+    ]
+  },
+  {
+    "stage": 3,
+    "theme": "wishcourt",
+    "sprite": "tex_stage3d_03",
+    "openraster_source": "art/3d_stage_sources/textures/stage_03_wishcourt/wishcourt_texture.ora",
+    "krita_source": "art/3d_stage_sources/textures/stage_03_wishcourt/wishcourt_texture.kra",
+    "runtime_png": "art/3d_stage_sources/textures/stage_03_wishcourt/wishcourt_runtime_texture.png",
+    "layers": [
+      "Base Materials",
+      "Masonry",
+      "Dither Texture",
+      "Stage Motifs",
+      "Emissive Details",
+      "Highlights"
+    ]
+  },
+  {
+    "stage": 4,
+    "theme": "orrery",
+    "sprite": "tex_stage3d_04",
+    "openraster_source": "art/3d_stage_sources/textures/stage_04_orrery/orrery_texture.ora",
+    "krita_source": "art/3d_stage_sources/textures/stage_04_orrery/orrery_texture.kra",
+    "runtime_png": "art/3d_stage_sources/textures/stage_04_orrery/orrery_runtime_texture.png",
+    "layers": [
+      "Base Materials",
+      "Masonry",
+      "Dither Texture",
+      "Stage Motifs",
+      "Emissive Details",
+      "Highlights"
+    ]
+  },
+  {
+    "stage": 5,
+    "theme": "violet_garden",
+    "sprite": "tex_stage3d_05",
+    "openraster_source": "art/3d_stage_sources/textures/stage_05_violet_garden/violet_garden_texture.ora",
+    "krita_source": "art/3d_stage_sources/textures/stage_05_violet_garden/violet_garden_texture.kra",
+    "runtime_png": "art/3d_stage_sources/textures/stage_05_violet_garden/violet_garden_runtime_texture.png",
+    "layers": [
+      "Base Materials",
+      "Masonry",
+      "Dither Texture",
+      "Stage Motifs",
+      "Emissive Details",
+      "Highlights"
+    ]
+  }
+]

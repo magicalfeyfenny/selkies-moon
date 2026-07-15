@@ -1,0 +1,88 @@
+[
+  {
+    "name": "Mira",
+    "text": "Sunrise took every card and still made her own ending.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Her desire did not become pure. It became honest.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_aisha_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "I do not need purity. I need Moon to know I chose to return.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Mira",
+    "text": "Then quit explaining it to us and tell the woman herself.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aisha",
+    "text": "Caelia guards the last orbit. Sunset waits beyond the violet gate.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_aisha_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Moon, this time Sunrise is not leaving. I am coming back for you.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  }
+]
