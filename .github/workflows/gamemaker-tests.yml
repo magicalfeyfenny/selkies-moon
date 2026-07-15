@@ -46,11 +46,29 @@ jobs:
           modules: windows
           cache: true
 
+      # igor-build invokes Igor through a shell that does not preserve spaces
+      # in /uf, so hand it an equivalent user directory with a safe path.
+      - name: Prepare space-safe GameMaker user directory
+        id: game_maker_user
+        shell: pwsh
+        env:
+          SOURCE_USER_DIR: ${{ steps.igor.outputs.user-dir }}
+        run: |
+          $safeUserDirectory = Join-Path $env:RUNNER_TEMP 'gm-user'
+          New-Item -ItemType Directory -Force -Path $safeUserDirectory | Out-Null
+          Get-ChildItem -LiteralPath $env:SOURCE_USER_DIR -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName `
+              -Destination $safeUserDirectory `
+              -Recurse `
+              -Force
+          }
+          "path=$safeUserDirectory" >> $env:GITHUB_OUTPUT
+
       - name: Build Windows VM test runner
         id: build
         uses: bscotch/igor-build@v1.3.3
         with:
-          user-dir: ${{ steps.igor.outputs.user-dir }}
+          user-dir: ${{ steps.game_maker_user.outputs.path }}
           yyp-path: Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp
           platform: windows
           config: Default
