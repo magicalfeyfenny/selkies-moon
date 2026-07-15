@@ -8,3 +8,6 @@ draw_radius = 4;
 collision_radius = 0;
 combat_step_blocked = false;
 rank_speed_scale = GameRankBulletSpeedScaleGet();
+bullet_age = 0;
+bullet_flash_phase = irandom(359);
+depth = -200;

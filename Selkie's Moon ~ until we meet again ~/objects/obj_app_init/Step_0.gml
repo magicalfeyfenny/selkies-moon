@@ -1,6 +1,10 @@
 // Finish the delayed resize/center sequence after display-mode changes settle.
 GameWindowCenterStep();
 
+// Retina/fullscreen transitions may recreate the application surface. Reassert
+// the fixed low-resolution pixel grid and nearest-neighbour sampling every step.
+GamePixelPresentationApply();
+
 // Keep the run music loop aligned with the current room flow across the persistent bootstrap object.
 GameStageMusicSync();
 

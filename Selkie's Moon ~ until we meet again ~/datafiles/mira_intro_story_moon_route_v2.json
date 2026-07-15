@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Mira",
+    "text": "Moon. The Lantern table is open, and you have been betting grief like it cannot run out.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "I did not come to gamble. Move.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Mira",
+    "text": "Everyone says that after they push all their chips into one impossible promise.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Selkie is not a wager.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Mira",
+    "text": "Then prove you can read the person across from you, not only the hand you want.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Moon",
+    "text": "Deal, Mira. I will not fold.",
+    "backgrounds": [
+      "spr_story_bg_wishcourt"
+    ],
+    "portraits": [
+      "spr_mira_portrait",
+      "spr_moon_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

@@ -1,0 +1,137 @@
+[
+  {
+    "slug": "bomb",
+    "resource": "snd_bomb",
+    "duration_seconds": 2.3,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -1.5,
+    "rms_dbfs": -23.10391043924765
+  },
+  {
+    "slug": "boss_phase",
+    "resource": "snd_boss_phase",
+    "duration_seconds": 1.45,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -3.0,
+    "rms_dbfs": -24.51330366727573
+  },
+  {
+    "slug": "boss_spawn",
+    "resource": "snd_boss_spawn",
+    "duration_seconds": 2.4,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -2.5,
+    "rms_dbfs": -24.00220889960247
+  },
+  {
+    "slug": "enemy_destroy",
+    "resource": "snd_enemy_destroy",
+    "duration_seconds": 0.72,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -6.0,
+    "rms_dbfs": -29.336812995228993
+  },
+  {
+    "slug": "enemy_fire_arc",
+    "resource": "snd_enemy_fire_arc",
+    "duration_seconds": 0.42,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -11.0,
+    "rms_dbfs": -31.899821213314972
+  },
+  {
+    "slug": "enemy_fire_needle",
+    "resource": "snd_enemy_fire_needle",
+    "duration_seconds": 0.3,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -13.0,
+    "rms_dbfs": -27.696832609885238
+  },
+  {
+    "slug": "ow",
+    "resource": "snd_ow",
+    "duration_seconds": 0.78,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -5.0,
+    "rms_dbfs": -26.177321097952856
+  },
+  {
+    "slug": "player_focus",
+    "resource": "snd_player_focus",
+    "duration_seconds": 0.4,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -10.0,
+    "rms_dbfs": -27.845128874299437
+  },
+  {
+    "slug": "player_shot_moon",
+    "resource": "snd_player_shot_moon",
+    "duration_seconds": 0.24,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -14.0,
+    "rms_dbfs": -29.92237782967741
+  },
+  {
+    "slug": "player_shot_selkie",
+    "resource": "snd_player_shot_selkie",
+    "duration_seconds": 0.24,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -14.0,
+    "rms_dbfs": -29.49299255754493
+  },
+  {
+    "slug": "powerup_collect",
+    "resource": "snd_powerup_collect",
+    "duration_seconds": 0.66,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -7.0,
+    "rms_dbfs": -25.286712144310115
+  },
+  {
+    "slug": "stage_clear",
+    "resource": "snd_stage_clear",
+    "duration_seconds": 2.2,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -3.5,
+    "rms_dbfs": -28.781717558208708
+  },
+  {
+    "slug": "sword_moon",
+    "resource": "snd_sword_moon",
+    "duration_seconds": 1.18,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -4.0,
+    "rms_dbfs": -26.45776037020105
+  },
+  {
+    "slug": "sword_selkie",
+    "resource": "snd_sword_selkie",
+    "duration_seconds": 1.18,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -4.0,
+    "rms_dbfs": -24.65169571551175
+  },
+  {
+    "slug": "typewriter",
+    "resource": "snd_typewriter",
+    "duration_seconds": 0.18,
+    "master_format": "24-bit stereo PCM / 48 kHz",
+    "runtime_format": "16-bit stereo PCM / 48 kHz",
+    "peak_dbfs": -18.0,
+    "rms_dbfs": -37.57615458914115
+  }
+]

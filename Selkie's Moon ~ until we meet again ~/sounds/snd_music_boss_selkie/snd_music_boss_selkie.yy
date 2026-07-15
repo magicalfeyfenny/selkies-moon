@@ -1,0 +1,10 @@
+{
+  "$GMSound":"v2",
+  "%Name":"snd_music_boss_selkie",
+  "audioGroupId":{"name":"audiogroup_default","path":"audiogroups/audiogroup_default",},
+  "bitDepth":1,"channelFormat":1,"compression":3,"compressionQuality":4,"conversionMode":0,
+  "duration":222.089542,"exportDir":"","name":"snd_music_boss_selkie",
+  "parent":{"name":"Selkies Moon","path":"Selkies Moon.yyp",},"preload":false,
+  "resourceType":"GMSound","resourceVersion":"2.0","sampleRate":48000,
+  "soundFile":"boss_selkie.ogg","volume":1.0,
+}

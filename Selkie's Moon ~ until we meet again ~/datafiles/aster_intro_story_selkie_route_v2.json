@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Aster",
+    "text": "Selkie. Sunrise keeps chasing a sunset that asked to be left alone.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait"
+    ],
+    "positions": [
+      "center"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Moon asked with her fear. I am answering the part of her that still hopes.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aster",
+    "text": "Convenient. Is this rescue for her, or absolution for you?",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Both, if I am honest. Neither if I turn back.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Aster",
+    "text": "An honest contradiction. Prove you can carry it without crushing her.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  },
+  {
+    "name": "Selkie",
+    "text": "Then do not blink, Aster. Sunrise is coming through.",
+    "backgrounds": [
+      "spr_story_bg_saltwind_ribbon"
+    ],
+    "portraits": [
+      "spr_aster_portrait",
+      "spr_selkie_portrait"
+    ],
+    "positions": [
+      "left",
+      "right"
+    ]
+  }
+]

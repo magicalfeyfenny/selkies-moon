@@ -1,6 +1,7 @@
 // Snapshot menu input and advance the title state machine.
 var _input = GameTitleInputSnapshotFromGlobal();
 var _result = GameTitleStateStep(title_state, _input);
+GameTitleRemapCaptureUpdate(title_state);
 
 // Dispatch any room or application actions requested by the title flow.
 switch (_result.action) {

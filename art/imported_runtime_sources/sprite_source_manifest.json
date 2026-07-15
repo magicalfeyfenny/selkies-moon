@@ -1,0 +1,642 @@
+[
+  {
+    "sprite": "spr_aisha_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_aisha_portrait/ac5410fa-513a-44ac-b81a-776d064811aa.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_aisha_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_aisha_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_aisha_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_aisha_ship",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_aisha_ship/ab4ead08-76de-424a-babc-b961ab02a18a.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_aisha_ship/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_aisha_ship/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_aisha_ship/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_aster_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_aster_portrait/eb9bf274-75ba-4fa4-bfbd-852a9d16def3.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_aster_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_aster_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_aster_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_aster_ship",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_aster_ship/a3741ae8-9a12-4e4d-97ab-9c373c7f6591.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_aster_ship/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_aster_ship/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_aster_ship/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_bee",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_bee/0300a0d1-afa3-42de-82ee-ec8565cd7b69.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_bee/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_bee/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_bee/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_bullet_bead",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_bullet_bead/b35fb60d-0c9a-4070-8247-47663c334eb3.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_bullet_bead/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_bullet_bead/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_bullet_bead/frame_00.kra",
+        "size": [
+          16,
+          16
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_bullet_bead_mask",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_bullet_bead_mask/938b4aeb-cf2e-46b9-b1ed-1f9035f49090.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_bullet_bead_mask/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_bullet_bead_mask/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_bullet_bead_mask/frame_00.kra",
+        "size": [
+          16,
+          16
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_bullet_blade",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_bullet_blade/ddc6c70f-acbc-45a2-bcc1-efe75316d8ad.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_bullet_blade/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_bullet_blade/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_bullet_blade/frame_00.kra",
+        "size": [
+          16,
+          16
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_bullet_diamond",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_bullet_diamond/a2fae919-2640-47e2-b359-84741d13bd2f.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_bullet_diamond/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_bullet_diamond/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_bullet_diamond/frame_00.kra",
+        "size": [
+          16,
+          16
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_caelia_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_caelia_portrait/e01b4155-92c8-4e79-ac42-7e961d7c4472.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_caelia_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_caelia_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_caelia_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_caelia_ship",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_caelia_ship/b56343f7-e971-4172-b86b-958d15ab849a.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_caelia_ship/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_caelia_ship/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_caelia_ship/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_dialogue_bg_core",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_dialogue_bg_core/602f3c2d-2858-4f8e-97bd-9a6106af87b8.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_dialogue_bg_core/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_dialogue_bg_core/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_dialogue_bg_core/frame_00.kra",
+        "size": [
+          640,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_dialogue_bg_flower",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_dialogue_bg_flower/530332c0-95a3-4141-8765-a0d03efc1fbc.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_dialogue_bg_flower/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_dialogue_bg_flower/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_dialogue_bg_flower/frame_00.kra",
+        "size": [
+          640,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_logo",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_logo/7c0dfe86-a547-4d6b-a9ae-6e9cabcb8103.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_logo/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_logo/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_logo/frame_00.kra",
+        "size": [
+          256,
+          256
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_mayfly",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_mayfly/0ac34ff0-c610-4d46-9853-44e41c840c2c.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_mayfly/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_mayfly/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_mayfly/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_mira_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_mira_portrait/b2151f3c-9386-4684-99cd-219549c3ea8d.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_mira_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_mira_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_mira_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_mira_ship",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_mira_ship/0c5d735c-4035-456e-9822-874b649cec10.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_mira_ship/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_mira_ship/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_mira_ship/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_moon_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_moon_portrait/5b1ca8ee-63d4-43a6-b5ba-f6d9bf7f7402.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_moon_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_moon_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_moon_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_selkie_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_selkie_portrait/2b4e1f9f-9a1a-4dd4-b0ef-5ff0a85b1e01.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_selkie_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_selkie_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_selkie_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_shalmii_portrait",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_shalmii_portrait/4a818e72-39be-4c83-8591-75a264d8719b.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_shalmii_portrait/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_shalmii_portrait/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_shalmii_portrait/frame_00.kra",
+        "size": [
+          360,
+          360
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_shalmii_ship",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_shalmii_ship/d2d3340e-f2c1-4ebd-8611-dd0763277dcd.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_shalmii_ship/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_shalmii_ship/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_shalmii_ship/frame_00.kra",
+        "size": [
+          64,
+          64
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_aisha",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_aisha/74345d23-1824-5ba0-9054-21f92009293f.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_aisha/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_aisha/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_aisha/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_aster",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_aster/0c938bc8-6217-5616-8e9f-21e6441fc6f2.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_aster/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_aster/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_aster/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_caelia",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_caelia/20059c76-1313-5a0b-a973-9ea6eb12ec6c.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_caelia/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_caelia/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_caelia/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_mira",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_mira/05347d60-468a-5b53-a808-d16a73f506b5.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_mira/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_mira/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_mira/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_moon",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_moon/7c3168c4-1c1a-5251-b232-6d6128b8d7f5.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_moon/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_moon/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_moon/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_selkie",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_selkie/16d406f5-e289-50db-8613-b40cdf06c7bc.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_selkie/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_selkie/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_selkie/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_silhouette_shalmii",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_silhouette_shalmii/c270b091-f162-54ba-8316-28fcd32364a5.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_silhouette_shalmii/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_silhouette_shalmii/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_silhouette_shalmii/frame_00.kra",
+        "size": [
+          384,
+          512
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_turret",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_turret/161fe750-f510-4ea4-9fe9-3150042fd22c.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_turret/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_turret/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_turret/frame_00.kra",
+        "size": [
+          32,
+          32
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_twilight_mayfly_bullet",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_twilight_mayfly_bullet/0542fc79-567f-5e3a-a881-01be3026db35.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_twilight_mayfly_bullet/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_twilight_mayfly_bullet/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_twilight_mayfly_bullet/frame_00.kra",
+        "size": [
+          16,
+          16
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_violet_bee_bullet",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_violet_bee_bullet/9e0032e0-9079-50ee-9202-7cf337868f24.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_violet_bee_bullet/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_violet_bee_bullet/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_violet_bee_bullet/frame_00.kra",
+        "size": [
+          16,
+          16
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  },
+  {
+    "sprite": "spr_violet_tiles",
+    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
+    "frames": [
+      {
+        "frame": 0,
+        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_violet_tiles/b35f25ec-b42c-473b-9626-a0d912d03983.png",
+        "imported_png": "art/imported_runtime_sources/sprites/spr_violet_tiles/frame_00_imported_runtime.png",
+        "openraster_source": "art/imported_runtime_sources/sprites/spr_violet_tiles/frame_00.ora",
+        "krita_source": "art/imported_runtime_sources/sprites/spr_violet_tiles/frame_00.kra",
+        "size": [
+          128,
+          128
+        ],
+        "layers": [
+          "Imported Runtime Pixels"
+        ]
+      }
+    ]
+  }
+]

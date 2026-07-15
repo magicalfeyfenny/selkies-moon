@@ -5,17 +5,28 @@ if (combat_step_blocked) {
     exit;
 }
 
-// Remove the bee once it drifts far outside the active combat space.
+// Bees leave promptly once they pass below the visible playfield. This keeps
+// completed fly-throughs from accumulating behind the player and firing from
+// an unreadable offscreen stack.
 var _camera = instance_find(obj_camera, 0);
-if (_camera != noone && (abs(x - _camera.x) > 1000 || abs(y - _camera.y) > 1000)) {
+if (_camera != noone && (y > _camera.y + PLAYFIELD_HALF_HEIGHT + 80
+        || abs(x - _camera.x) > PLAYFIELD_HALF_WIDTH + 120)) {
     instance_destroy();
     exit;
 }
 
-// Steer toward the player for the next movement tick and face along that travel direction.
+// Pursue only while approaching from above. Once a bee reaches or passes the
+// player, it commits downward and never turns back to hover behind the ship.
+// With no player, it follows the same downward cleanup path.
 var _player = instance_find(obj_player, 0);
-if (_player != noone) {
+if (_player == noone) {
+    flyaway_committed = true;
+    move_direction = 270;
+} else if (!flyaway_committed && y < _player.y - max(2, move_speed)) {
     move_direction = point_direction(x, y, _player.x, _player.y);
+} else {
+    flyaway_committed = true;
+    move_direction = 270;
 }
 
 image_angle = move_direction;

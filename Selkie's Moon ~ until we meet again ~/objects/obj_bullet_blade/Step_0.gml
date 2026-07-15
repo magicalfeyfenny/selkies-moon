@@ -20,7 +20,8 @@ if (freeze_timer > 0) {
 }
 
 if (redirected) {
-    move_speed += redirect_acceleration;
+    var _redirect_raw_max = BLADE_REDIRECT_MAX_SCREEN_SPEED / max(0.01, rank_speed_scale);
+    move_speed = min(move_speed + redirect_acceleration, _redirect_raw_max);
     image_angle = move_direction;
 
     var _redirect_camera = instance_find(obj_camera, 0);
@@ -32,11 +33,15 @@ if (redirected) {
 }
 
 // Advance the blade bullet outward from its spawn point in a spiral path.
-spiral_radius += spiral_radial_speed * rank_speed_scale;
-spiral_angle += spiral_turn_speed * spiral_direction;
+var _previous_x = x;
+var _previous_y = y;
+var _motion = GameBladeMotionStepCreate(
+    spiral_radius, spiral_radial_speed, spiral_turn_speed, rank_speed_scale);
+spiral_radius += _motion.radial_step;
+spiral_angle += _motion.turn_step * spiral_direction;
 x = spiral_origin_x + lengthdir_x(spiral_radius, spiral_angle);
 y = spiral_origin_y + lengthdir_y(spiral_radius, spiral_angle);
-image_angle = spiral_angle;
+image_angle = point_direction(_previous_x, _previous_y, x, y);
 
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone && (abs(x - _camera.x) > 1000 || abs(y - _camera.y) > 1000)) {
