@@ -77,13 +77,16 @@ if (!_can_fire || fire_timer < GameRankFireIntervalGet(fire_interval, 12)) {
 fire_timer = 0;
 var _fired = false;
 
-// Aimed fans inherit the removed Tideglass, Saltwind, dealer, chaos,
-// Bloodtide, and thorn-arc pattern families.
+// Aimed fans inherit Tideglass, Saltwind, Mira's casino tricks, Aisha's
+// mirrored hexes, Bloodtide, and thorn-arc pattern families.
 switch (pattern_kind) {
     case "tideglass_fan":
     case "saltwind_gale":
     case "mira_dealer_fan":
+    case "mira_three_card_monte":
+    case "mira_loaded_dice":
     case "aisha_chaos_shards":
+    case "aisha_mirrored_hex":
     case "bloodtide_hunt":
     case "rose_thorn_arc":
         if (_player != noone) {
@@ -164,6 +167,7 @@ switch (pattern_kind) {
         break;
 
     case "aisha_order_circle":
+    case "aisha_arcane_circle":
     case "bloodtide_pulse":
     case "rose_bloom":
         var _ring_count = 10;

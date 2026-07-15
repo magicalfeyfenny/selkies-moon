@@ -76,7 +76,7 @@ Tests that create instances must destroy them before returning. Persistence test
 
 ## Visual QA tour
 
-`scr_test_helpers` contains an opt-in 25-capture tour covering title pages (including the three audio meters), every stage notice, representative combat (including the final-stage insects), the dual boss, the final boss, story, credits, practice, and pause pages.
+`scr_test_helpers` contains an opt-in 25-capture tour covering title pages (including the three audio meters), every stage notice, representative combat (including the final-stage insects), the sisters' shared dual-boss finale on its alternate background route, the final boss, story, credits, practice, and pause pages.
 
 Launch with `--visual-tour` or create `.visual-tour.txt` in GameMaker's runtime working directory. Captures are saved under the runtime sandbox's `visual-tour/` directory. The debug log prints the sandbox paths and capture progress. The marker is deleted when all captures finish.
 
@@ -86,7 +86,7 @@ The capture is queued during Step and written in Draw GUI End so world and GUI l
 
 `tools/build_gameplay_art.py` deterministically rebuilds the final-stage Violet Bee, Twilight Mayfly, their bullets, and the seven portrait-derived menu silhouettes. `tools/build_layered_enemy_art.py`, `tools/build_core_pixel_art.py`, and `tools/build_story_pixel_backgrounds.py` own the higher-color PC-98-style sprite, attack, UI, pickup, and story sources. `tools/build_runtime_sprite_source_catalog.py` imports every remaining historical runtime frame exactly into a one-layer editable source rather than reconstructing it.
 
-`tools/blender_build_stage_scenes.py` runs inside Blender and saves five native `.blend` scenes plus triangulated OBJ exports. `tools/build_3d_stage_textures.py` creates their layered Krita texture sources. `tools/build_stage3d_runtime_buffers.py` compiles the OBJ streams into GameMaker-ready vertex buffers without replacing the portable OBJ deliverables. All native 3D rendering stays in `obj_scene_manager` Draw Begin so no gameplay, effect, bullet, hitbox, or UI coordinate can inherit its matrices or depth state.
+`tools/blender_build_stage_scenes.py` runs inside Blender and saves five native `.blend` scenes with packed 1024px atlases, editable travel/boss camera curves, billboard-layout proxies, and triangulated OBJ exports. `tools/build_3d_stage_textures.py` creates the corresponding seven-layer `.kra` texture sources and exports the runtime PNG atlases; the lower-right atlas quadrant holds four transparent billboard cells. `tools/build_stage3d_runtime_buffers.py` compiles the OBJ streams into GameMaker-ready vertex buffers without replacing the portable OBJ deliverables. All native 3D rendering stays in `obj_scene_manager` Draw Begin so no gameplay, effect, bullet, hitbox, or UI coordinate can inherit its matrices or depth state.
 
 `tools/build_logic_score_midi.py` generates the fifteen production-length,
 Logic-ready score sources and their cue sheets. `tools/validate_logic_score.py`

@@ -1,7 +1,7 @@
 [
   {
     "name": "Mira",
-    "text": "Sunrise took every card and still made her own ending.",
+    "text": "Sister, Sunrise took every card in our final act and still made her own ending.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -16,7 +16,7 @@
   },
   {
     "name": "Aisha",
-    "text": "Her desire did not become pure. It became honest.",
+    "text": "And your rigged table could not hide it, Mira. Her desire became honest.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -44,7 +44,7 @@
   },
   {
     "name": "Mira",
-    "text": "Then quit explaining it to us and tell the woman herself.",
+    "text": "Then quit explaining it to us. My sister and I have heard enough; tell the woman herself.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -59,7 +59,7 @@
   },
   {
     "name": "Aisha",
-    "text": "Caelia guards the last orbit. Sunset waits beyond the violet gate.",
+    "text": "Mira is right. Caelia guards the last orbit; Sunset waits beyond the violet gate.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],

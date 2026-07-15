@@ -981,6 +981,9 @@ function GameSceneStateCreate() {
         target_x: CAMERA_HOME_X,
         scroll_speed: CAMERA_SCROLL_SPEED,
         frame: 0,
+        background_frame: 0,
+        background_route: "travel",
+        background_route_blend: 0,
         stage_length_frames: STAGE_LENGTH_FRAMES,
         mode: "scroll",
         boss_spawned: false,
@@ -1003,6 +1006,9 @@ function GamePracticeSceneStateApply(_state) {
     global.game_runtime.stage_complete = false;
 
     _state.frame = 0;
+    _state.background_frame = 0;
+    _state.background_route = "travel";
+    _state.background_route_blend = 0;
     _state.camera_y = CAMERA_HOME_Y;
     _state.target_x = CAMERA_HOME_X;
     _state.scroll_speed = CAMERA_SCROLL_SPEED;
@@ -1017,6 +1023,7 @@ function GamePracticeSceneStateApply(_state) {
             _state.camera_y = CAMERA_HOME_Y - STAGE_LENGTH_FRAMES;
             _state.scroll_speed = 0;
             _state.mode = "boss_intro";
+            GameSceneBackgroundBossRouteBegin(_state);
             global.game_runtime.stage_frame = STAGE_LENGTH_FRAMES;
             global.game_runtime.stage_notice_timer = 0;
         } else {
@@ -1031,6 +1038,27 @@ function GamePracticeSceneStateApply(_state) {
         global.game_runtime.stage_notice_timer = STAGE_NOTICE_FRAMES;
     }
 
+    return true;
+}
+
+/// @func GameSceneBackgroundStep(state)
+/// Advances presentation-only 3D travel independently of the anchored 2D field.
+function GameSceneBackgroundStep(_state) {
+    _state.background_frame += 1;
+
+    if (_state.background_route == "boss") {
+        _state.background_route_blend = min(1, _state.background_route_blend + (1 / 150));
+    } else {
+        _state.background_route_blend = max(0, _state.background_route_blend - (1 / 90));
+    }
+
+    return _state.background_frame;
+}
+
+/// @func GameSceneBackgroundBossRouteBegin(state)
+/// Changes the infinite 3D route at a boss seam without stopping its forward motion.
+function GameSceneBackgroundBossRouteBegin(_state) {
+    _state.background_route = "boss";
     return true;
 }
 
@@ -1067,11 +1095,11 @@ function GameStageInfoGet(_stage) {
     _stage = clamp(_stage, 1, STAGE_COUNT);
 
     var _stages = [
-        { name: "Shalmii's Runebound Garden", subtitle: "old tides ring beneath the first lock", accent: make_color_rgb(255, 214, 112) },
-        { name: "Aster's Ribbon-Saltwind Coast", subtitle: "a soft wish dances through sharpened air", accent: make_color_rgb(255, 146, 212) },
-        { name: "Mira & Aisha's Velvet Wishcourt", subtitle: "chance and desire share one hand", accent: make_color_rgb(112, 196, 255) },
-        { name: "Caelia's Bloodstar Orrery", subtitle: "every orbit guards the violet gate", accent: make_color_rgb(238, 172, 255) },
-        { name: "The Violet Garden at Moonrise", subtitle: "Sunset finally catches Sunrise", accent: make_color_rgb(255, 236, 138) },
+        { name: "Shalmii's Blacksmith Citadel", subtitle: "hammers ring above rivers of molten steel", accent: make_color_rgb(255, 214, 112) },
+        { name: "Aster's Moonrabbit Forest", subtitle: "bunny trails wind beneath an enchanted canopy", accent: make_color_rgb(255, 146, 212) },
+        { name: "Mira & Aisha's Grand Illusion", subtitle: "casino trickery meets sorcery beneath Vegas lights", accent: make_color_rgb(112, 196, 255) },
+        { name: "Caelia's Deep-Space Orrery", subtitle: "galaxies turn around the violet gate", accent: make_color_rgb(238, 172, 255) },
+        { name: "The Infinite Violet Field", subtitle: "flowers and vines reach beyond the horizon", accent: make_color_rgb(255, 236, 138) },
     ];
 
     return _stages[_stage - 1];
@@ -1082,9 +1110,9 @@ function GameStageInfoGet(_stage) {
 function GameStageBackgroundThemeCreate(_stage) {
     var _themes = [
         { motif: "runes", sky_top: make_color_rgb(20, 12, 30), sky_bottom: make_color_rgb(94, 58, 46), floor: make_color_rgb(46, 30, 44), accent: make_color_rgb(255, 214, 112) },
-        { motif: "ribbons", sky_top: make_color_rgb(16, 10, 34), sky_bottom: make_color_rgb(82, 42, 92), floor: make_color_rgb(34, 32, 64), accent: make_color_rgb(255, 146, 212) },
-        { motif: "duet", sky_top: make_color_rgb(12, 8, 34), sky_bottom: make_color_rgb(72, 30, 92), floor: make_color_rgb(28, 34, 70), accent: make_color_rgb(112, 196, 255) },
-        { motif: "orrery", sky_top: make_color_rgb(12, 4, 26), sky_bottom: make_color_rgb(76, 18, 70), floor: make_color_rgb(32, 16, 58), accent: make_color_rgb(238, 172, 255) },
+        { motif: "moonrabbit_forest", sky_top: make_color_rgb(8, 24, 24), sky_bottom: make_color_rgb(42, 88, 62), floor: make_color_rgb(25, 48, 38), accent: make_color_rgb(255, 146, 212) },
+        { motif: "vegas_sorcery", sky_top: make_color_rgb(12, 8, 34), sky_bottom: make_color_rgb(88, 24, 96), floor: make_color_rgb(28, 24, 62), accent: make_color_rgb(112, 196, 255) },
+        { motif: "deep_space", sky_top: make_color_rgb(4, 4, 18), sky_bottom: make_color_rgb(38, 16, 78), floor: make_color_rgb(18, 12, 42), accent: make_color_rgb(238, 172, 255) },
         { motif: "violets", sky_top: make_color_rgb(10, 4, 24), sky_bottom: make_color_rgb(62, 24, 84), floor: make_color_rgb(28, 16, 52), accent: make_color_rgb(194, 126, 255) },
     ];
 
@@ -1148,6 +1176,9 @@ function GameSceneNextStageBegin(_state) {
     GameStageNoticeRestart();
 
     _state.frame = 0;
+    _state.background_frame = 0;
+    _state.background_route = "travel";
+    _state.background_route_blend = 0;
     _state.stage_length_frames = STAGE_LENGTH_FRAMES;
     _state.mode = "scroll";
     _state.scroll_speed = CAMERA_SCROLL_SPEED;
@@ -1174,6 +1205,7 @@ function GameSceneStageAdvance(_state) {
         _state.scroll_speed = 0;
         if (GameStageHasCharacterBoss(GameCurrentStageGet())) {
             _state.mode = "boss_intro";
+            GameSceneBackgroundBossRouteBegin(_state);
             return "boss_intro";
         }
 
@@ -1391,10 +1423,10 @@ function GameStageEnemyRosterCreate(_stage) {
 
         case 3:
             return [
-                { id: ENEMY_SPADE_FAMILIAR, name: "Spade Familiar", role: "chaser", pattern: "mira_four_suits", shape: "spade", sprite: spr_enemy_spade_familiar, accent: make_color_rgb(255, 146, 212), core: make_color_rgb(24, 12, 42) },
-                { id: ENEMY_DEALER_MASK, name: "Dealer Mask", role: "anchor", pattern: "mira_dealer_fan", shape: "mask", sprite: spr_enemy_dealer_mask, accent: make_color_rgb(255, 214, 112), core: make_color_rgb(255, 244, 220) },
-                { id: ENEMY_ORDER_TALISMAN, name: "Order Talisman", role: "dancer", pattern: "aisha_order_circle", shape: "talisman", sprite: spr_enemy_order_talisman, accent: make_color_rgb(112, 196, 255), core: make_color_rgb(255, 214, 112) },
-                { id: ENEMY_CHAOS_SHARD, name: "Chaos Shard", role: "lancer", pattern: "aisha_chaos_shards", shape: "shard", sprite: spr_enemy_chaos_shard, accent: make_color_rgb(118, 236, 255), core: make_color_rgb(255, 96, 196) },
+                { id: ENEMY_SPADE_FAMILIAR, name: "Monte Familiar", role: "chaser", pattern: "mira_three_card_monte", shape: "spade", sprite: spr_enemy_spade_familiar, accent: make_color_rgb(255, 146, 212), core: make_color_rgb(24, 12, 42) },
+                { id: ENEMY_DEALER_MASK, name: "Loaded Dealer Mask", role: "anchor", pattern: "mira_loaded_dice", shape: "mask", sprite: spr_enemy_dealer_mask, accent: make_color_rgb(255, 214, 112), core: make_color_rgb(255, 244, 220) },
+                { id: ENEMY_ORDER_TALISMAN, name: "Arcane Talisman", role: "dancer", pattern: "aisha_arcane_circle", shape: "talisman", sprite: spr_enemy_order_talisman, accent: make_color_rgb(112, 196, 255), core: make_color_rgb(255, 214, 112) },
+                { id: ENEMY_CHAOS_SHARD, name: "Mirrored Hex", role: "lancer", pattern: "aisha_mirrored_hex", shape: "shard", sprite: spr_enemy_chaos_shard, accent: make_color_rgb(118, 236, 255), core: make_color_rgb(255, 96, 196) },
             ];
 
         case 4:
@@ -1907,7 +1939,7 @@ function GameBossPhaseDisplayNameGet(_phase) {
     // Attack banners name the spell itself; the boss identity already owns a
     // dedicated gutter label and should not be repeated in limited playfield space.
     var _boss_prefixes = [
-        "shalmii_", "aster_", "mira_", "aisha_", "caelia_",
+        "shalmii_", "aster_", "mira_", "aisha_", "sisters_", "caelia_",
         "moon_", "selkie_", "sunset_", "sunrise_", "boss_"
     ];
     var _prefix_removed = true;
@@ -2072,6 +2104,23 @@ function GameBossDamageApply(_boss, _damage) {
 
     var _phase_count = variable_instance_exists(_boss, "phase_count") ? _boss.phase_count : BOSS_PHASE_COUNT;
     var _applied_damage = max(0, _damage) * GameBossDamageScaleGet(_phase_count);
+
+    // Mira and Aisha's shared finale has one life pool presented by two bodies.
+    // Hitting either sister updates both copies so their coordinated attack can
+    // only end once, after both individual plans have already been cleared.
+    if (variable_instance_exists(_boss, "dual_finale_active")
+        && _boss.dual_finale_active) {
+        var _dual_members = GameBossDualMembersCreate();
+        for (var _dual = 0; _dual < array_length(_dual_members); _dual++) {
+            var _member = _dual_members[_dual];
+            if (variable_instance_exists(_member, "dual_finale_active")
+                && _member.dual_finale_active) {
+                _member.hp -= _applied_damage;
+            }
+        }
+        return _applied_damage;
+    }
+
     _boss.hp -= _applied_damage;
     return _applied_damage;
 }
@@ -2107,8 +2156,8 @@ function GameMemoryCoreBasePhasePlanCreate(_stage) {
 
         case 2:
             return [
-                GameMemoryCorePhaseCreate("mira_four_suits", "mira_four_suits", 30, 12, 12, -9, 2.8, 0, 0, 72, 0, "poker"),
-                GameMemoryCorePhaseCreate("mira_dealer_fan", "mira_dealer_fan", 38, 9, 0, 11, 3.5, 0, 0, 76, 0, "poker"),
+                GameMemoryCorePhaseCreate("mira_three_card_monte", "mira_three_card_monte", 30, 12, 12, -9, 3.0, 0, 0, 82, 0, "casino"),
+                GameMemoryCorePhaseCreate("mira_loaded_dice", "mira_loaded_dice", 36, 14, 0, 17, 3.4, 0, 0, 92, 0, "casino"),
             ];
 
         case 3:
@@ -2134,9 +2183,9 @@ function GameMemoryCoreBasePhasePlanCreate(_stage) {
 
         case 6:
             return [
-                GameMemoryCorePhaseCreate("aisha_order_circle", "aisha_order_circle", 28, 12, 0, 19, 3.2, 0, 0, 0, 0, "desire"),
-                GameMemoryCorePhaseCreate("aisha_chaos_shards", "aisha_chaos_shards", 22, 11, 235, -17, 4.0, 0, 0, 84, 0, "desire"),
-                GameMemoryCorePhaseCreate("aisha_talisman_seal", "aisha_talisman_seal", 32, 18, 6, 13, 2.8, 14, 1.65, 92, 0, "desire"),
+                GameMemoryCorePhaseCreate("aisha_arcane_circle", "aisha_arcane_circle", 28, 14, 0, 19, 3.0, 13, 1.55, 0, 0, "sorcery"),
+                GameMemoryCorePhaseCreate("aisha_mirrored_hex", "aisha_mirrored_hex", 24, 12, 30, -17, 3.8, 12, 1.45, 96, 0, "sorcery"),
+                GameMemoryCorePhaseCreate("aisha_grand_grimoire", "aisha_grand_grimoire", 32, 18, 6, 13, 3.1, 16, 1.7, 104, 90, "sorcery"),
             ];
 
         case 7:
@@ -2179,7 +2228,7 @@ function GameMemoryCoreFinalPhaseCreate(_stage) {
             return GameMemoryCorePhaseCreate("tideglass_maelstrom_finale", "tideglass_maelstrom", 18, 18, 0, 23, 3.4, 15, 1.65, 96, 0, "tideglass");
 
         case 2:
-            return GameMemoryCorePhaseCreate("mira_royal_flush_finale", "mira_royal_flush", 18, 16, 45, -19, 3.8, 0, 0, 104, 0, "poker");
+            return GameMemoryCorePhaseCreate("mira_house_always_wins_finale", "mira_house_always_wins", 18, 18, 45, -19, 3.9, 0, 0, 112, 0, "casino");
 
         case 3:
             return GameMemoryCorePhaseCreate("saltwind_eye_finale", "saltwind_eye", 16, 18, 270, 31, 4.1, 17, 1.75, 112, 0, "saltwind");
@@ -2191,7 +2240,7 @@ function GameMemoryCoreFinalPhaseCreate(_stage) {
             return GameMemoryCorePhaseCreate("shalmii_runebreaker_finale", "shalmii_runebreaker", 16, 20, 0, -29, 4.0, 18, 1.95, 132, 0, "rune");
 
         case 6:
-            return GameMemoryCorePhaseCreate("aisha_blade_of_desires_finale", "aisha_blade_of_desires", 14, 21, 6, 37, 4.3, 14, 1.8, 116, 0, "desire");
+            return GameMemoryCorePhaseCreate("aisha_grand_sorcery_finale", "aisha_grand_sorcery", 15, 22, 6, 37, 4.1, 18, 1.85, 124, 75, "sorcery");
 
         case 7:
             return GameMemoryCorePhaseCreate("aster_ribbonstar_wish_finale", "aster_ribbonstar_wish", 14, 22, 0, -33, 4.5, 20, 2.0, 128, 75, "ribbon");
@@ -2468,8 +2517,111 @@ function GameBossDualConfigure(_boss, _role) {
     _boss.float_phase = _is_aisha ? 180 : 0;
     _boss.dual_boss = true;
     _boss.dual_role = _identity.dual_role;
+    _boss.dual_individual_defeated = false;
+    _boss.dual_finale_active = false;
     _boss.points = 22000;
     return _boss;
+}
+
+/// @func GameBossDualMembersCreate()
+/// Returns the live Mira/Aisha boss objects in encounter order.
+function GameBossDualMembersCreate() {
+    var _members = [];
+    var _count = instance_number(obj_boss_parent);
+    for (var _index = 0; _index < _count; _index++) {
+        var _member = instance_find(obj_boss_parent, _index);
+        if (_member != noone
+            && variable_instance_exists(_member, "dual_boss")
+            && _member.dual_boss) {
+            array_push(_members, _member);
+        }
+    }
+    return _members;
+}
+
+/// @func GameBossDualFinalPhaseCreate()
+/// Defines the one attack the sisters perform only after both personal plans fall.
+function GameBossDualFinalPhaseCreate() {
+    return GameMemoryCorePhaseCreate(
+        "sisters_grand_illusion_finale",
+        "sisters_grand_illusion",
+        18, 22, 0, 23, 4.0, 18, 1.75, 126, 72, "sisters"
+    );
+}
+
+/// @func GameBossDualFinaleTryBegin()
+/// Reforms both defeated sisters around a synchronized final shared life pool.
+function GameBossDualFinaleTryBegin() {
+    var _members = GameBossDualMembersCreate();
+    if (array_length(_members) < 2) {
+        return false;
+    }
+
+    var _all_defeated = true;
+    for (var _check = 0; _check < array_length(_members); _check++) {
+        var _candidate = _members[_check];
+        if (!variable_instance_exists(_candidate, "dual_individual_defeated")
+            || !_candidate.dual_individual_defeated) {
+            _all_defeated = false;
+        }
+        if (variable_instance_exists(_candidate, "dual_finale_active")
+            && _candidate.dual_finale_active) {
+            return true;
+        }
+    }
+
+    if (!_all_defeated) {
+        return false;
+    }
+
+    var _final_phase = GameBossDualFinalPhaseCreate();
+    var _shared_hp = ceil(GameBossPhaseHpGet(DUAL_BOSS_STAGE, 1) * 1.35);
+    for (var _index = 0; _index < array_length(_members); _index++) {
+        var _member = _members[_index];
+        _member.dual_finale_active = true;
+        _member.dual_individual_defeated = true;
+        _member.boss_identity.phase_plan = [_final_phase];
+        _member.boss_identity.phase_signature = GameMemoryCorePhaseSignatureCreate(_final_phase);
+        _member.boss_display_name = "Mira & Aisha";
+        _member.boss_ship_name = "Wildheart + Wishbound";
+        _member.phase_count = 1;
+        _member.phase_index = 0;
+        _member.phase_max_hp = _shared_hp;
+        _member.hp = 0;
+        _member.phase_timer = 0;
+        _member.phase_transition_timer = BOSS_PHASE_TRANSITION_FRAMES;
+        _member.phase_transition_total = BOSS_PHASE_TRANSITION_FRAMES;
+        _member.destruction_active = false;
+        _member.destruction_timer = 0;
+        _member.hit_radius = 28;
+        _member.image_alpha = 1;
+        _member.pattern_clockwise_first = (_member.dual_role == "mira");
+    }
+
+    GameBulletsCancelAll(false);
+    GameBossPhaseSoundPlay();
+    return true;
+}
+
+/// @func GameBossDualIndividualDefeatBegin(boss)
+/// Holds one sister safely off-line until the other personal plan is defeated.
+function GameBossDualIndividualDefeatBegin(_boss) {
+    if (!instance_exists(_boss)
+        || !variable_instance_exists(_boss, "dual_boss")
+        || !_boss.dual_boss
+        || _boss.dual_finale_active) {
+        return false;
+    }
+
+    _boss.dual_individual_defeated = true;
+    _boss.hp = 0;
+    _boss.hit_radius = 0;
+    _boss.phase_transition_timer = 0;
+    _boss.phase_timer = 0;
+    _boss.image_alpha = 0.34;
+    GameBulletsCancelAll(false);
+    GameBossPhaseSoundPlay();
+    return GameBossDualFinaleTryBegin();
 }
 
 /// @func GameBossEncounterInfoCreate(stage, player_ship_id)

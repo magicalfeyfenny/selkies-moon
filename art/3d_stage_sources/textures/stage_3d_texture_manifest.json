@@ -2,15 +2,67 @@
   {
     "stage": 1,
     "theme": "forge",
+    "location": "Shalmii's Blacksmith Citadel",
     "sprite": "tex_stage3d_01",
+    "resolution": [
+      1024,
+      1024
+    ],
+    "mesh_regions": {
+      "ground": [
+        0,
+        0,
+        511,
+        511
+      ],
+      "architecture": [
+        512,
+        0,
+        1023,
+        511
+      ],
+      "modeled_accents": [
+        0,
+        512,
+        511,
+        1023
+      ]
+    },
+    "billboard_cells": [
+      [
+        512,
+        512,
+        767,
+        767
+      ],
+      [
+        768,
+        512,
+        1023,
+        767
+      ],
+      [
+        512,
+        768,
+        767,
+        1023
+      ],
+      [
+        768,
+        768,
+        1023,
+        1023
+      ]
+    ],
     "openraster_source": "art/3d_stage_sources/textures/stage_01_forge/forge_texture.ora",
     "krita_source": "art/3d_stage_sources/textures/stage_01_forge/forge_texture.kra",
     "runtime_png": "art/3d_stage_sources/textures/stage_01_forge/forge_runtime_texture.png",
     "layers": [
       "Base Materials",
-      "Masonry",
-      "Dither Texture",
+      "Surface Detail",
       "Stage Motifs",
+      "Billboard Back Glow",
+      "Billboard Silhouettes",
       "Emissive Details",
       "Highlights"
     ]
@@ -18,15 +70,67 @@
   {
     "stage": 2,
     "theme": "saltwind",
+    "location": "Aster's Moonrabbit Forest",
     "sprite": "tex_stage3d_02",
+    "resolution": [
+      1024,
+      1024
+    ],
+    "mesh_regions": {
+      "ground": [
+        0,
+        0,
+        511,
+        511
+      ],
+      "architecture": [
+        512,
+        0,
+        1023,
+        511
+      ],
+      "modeled_accents": [
+        0,
+        512,
+        511,
+        1023
+      ]
+    },
+    "billboard_cells": [
+      [
+        512,
+        512,
+        767,
+        767
+      ],
+      [
+        768,
+        512,
+        1023,
+        767
+      ],
+      [
+        512,
+        768,
+        767,
+        1023
+      ],
+      [
+        768,
+        768,
+        1023,
+        1023
+      ]
+    ],
     "openraster_source": "art/3d_stage_sources/textures/stage_02_saltwind/saltwind_texture.ora",
     "krita_source": "art/3d_stage_sources/textures/stage_02_saltwind/saltwind_texture.kra",
     "runtime_png": "art/3d_stage_sources/textures/stage_02_saltwind/saltwind_runtime_texture.png",
     "layers": [
       "Base Materials",
-      "Masonry",
-      "Dither Texture",
+      "Surface Detail",
       "Stage Motifs",
+      "Billboard Back Glow",
+      "Billboard Silhouettes",
       "Emissive Details",
       "Highlights"
     ]
@@ -34,15 +138,67 @@
   {
     "stage": 3,
     "theme": "wishcourt",
+    "location": "Mira and Aisha's Vegas Grand Illusion",
     "sprite": "tex_stage3d_03",
+    "resolution": [
+      1024,
+      1024
+    ],
+    "mesh_regions": {
+      "ground": [
+        0,
+        0,
+        511,
+        511
+      ],
+      "architecture": [
+        512,
+        0,
+        1023,
+        511
+      ],
+      "modeled_accents": [
+        0,
+        512,
+        511,
+        1023
+      ]
+    },
+    "billboard_cells": [
+      [
+        512,
+        512,
+        767,
+        767
+      ],
+      [
+        768,
+        512,
+        1023,
+        767
+      ],
+      [
+        512,
+        768,
+        767,
+        1023
+      ],
+      [
+        768,
+        768,
+        1023,
+        1023
+      ]
+    ],
     "openraster_source": "art/3d_stage_sources/textures/stage_03_wishcourt/wishcourt_texture.ora",
     "krita_source": "art/3d_stage_sources/textures/stage_03_wishcourt/wishcourt_texture.kra",
     "runtime_png": "art/3d_stage_sources/textures/stage_03_wishcourt/wishcourt_runtime_texture.png",
     "layers": [
       "Base Materials",
-      "Masonry",
-      "Dither Texture",
+      "Surface Detail",
       "Stage Motifs",
+      "Billboard Back Glow",
+      "Billboard Silhouettes",
       "Emissive Details",
       "Highlights"
     ]
@@ -50,15 +206,67 @@
   {
     "stage": 4,
     "theme": "orrery",
+    "location": "Caelia's Deep-Space Orrery",
     "sprite": "tex_stage3d_04",
+    "resolution": [
+      1024,
+      1024
+    ],
+    "mesh_regions": {
+      "ground": [
+        0,
+        0,
+        511,
+        511
+      ],
+      "architecture": [
+        512,
+        0,
+        1023,
+        511
+      ],
+      "modeled_accents": [
+        0,
+        512,
+        511,
+        1023
+      ]
+    },
+    "billboard_cells": [
+      [
+        512,
+        512,
+        767,
+        767
+      ],
+      [
+        768,
+        512,
+        1023,
+        767
+      ],
+      [
+        512,
+        768,
+        767,
+        1023
+      ],
+      [
+        768,
+        768,
+        1023,
+        1023
+      ]
+    ],
     "openraster_source": "art/3d_stage_sources/textures/stage_04_orrery/orrery_texture.ora",
     "krita_source": "art/3d_stage_sources/textures/stage_04_orrery/orrery_texture.kra",
     "runtime_png": "art/3d_stage_sources/textures/stage_04_orrery/orrery_runtime_texture.png",
     "layers": [
       "Base Materials",
-      "Masonry",
-      "Dither Texture",
+      "Surface Detail",
       "Stage Motifs",
+      "Billboard Back Glow",
+      "Billboard Silhouettes",
       "Emissive Details",
       "Highlights"
     ]
@@ -66,15 +274,67 @@
   {
     "stage": 5,
     "theme": "violet_garden",
+    "location": "The Infinite Violet and Vine Field",
     "sprite": "tex_stage3d_05",
+    "resolution": [
+      1024,
+      1024
+    ],
+    "mesh_regions": {
+      "ground": [
+        0,
+        0,
+        511,
+        511
+      ],
+      "architecture": [
+        512,
+        0,
+        1023,
+        511
+      ],
+      "modeled_accents": [
+        0,
+        512,
+        511,
+        1023
+      ]
+    },
+    "billboard_cells": [
+      [
+        512,
+        512,
+        767,
+        767
+      ],
+      [
+        768,
+        512,
+        1023,
+        767
+      ],
+      [
+        512,
+        768,
+        767,
+        1023
+      ],
+      [
+        768,
+        768,
+        1023,
+        1023
+      ]
+    ],
     "openraster_source": "art/3d_stage_sources/textures/stage_05_violet_garden/violet_garden_texture.ora",
     "krita_source": "art/3d_stage_sources/textures/stage_05_violet_garden/violet_garden_texture.kra",
     "runtime_png": "art/3d_stage_sources/textures/stage_05_violet_garden/violet_garden_runtime_texture.png",
     "layers": [
       "Base Materials",
-      "Masonry",
-      "Dither Texture",
+      "Surface Detail",
       "Stage Motifs",
+      "Billboard Back Glow",
+      "Billboard Silhouettes",
       "Emissive Details",
       "Highlights"
     ]
