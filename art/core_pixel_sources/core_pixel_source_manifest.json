@@ -1,0 +1,281 @@
+[
+  {
+    "category": "player_ships",
+    "slug": "moon_sunset_ship",
+    "sprite": "spr_sunrise",
+    "openraster_source": "art/core_pixel_sources/player_ships/moon_sunset_ship.ora",
+    "krita_source": "art/core_pixel_sources/player_ships/moon_sunset_ship.kra",
+    "size": [
+      64,
+      64
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Ornament",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_ships",
+    "slug": "selkie_sunrise_ship",
+    "sprite": "spr_sunset",
+    "openraster_source": "art/core_pixel_sources/player_ships/selkie_sunrise_ship.ora",
+    "krita_source": "art/core_pixel_sources/player_ships/selkie_sunrise_ship.kra",
+    "size": [
+      64,
+      64
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Ornament",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_attacks",
+    "slug": "moon_rose_thorn_shot",
+    "sprite": "spr_sunrise_bullet",
+    "openraster_source": "art/core_pixel_sources/player_attacks/moon_rose_thorn_shot.ora",
+    "krita_source": "art/core_pixel_sources/player_attacks/moon_rose_thorn_shot.kra",
+    "size": [
+      16,
+      16
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_attacks",
+    "slug": "selkie_tidal_chakram_shot",
+    "sprite": "spr_sunset_bullet",
+    "openraster_source": "art/core_pixel_sources/player_attacks/selkie_tidal_chakram_shot.ora",
+    "krita_source": "art/core_pixel_sources/player_attacks/selkie_tidal_chakram_shot.kra",
+    "size": [
+      16,
+      16
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_attacks",
+    "slug": "selkie_sword_chakram",
+    "sprite": "spr_attack_selkie_chakram",
+    "openraster_source": "art/core_pixel_sources/player_attacks/selkie_sword_chakram.ora",
+    "krita_source": "art/core_pixel_sources/player_attacks/selkie_sword_chakram.kra",
+    "size": [
+      48,
+      48
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Ornament",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_attacks",
+    "slug": "moon_sword_rose",
+    "sprite": "spr_attack_moon_rose",
+    "openraster_source": "art/core_pixel_sources/player_attacks/moon_sword_rose.ora",
+    "krita_source": "art/core_pixel_sources/player_attacks/moon_sword_rose.kra",
+    "size": [
+      24,
+      24
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Ornament",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_attacks",
+    "slug": "moon_sword_thorn",
+    "sprite": "spr_attack_moon_thorn",
+    "openraster_source": "art/core_pixel_sources/player_attacks/moon_sword_thorn.ora",
+    "krita_source": "art/core_pixel_sources/player_attacks/moon_sword_thorn.kra",
+    "size": [
+      8,
+      8
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Ornament",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "player_attacks",
+    "slug": "sword_charge_dial",
+    "sprite": "spr_attack_charge_dial",
+    "openraster_source": "art/core_pixel_sources/player_attacks/sword_charge_dial.ora",
+    "krita_source": "art/core_pixel_sources/player_attacks/sword_charge_dial.kra",
+    "size": [
+      80,
+      80
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Ornament",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "powerups",
+    "slug": "power_pickup",
+    "sprite": "spr_powerup_power",
+    "openraster_source": "art/core_pixel_sources/powerups/power_pickup.ora",
+    "krita_source": "art/core_pixel_sources/powerups/power_pickup.kra",
+    "size": [
+      32,
+      32
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Symbol",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "powerups",
+    "slug": "bomb_pickup",
+    "sprite": "spr_powerup_bomb",
+    "openraster_source": "art/core_pixel_sources/powerups/bomb_pickup.ora",
+    "krita_source": "art/core_pixel_sources/powerups/bomb_pickup.kra",
+    "size": [
+      32,
+      32
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Symbol",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "powerups",
+    "slug": "life_pickup",
+    "sprite": "spr_powerup_life",
+    "openraster_source": "art/core_pixel_sources/powerups/life_pickup.ora",
+    "krita_source": "art/core_pixel_sources/powerups/life_pickup.kra",
+    "size": [
+      32,
+      32
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Symbol",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "powerups",
+    "slug": "meter_pickup",
+    "sprite": "spr_powerup_meter",
+    "openraster_source": "art/core_pixel_sources/powerups/meter_pickup.ora",
+    "krita_source": "art/core_pixel_sources/powerups/meter_pickup.kra",
+    "size": [
+      32,
+      32
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Symbol",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "powerups",
+    "slug": "score_pickup",
+    "sprite": "spr_powerup_score",
+    "openraster_source": "art/core_pixel_sources/powerups/score_pickup.ora",
+    "krita_source": "art/core_pixel_sources/powerups/score_pickup.kra",
+    "size": [
+      32,
+      32
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Symbol",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "ui",
+    "slug": "score_medal",
+    "sprite": "spr_medal",
+    "openraster_source": "art/core_pixel_sources/ui/score_medal.ora",
+    "krita_source": "art/core_pixel_sources/ui/score_medal.kra",
+    "size": [
+      32,
+      32
+    ],
+    "layers": [
+      "Glow",
+      "Silhouette",
+      "Materials",
+      "Dither Texture",
+      "Symbol",
+      "Highlights"
+    ]
+  },
+  {
+    "category": "ui",
+    "slug": "dialogue_textbox",
+    "sprite": "spr_textbox",
+    "openraster_source": "art/core_pixel_sources/ui/dialogue_textbox.ora",
+    "krita_source": "art/core_pixel_sources/ui/dialogue_textbox.kra",
+    "size": [
+      640,
+      130
+    ],
+    "layers": [
+      "Shadow",
+      "Velvet Fill",
+      "Dither Texture",
+      "Legacy Tracery",
+      "Frame",
+      "Filigree",
+      "Rose Windows",
+      "Highlights"
+    ]
+  }
+]

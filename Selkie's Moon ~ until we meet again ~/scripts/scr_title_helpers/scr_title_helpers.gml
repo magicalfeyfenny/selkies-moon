@@ -13,6 +13,10 @@ function GameTitleCharactersCreate() {
             preview_sprite: "spr_sunrise",
             pilot_name: "Moon",
             support_name: "",
+            speed_label: "Balanced / 4 px",
+            normal_label: "Rose fan volleys",
+            focus_label: "Tight sunset lance",
+            sword_label: "Hold Fire: thorn whip",
             description_lines: [
                 "A balanced craft built for",
                 "Moon's long pursuit through",
@@ -30,6 +34,10 @@ function GameTitleCharactersCreate() {
             preview_sprite: "spr_sunset",
             pilot_name: "Selkie",
             support_name: "Moon",
+            speed_label: "Balanced / 4 px",
+            normal_label: "Wide crescent spread",
+            focus_label: "Narrow sunrise lance",
+            sword_label: "Hold Fire: chakram",
             description_lines: [
                 "A heavier ship with crescent",
                 "spread shots and narrow focus",
@@ -58,19 +66,21 @@ function GameTitleGalleryItemsCreate() {
 /// Creates the music-room track list.
 function GameTitleMusicItemsCreate() {
     return [
-        { name: "Moonlit Launch", subtitle: "title / opening", sound_id: snd_music_title },
-        { name: "Tideglass", subtitle: "stage 1", sound_id: snd_music_stage_01 },
-        { name: "Lanterns Underwater", subtitle: "stage 2", sound_id: snd_music_stage_02 },
-        { name: "Saltwind Corridor", subtitle: "stage 3", sound_id: snd_music_stage_03 },
-        { name: "Kelp Chase", subtitle: "stage 4", sound_id: snd_music_stage_04 },
-        { name: "Moonwake", subtitle: "stage 5", sound_id: snd_music_stage_05 },
-        { name: "Glassreef", subtitle: "stage 6", sound_id: snd_music_stage_06 },
-        { name: "Starfall Break", subtitle: "stage 7", sound_id: snd_music_stage_07 },
-        { name: "Bloodtide", subtitle: "stage 8", sound_id: snd_music_stage_08 },
-        { name: "Crescent Gate", subtitle: "stage 9", sound_id: snd_music_stage_09 },
-        { name: "Selkie Eclipse", subtitle: "stage 10", sound_id: snd_music_stage_10 },
-        { name: "Soft Bloom", subtitle: "ending", sound_id: snd_music_ending },
-        { name: "Moonlit Return", subtitle: "credits", sound_id: snd_music_credits },
+        { name: "A Promise Across the Horizon", subtitle: "title / Two Voices Beyond the Horizon", sound_id: snd_music_title },
+        { name: "The Forge at Dusk", subtitle: "stage 1 / Shalmii / Anvil Oath", sound_id: snd_music_stage_shalmii },
+        { name: "Iron Vow beneath the Ember Moon", subtitle: "boss / Shalmii / Anvil Oath", sound_id: snd_music_boss_shalmii },
+        { name: "Ribbon over Saltwind", subtitle: "stage 2 / Aster / Saltwind Ribbon", sound_id: snd_music_stage_aster },
+        { name: "Tidebound Lace in Revolt", subtitle: "boss / Aster / Saltwind Ribbon", sound_id: snd_music_boss_aster },
+        { name: "A Covenant in Four Suits", subtitle: "stage 3 / Mira & Aisha medley", sound_id: snd_music_stage_mira_aisha },
+        { name: "Wish and Suit, Entwined", subtitle: "dual boss / Mira & Aisha medley", sound_id: snd_music_boss_mira_aisha },
+        { name: "Orrery of the Bloodstar", subtitle: "stage 4 / Caelia / Bloodstar Orrery", sound_id: snd_music_stage_caelia },
+        { name: "Red Orbit of the Unforgiving Star", subtitle: "boss / Caelia / Bloodstar Orrery", sound_id: snd_music_boss_caelia },
+        { name: "Violets beneath Moon's Sunset", subtitle: "stage 5 / Moon route / two voices", sound_id: snd_music_stage_moon },
+        { name: "Rose-Eternity at the Edge of Morning", subtitle: "final boss / Moon / two voices", sound_id: snd_music_boss_moon },
+        { name: "Violets upon Selkie's Sunrise", subtitle: "stage 5 / Selkie route / two voices", sound_id: snd_music_stage_selkie },
+        { name: "Chakram Apotheosis before Daybreak", subtitle: "final boss / Selkie / two voices", sound_id: snd_music_boss_selkie },
+        { name: "Where Morning Finds the Moon", subtitle: "ending / two voices", sound_id: snd_music_ending },
+        { name: "Until We Meet Again", subtitle: "credits / two voices", sound_id: snd_music_credits },
     ];
 }
 
@@ -97,6 +107,11 @@ function GameTitleStateCreate() {
         flash_timer: 0,
         main_index: 0,
         options_index: 0,
+        controls_index: 0,
+        remap_listening: false,
+        remap_wait_release: false,
+        remap_device: "keyboard",
+        remap_verb: "",
         score_character_index: 0,
         select_character_index: 0,
         gallery_index: 0,
@@ -138,13 +153,131 @@ function GameTitleInputSnapshotFromGlobal() {
     );
 }
 
-/// @func GameTitleConfigEntriesCreate()
+/// @func GameTitleConfigEntriesCreate(include_controls)
 /// Creates the list of editable settings shown on the options page.
-function GameTitleConfigEntriesCreate() {
-    return [
+function GameTitleConfigEntriesCreate(_include_controls = true) {
+    var _entries = [
         { id: "fullscreen", label: "Fullscreen", value: global.game_config.fullscreen ? "On" : "Off" },
-        { id: "display_scale", label: "Display Scale", value: string(global.game_config.display_scale) }
+        { id: "display_scale", label: "Display Scale", value: string(global.game_config.display_scale) },
+        { id: "master_volume", label: "Master Volume", value: string(global.game_config.master_volume) + "%", meter_ratio: global.game_config.master_volume / 100 },
+        { id: "music_volume", label: "Music Volume", value: string(global.game_config.music_volume) + "%", meter_ratio: global.game_config.music_volume / 100 },
+        { id: "sfx_volume", label: "SFX Volume", value: string(global.game_config.sfx_volume) + "%", meter_ratio: global.game_config.sfx_volume / 100 },
     ];
+
+    if (_include_controls) {
+        array_push(_entries,
+            { id: "controls_keyboard", label: "Keyboard Controls", value: "Configure", submenu: true },
+            { id: "controls_gamepad", label: "Gamepad Controls", value: "Configure", submenu: true });
+    }
+
+    return _entries;
+}
+
+/// @func GameTitleControlEntriesCreate(device)
+/// Builds the device-specific action rows plus reset and return commands.
+function GameTitleControlEntriesCreate(_device) {
+    var _labels = ["Move Up", "Move Down", "Move Left", "Move Right",
+        "Fire / Charge", "Autofire", "Bomb", "Pause"];
+    var _verbs = GameInputVerbNamesCreate();
+    var _entries = [];
+
+    for (var i = 0; i < array_length(_verbs); i++) {
+        array_push(_entries, {
+            id: _verbs[i],
+            label: _labels[i],
+            value: GameInputBindingLabel(_device, _verbs[i]),
+        });
+    }
+
+    array_push(_entries,
+        { id: "reset", label: "Restore Defaults", value: "" },
+        { id: "back", label: "Back", value: "" });
+    return _entries;
+}
+
+/// @func GameTitleRemapBegin(state, device, verb)
+function GameTitleRemapBegin(_state, _device, _verb) {
+    _state.remap_device = _device;
+    _state.remap_verb = _verb;
+    _state.remap_listening = true;
+    _state.remap_wait_release = true;
+    return true;
+}
+
+/// @func GameTitleRemapCommit(state, code)
+/// Applies one captured binding and persists the independent device map.
+function GameTitleRemapCommit(_state, _code) {
+    if (!_state.remap_listening
+        || !GameInputBindingAssign(_state.remap_device, _state.remap_verb, _code)) {
+        return false;
+    }
+
+    _state.remap_listening = false;
+    _state.remap_wait_release = false;
+    _state.remap_verb = "";
+    SaveGameConfig();
+    GameSoundPlay(snd_powerup_collect);
+    return true;
+}
+
+/// @func GameTitleRemapCancel(state)
+function GameTitleRemapCancel(_state) {
+    if (!_state.remap_listening) return false;
+    _state.remap_listening = false;
+    _state.remap_wait_release = false;
+    _state.remap_verb = "";
+    return true;
+}
+
+/// @func GameTitleRemapCaptureUpdate(state)
+/// Captures the next raw key/button after the menu-confirm input is released.
+function GameTitleRemapCaptureUpdate(_state) {
+    if (!_state.remap_listening) return false;
+
+    if (_state.remap_device == "keyboard") {
+        if (_state.remap_wait_release) {
+            if (keyboard_check(vk_anykey) != true) _state.remap_wait_release = false;
+            return false;
+        }
+
+        if (keyboard_check_pressed(vk_backspace) == true) {
+            return GameTitleRemapCancel(_state);
+        }
+        if (keyboard_check_pressed(vk_anykey) == true
+            && GameInputKeyboardCodeSupported(keyboard_lastkey)) {
+            return GameTitleRemapCommit(_state, keyboard_lastkey);
+        }
+        return false;
+    }
+
+    if (!variable_global_exists("game_input")) return false;
+    var _slot = GameInputGamepadSlotRefresh(global.game_input);
+    if (_slot < 0) return false;
+
+    var _codes = GameInputGamepadCodesCreate();
+    var _any_down = false;
+    for (var i = 0; i < array_length(_codes); i++) {
+        if (gamepad_button_check(_slot, _codes[i]) == true) {
+            _any_down = true;
+            break;
+        }
+    }
+
+    if (_state.remap_wait_release) {
+        if (!_any_down) _state.remap_wait_release = false;
+        return false;
+    }
+
+    if (gamepad_button_check_pressed(_slot, gp_select) == true) {
+        return GameTitleRemapCancel(_state);
+    }
+    for (var i = 0; i < array_length(_codes); i++) {
+        var _code = _codes[i];
+        if (_code != gp_select && gamepad_button_check_pressed(_slot, _code) == true) {
+            return GameTitleRemapCommit(_state, _code);
+        }
+    }
+    return false;
 }
 
 /// @func GameTitleCharacterGet(state, index)
@@ -195,11 +328,26 @@ function GameTitleConfigEntryAdjust(_entry_id, _delta) {
                 _did_change = true;
             }
             break;
+
+        case "master_volume":
+        case "music_volume":
+        case "sfx_volume":
+            var _volume = global.game_config[$ _entry_id];
+            var _next_volume = clamp(_volume + (_delta * 5), 0, 100);
+            if (_next_volume != _volume) {
+                global.game_config[$ _entry_id] = _next_volume;
+                _did_change = true;
+            }
+            break;
     }
 
     if (_did_change) {
         SaveGameConfig();
         GameConfigApply();
+
+        if (_entry_id == "master_volume" || _entry_id == "sfx_volume") {
+            GameSoundPlay(snd_powerup_collect);
+        }
     }
 
     return _did_change;
@@ -215,7 +363,7 @@ function GameTitlePracticeEntriesCreate(_state) {
     return [
         { id: "ship", label: "Ship", value: _ship.name },
         { id: "stage", label: "Stage", value: string(_practice.stage) + " / " + string(STAGE_COUNT) },
-        { id: "segment", label: "Segment", value: GamePracticeSegmentNameGet(_practice.segment) },
+        { id: "segment", label: "Segment", value: GamePracticeSegmentNameForStageGet(_practice.segment, _practice.stage) },
         { id: "power", label: "Power", value: string(_practice.power) + " / " + string(PLAYER_POWER_MAX) },
         { id: "rank", label: "Rank", value: string(_practice.rank) + "%" },
         { id: "dynamic_rank", label: "Dynamic Rank", value: _practice.dynamic_rank ? "On" : "Off" },
@@ -299,7 +447,7 @@ function GameTitlePracticeEntryAdjust(_state, _entry_id, _delta) {
 /// Returns one concise explanation for the selected Practice Select row.
 function GameTitlePracticeHelpGet(_entry_id) {
     switch (_entry_id) {
-        case "segment": return "Full stage, enemy waves, or the boss alone";
+        case "segment": return "Full stage, waves, or its boss/finale pattern gauntlet";
         case "rank": return "Starting bullet pressure and enemy tempo";
         case "dynamic_rank": return "Let survival and mistakes adjust rank during play";
         case "meter": return "Start with up to a full berserk meter";
@@ -307,7 +455,7 @@ function GameTitlePracticeHelpGet(_entry_id) {
         case "back": return "Return to the main menu";
     }
 
-    return "Left / Right or D-pad adjusts this value";
+    return "Left / Right, A / D, or D-pad adjusts this value";
 }
 
 /// @func GameTitleMusicPreviewStop(state)
@@ -352,6 +500,12 @@ function GameTitleStateStep(_state, _input) {
     };
 
     _state.flash_timer += 1;
+
+    // Raw capture owns input until it receives a new key or button. This keeps
+    // ordinary menu navigation from moving beneath the listening prompt.
+    if (_state.remap_listening) {
+        return _result;
+    }
 
     if (_state.phase == "press_start") {
         if (_input.fire) {
@@ -457,7 +611,7 @@ function GameTitleStateStep(_state, _input) {
             _state.options_index = GameMenuIndexStep(
                 _state.options_index, _input.up, _input.down, _entry_count);
 
-            if (_entry_count > 0) {
+            if (_entry_count > 0 && !struct_exists(_entries[_state.options_index], "submenu")) {
                 if (_input.left) {
                     GameTitleConfigEntryAdjust(_entries[_state.options_index].id, -1);
                 }
@@ -467,8 +621,37 @@ function GameTitleStateStep(_state, _input) {
                 }
             }
 
-            if (_input.bomb) {
+            if (_input.fire && struct_exists(_entries[_state.options_index], "submenu")) {
+                _state.remap_device = (_entries[_state.options_index].id == "controls_gamepad")
+                    ? "gamepad" : "keyboard";
+                _state.controls_index = 0;
+                _state.page = "controls_" + _state.remap_device;
+            } else if (_input.bomb) {
                 _state.page = "main";
+            }
+            break;
+
+        case "controls_keyboard":
+        case "controls_gamepad":
+            var _device = (_state.page == "controls_gamepad") ? "gamepad" : "keyboard";
+            var _control_entries = GameTitleControlEntriesCreate(_device);
+            var _control_count = array_length(_control_entries);
+            _state.controls_index = GameMenuIndexStep(_state.controls_index,
+                _input.up, _input.down, _control_count);
+
+            if (_input.bomb) {
+                _state.page = "options";
+            } else if (_input.fire) {
+                var _control = _control_entries[_state.controls_index];
+                if (_control.id == "reset") {
+                    GameInputBindingsResetDevice(_device);
+                    SaveGameConfig();
+                    GameSoundPlay(snd_powerup_collect);
+                } else if (_control.id == "back") {
+                    _state.page = "options";
+                } else {
+                    GameTitleRemapBegin(_state, _device, _control.id);
+                }
             }
             break;
 
@@ -534,8 +717,10 @@ function GameTitleStateStep(_state, _input) {
 
 /// @func GameTitleDrawFrame(x, y, width, height, border_color, fill_color, fill_alpha)
 /// Draws a framed UI panel for title menu widgets.
-function GameTitleDrawFrame(_x, _y, _w, _h, _border_color, _fill_color, _fill_alpha = 1.0) {
-    GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color, _fill_alpha, _border_color, false);
+function GameTitleDrawFrame(_x, _y, _w, _h, _border_color, _fill_color,
+    _fill_alpha = 1.0, _selected = false) {
+    GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color, _fill_alpha,
+        _border_color, _selected);
 }
 
 /// @func GameTitleDrawSpriteFit(sprite_name, center_x, center_y, max_width, max_height, scale_cap)
@@ -574,6 +759,7 @@ function GameTitleDrawBackground(_state) {
         draw_set_color(c_black);
         draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
         draw_set_alpha(1.0);
+        GameTitleDrawSilhouetteDecorators(_state);
         return;
     }
 
@@ -586,6 +772,38 @@ function GameTitleDrawBackground(_state) {
 
     draw_set_color(make_color_rgb(0, 160, 192));
     draw_rectangle(32, 24, 608, 28, false);
+    GameTitleDrawSilhouetteDecorators(_state);
+}
+
+/// @func GameTitleDrawSilhouetteDecorators(state)
+/// Washes all seven heroines across menu backgrounds as subtle cameos.
+function GameTitleDrawSilhouetteDecorators(_state) {
+    var _silhouettes = [
+        "spr_silhouette_moon", "spr_silhouette_selkie", "spr_silhouette_mira",
+        "spr_silhouette_shalmii", "spr_silhouette_aisha", "spr_silhouette_aster",
+        "spr_silhouette_caelia"
+    ];
+    var _count = array_length(_silhouettes);
+    // These are decorators, but they still need to read as the seven heroines
+    // rather than disappearing into the dark title painting.
+    var _pulse = 0.30 + (0.04 * dsin(_state.flash_timer * 1.5));
+
+    for (var i = 0; i < _count; i++) {
+        var _asset = asset_get_index(_silhouettes[i]);
+        if (_asset == -1 || !sprite_exists(_asset)) {
+            continue;
+        }
+
+        var _scale = min(0.19, 96 / max(1, sprite_get_height(_asset)));
+        var _x = 38 + (i * 94);
+        var _y = 302 + (dsin((_state.flash_timer * 1.2) + (i * 33)) * 3);
+        draw_sprite_ext(_asset, 0, _x, _y, _scale, _scale, 0,
+            (i mod 2 == 0) ? make_color_rgb(176, 112, 224) : make_color_rgb(92, 190, 220),
+            _pulse);
+    }
+
+    draw_set_alpha(1);
+    draw_set_color(c_white);
 }
 
 /// @func GameTitlePressStartSubtitleAnimCreate(timer)
@@ -648,13 +866,14 @@ function GameTitlePanelStyleCreate(_selected = false) {
         fill_color: make_color_rgb(58, 18, 92),
         border_color: _story_palette.border_color,
         text_color: c_white,
-        fill_alpha: 0.75,
+        fill_alpha: 0.56,
     };
 
     if (_selected) {
         _style.fill_color = make_color_rgb(78, 28, 116);
         _style.border_color = _story_palette.inner_border_color;
         _style.text_color = make_color_rgb(255, 255, 160);
+        _style.fill_alpha = 0.72;
     }
 
     return _style;
@@ -696,21 +915,32 @@ function GameTitleDrawLogo(_state) {
 
 /// @func GameTitleDrawPrompt(state)
 /// Draws the press-start prompt and input hint text.
+function GameTitlePressPromptTextGet(_gamepad_connected = undefined) {
+    if (_gamepad_connected == undefined) {
+        _gamepad_connected = variable_global_exists("game_input")
+            && global.game_input.gamepad_connected;
+    }
+
+    return "Press " + GameInputBindingLabel(
+        _gamepad_connected ? "gamepad" : "keyboard",
+        _gamepad_connected ? "pause" : "fire");
+}
+
+/// @func GameTitleDrawPrompt(state)
+/// Draws one device-aware press prompt without a controls legend.
 function GameTitleDrawPrompt(_state) {
     var _prompt_alpha = (((_state.flash_timer div 20) mod 2) == 0) ? 1.0 : 0.42;
     var _palette = GameUiStoryFramePaletteCreate(false);
 
-    GameUiDrawOrnateFrame(242, 162, 382, 82, _palette.fill_color, 0.58, _palette.border_color, false);
-
+    // The title art should breathe. Input details belong in character select
+    // and pause help, not in an instruction panel beside the logo.
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
-    draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Press Z / A / Start", 433, 188, c_white, c_black, _prompt_alpha);
-
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_middle);
-    draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Arrows/D-pad move  Z/A shot  C/X focus  X/B bomb", 433, 222, make_color_rgb(140, 210, 255));
+    draw_set_font(fn_menu);
+    GameUiDrawOutlinedText(GameTitlePressPromptTextGet(), 470, 108,
+        c_white, c_black, _prompt_alpha);
+    GameUiDrawFiligreeDivider(392, 548, 132, _palette, 0.82, -4,
+        _palette.border_color);
 }
 
 /// @func GameTitleDrawMenuItem(x, y, label, selected)
@@ -718,7 +948,8 @@ function GameTitleDrawPrompt(_state) {
 function GameTitleDrawMenuItem(_x, _y, _label, _selected) {
     var _style = GameTitlePanelStyleCreate(_selected);
 
-    GameTitleDrawFrame(_x, _y, 220, 28, _style.border_color, _style.fill_color, _style.fill_alpha);
+    GameTitleDrawFrame(_x, _y, 220, 28, _style.border_color,
+        _style.fill_color, _style.fill_alpha, _selected);
     draw_set_halign(fa_left);
     draw_set_valign(fa_middle);
     draw_set_font(fn_menu);
@@ -737,7 +968,8 @@ function GameTitleDrawMainMenu(_state) {
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Arrows / D-pad select   Z / A / Start confirm", 320, 330, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Move to select   " + GameInputActiveBindingLabel("fire") + " confirms",
+        320, 330, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawOptionsPage(state)
@@ -747,22 +979,100 @@ function GameTitleDrawOptionsPage(_state) {
 
     var _entries = GameTitleConfigEntriesCreate();
     var _entry_count = array_length(_entries);
+    var _visible_count = min(7, _entry_count);
+    var _first_entry = clamp(_state.options_index - 3, 0,
+        max(0, _entry_count - _visible_count));
+    var _palette = GameUiStoryFramePaletteCreate(false);
 
-    for (var i = 0; i < _entry_count; i++) {
-        var _entry = _entries[i];
-        var _style = GameTitlePanelStyleCreate(i == _state.options_index);
+    for (var i = 0; i < _visible_count; i++) {
+        var _entry_index = _first_entry + i;
+        var _entry = _entries[_entry_index];
+        var _selected = _entry_index == _state.options_index;
+        var _style = GameTitlePanelStyleCreate(_selected);
+        var _row_top = 66 + (i * 34);
 
-        GameTitleDrawFrame(136, 96 + (i * 36), 368, 28, _style.border_color, _style.fill_color, _style.fill_alpha);
+        GameTitleDrawFrame(136, _row_top, 368, 28,
+            _style.border_color, _style.fill_color, _style.fill_alpha,
+            _selected);
         draw_set_halign(fa_left);
         draw_set_font(fn_menu);
-        GameUiDrawOutlinedText(_entry.label, 148, 111 + (i * 36), _style.text_color);
+        GameUiDrawOutlinedText(_entry.label, 148, _row_top + 15, _style.text_color);
         draw_set_halign(fa_right);
-        GameUiDrawOutlinedText(_entry.value, 492, 111 + (i * 36), _style.text_color);
+        GameUiDrawOutlinedText(_entry.value, 492, _row_top + 15, _style.text_color);
+
+        if (struct_exists(_entry, "meter_ratio")) {
+            GameUiDrawVolumeGauge(292, 440, _row_top + 14,
+                _entry.meter_ratio, _selected);
+        }
     }
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Arrows / D-pad adjust   X / B back", 320, 322, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Left / Right adjust   Confirm opens controls   Bomb returns",
+        320, 322, make_color_rgb(160, 188, 220));
+}
+
+/// @func GameTitleDrawControlsPage(state, device)
+/// Draws a scrolling, device-specific binding editor.
+function GameTitleDrawControlsPage(_state, _device) {
+    var _entries = GameTitleControlEntriesCreate(_device);
+    var _entry_count = array_length(_entries);
+    var _visible_count = min(7, _entry_count);
+    var _first_entry = clamp(_state.controls_index - 3, 0,
+        max(0, _entry_count - _visible_count));
+    var _heading = (_device == "gamepad") ? "Gamepad Controls" : "Keyboard Controls";
+    var _gamepad_ready = _device != "gamepad"
+        || (variable_global_exists("game_input") && global.game_input.gamepad_connected);
+
+    GameTitleDrawPageHeading(_heading, 34);
+    draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
+    GameUiDrawOutlinedText(string(_state.controls_index + 1) + " / " + string(_entry_count),
+        320, 54, make_color_rgb(160, 188, 220));
+
+    for (var i = 0; i < _visible_count; i++) {
+        var _entry_index = _first_entry + i;
+        var _entry = _entries[_entry_index];
+        var _selected = _entry_index == _state.controls_index;
+        var _style = GameTitlePanelStyleCreate(_selected);
+        var _row_top = 66 + (i * 32);
+        var _value = _entry.value;
+
+        if (_selected && _state.remap_listening) {
+            _value = (_device == "gamepad")
+                ? (_gamepad_ready ? "Press a button..." : "Connect controller...")
+                : "Press a key...";
+        }
+
+        GameTitleDrawFrame(124, _row_top, 392, 26, _style.border_color,
+            _style.fill_color, _style.fill_alpha, _selected);
+        draw_set_font(fn_menu);
+        if (_entry.id == "reset" || _entry.id == "back") {
+            draw_set_halign(fa_center);
+            GameUiDrawOutlinedText(_entry.label, 320, _row_top + 14, _style.text_color);
+        } else {
+            draw_set_halign(fa_left);
+            GameUiDrawOutlinedText(_entry.label, 138, _row_top + 14, _style.text_color);
+            draw_set_halign(fa_right);
+            GameUiDrawOutlinedText(_value, 502, _row_top + 14,
+                (_selected && _state.remap_listening)
+                    ? make_color_rgb(255, 228, 138) : _style.text_color);
+        }
+    }
+
+    draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
+    var _help = "Confirm rebinds   Bomb returns";
+    if (_state.remap_listening) {
+        _help = (_device == "gamepad")
+            ? (_gamepad_ready
+                ? "Release controls, then press a button   Select cancels"
+                : "Connect a controller to continue listening")
+            : "Release keys, then press a key   Backspace cancels";
+    } else if (_device == "gamepad") {
+        _help = "Left stick remains analog   Confirm rebinds   Bomb returns";
+    }
+    GameUiDrawOutlinedText(_help, 320, 322, make_color_rgb(170, 204, 228));
 }
 
 /// @func GameTitleDrawPracticePage(state)
@@ -785,7 +1095,9 @@ function GameTitleDrawPracticePage(_state) {
         var _style = GameTitlePanelStyleCreate(_entry_index == _state.practice_index);
         var _row_top = 68 + (i * 30);
 
-        GameTitleDrawFrame(128, _row_top, 384, 26, _style.border_color, _style.fill_color, _style.fill_alpha);
+        GameTitleDrawFrame(128, _row_top, 384, 26, _style.border_color,
+            _style.fill_color, _style.fill_alpha,
+            _entry_index == _state.practice_index);
         draw_set_font(fn_menu);
 
         if (_entry.id == "start" || _entry.id == "back") {
@@ -803,7 +1115,9 @@ function GameTitleDrawPracticePage(_state) {
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
     GameUiDrawOutlinedText(GameTitlePracticeHelpGet(_selected_entry.id), 320, 294, make_color_rgb(190, 214, 234));
-    GameUiDrawOutlinedText("D-pad adjust   Z / A choose   X / B back", 320, 326, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Move to adjust   " + GameInputActiveBindingLabel("fire")
+        + " chooses   " + GameInputActiveBindingLabel("bomb") + " returns",
+        320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawScoresPage(state)
@@ -832,7 +1146,9 @@ function GameTitleDrawScoresPage(_state) {
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Left/Right or D-pad change ship   X / B back", 320, 326, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Move left / right to change ship   "
+        + GameInputActiveBindingLabel("bomb") + " returns",
+        320, 326, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawGalleryPage(state)
@@ -851,7 +1167,9 @@ function GameTitleDrawGalleryPage(_state) {
     GameUiDrawOutlinedText(_item.name, 320, 282, c_white);
     draw_set_font(fn_dialogue_speech);
     GameUiDrawOutlinedText(_item.caption, 320, 304, make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText("Left/Right or D-pad browse   X / B back", 320, 332, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText("Move left / right to browse   "
+        + GameInputActiveBindingLabel("bomb") + " returns",
+        320, 332, make_color_rgb(160, 188, 220));
 }
 
 /// @func GameTitleDrawMusicRoomPage(state)
@@ -870,7 +1188,9 @@ function GameTitleDrawMusicRoomPage(_state) {
         var _is_playing = GameMusicRoomPreviewIsActive() && _state.music_preview_index == _track_index;
 
         var _row_top = 70 + (i * 42);
-        GameTitleDrawFrame(128, _row_top, 384, 38, _style.border_color, _style.fill_color, _style.fill_alpha);
+        GameTitleDrawFrame(128, _row_top, 384, 38, _style.border_color,
+            _style.fill_color, _style.fill_alpha,
+            _track_index == _state.music_index);
         draw_set_halign(fa_left);
         draw_set_font(fn_menu);
         GameUiDrawOutlinedText(_track.name, 142, _row_top + 12, _style.text_color);
@@ -893,7 +1213,9 @@ function GameTitleDrawMusicRoomPage(_state) {
     }
 
     GameUiDrawOutlinedText(_status, 320, 296, _preview_active ? c_yellow : make_color_rgb(180, 204, 224));
-    GameUiDrawOutlinedText(_preview_active ? "D-pad switch   Z / A stop   X / B back" : "D-pad select   Z / A play   X / B back",
+    GameUiDrawOutlinedText((_preview_active ? "Move to switch   " : "Move to select   ")
+        + GameInputActiveBindingLabel("fire") + (_preview_active ? " stops   " : " plays   ")
+        + GameInputActiveBindingLabel("bomb") + " returns",
         320, 326, make_color_rgb(160, 188, 220));
 }
 
@@ -902,48 +1224,124 @@ function GameTitleDrawMusicRoomPage(_state) {
 function GameTitleDrawCharacterSelectPage(_state) {
     var _character = GameTitleCharacterGet(_state, _state.select_character_index);
     var _line_count = array_length(_character.description_lines);
-    var _description_start_y = 178;
 
-    GameTitleDrawPageHeading("Character Select", 36);
+    GameTitleDrawPageHeading("Choose the Chaser", 32);
     draw_set_font(fn_dialogue_name);
-    GameUiDrawOutlinedText(_character.name, 320, 62, _character.accent_color);
+    GameUiDrawOutlinedText(_character.name, 320, 56, _character.accent_color);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText(_character.subtitle, 320, 84, make_color_rgb(180, 204, 224));
+    GameUiDrawOutlinedText(_character.subtitle, 320, 76, make_color_rgb(180, 204, 224));
 
     var _panel_style = GameTitlePanelStyleCreate(false);
 
-    GameTitleDrawFrame(96, 112, 124, 140, _panel_style.border_color, _panel_style.fill_color, _panel_style.fill_alpha);
-    if (!GameTitleDrawSpriteFit(_character.preview_sprite, 158, 176, 92, 92, 2)) {
-        draw_set_color(_character.accent_color);
-        draw_rectangle(118, 138, 198, 226, false);
-    }
-    draw_set_font(fn_menu);
-    GameUiDrawOutlinedText(_character.name, 158, 242, c_white);
+    GameTitleDrawFrame(42, 94, 218, 202, _panel_style.border_color, _panel_style.fill_color, 0.82);
+    GameTitleDrawCharacterAttackPreview(_character, _state.flash_timer, 151, 225);
 
-    GameTitleDrawFrame(252, 108, 292, 154, _panel_style.border_color, _panel_style.fill_color, _panel_style.fill_alpha);
+    GameTitleDrawFrame(276, 94, 322, 202, _panel_style.border_color, _panel_style.fill_color, 0.82);
     draw_set_halign(fa_left);
     draw_set_font(fn_menu);
-    GameUiDrawOutlinedText("Pilot: " + _character.pilot_name, 266, 126, make_color_rgb(180, 204, 224));
-
-    if (_character.support_name != "") {
-        GameUiDrawOutlinedText("Support: " + _character.support_name, 266, 148, make_color_rgb(180, 204, 224));
-    } else {
-        _description_start_y = 162;
-    }
+    GameUiDrawOutlinedText("Pilot", 290, 109, _character.accent_color);
+    GameUiDrawOutlinedText(_character.pilot_name, 382, 109, c_white);
+    GameUiDrawOutlinedText("Speed", 290, 128, _character.accent_color);
+    GameUiDrawOutlinedText(_character.speed_label, 382, 128, c_white);
+    GameUiDrawOutlinedText("Normal", 290, 147, _character.accent_color);
+    GameUiDrawOutlinedText(_character.normal_label, 382, 147, c_white);
+    GameUiDrawOutlinedText("Focus", 290, 166, _character.accent_color);
+    GameUiDrawOutlinedText(_character.focus_label, 382, 166, c_white);
+    GameUiDrawOutlinedText("Sword", 290, 185, _character.accent_color);
+    GameUiDrawOutlinedText(_character.sword_label, 382, 185, c_white);
 
     draw_set_font(fn_dialogue_speech);
-    for (var i = 0; i < _line_count; i++) {
-        GameUiDrawOutlinedText(_character.description_lines[i], 266, _description_start_y + (i * 15), c_white);
+    for (var i = 0; i < min(5, _line_count); i++) {
+        GameUiDrawOutlinedText(_character.description_lines[i], 290, 212 + (i * 14),
+            (i < 2) ? c_white : make_color_rgb(190, 210, 230));
     }
 
     draw_set_halign(fa_center);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Z / A begin   D-pad switch   X / B back", 320, 326, make_color_rgb(160, 188, 220));
+    GameUiDrawOutlinedText(GameInputActiveBindingLabel("fire")
+        + " begins   Move left / right to switch   "
+        + GameInputActiveBindingLabel("bomb") + " returns",
+        320, 326, make_color_rgb(180, 214, 236));
+}
+
+/// @func GameTitleDrawCharacterAttackPreview(character, timer, x, y)
+/// Animates normal fire, focused fire, charge, and sword use in the select card.
+function GameTitleDrawCharacterAttackPreview(_character, _timer, _x, _y) {
+    var _cycle = _timer mod 240;
+    var _ship_asset = asset_get_index(_character.preview_sprite);
+    var _shot_asset = asset_get_index((_character.id == SHIP_SELKIE)
+        ? "spr_sunset_bullet" : "spr_sunrise_bullet");
+    var _label = "NORMAL VOLLEY";
+
+    draw_set_halign(fa_center);
+    draw_set_font(fn_dialogue_speech);
+
+    if (_cycle < 90) {
+        for (var shot = -2; shot <= 2; shot++) {
+            var _shot_y = _y - 30 - ((_cycle * 3 + ((shot + 2) * 23)) mod 116);
+            var _shot_x = _x + (shot * ((_character.id == SHIP_SELKIE) ? 13 : 9));
+            if (_shot_asset != -1) {
+                draw_sprite_ext(_shot_asset, 0, _shot_x, _shot_y, 0.75, 0.75,
+                    90 + (shot * 4), _character.accent_color, 0.9);
+            }
+        }
+    } else if (_cycle < 160) {
+        _label = "FOCUS LANCE";
+        var _focus_time = _cycle - 90;
+        for (var lance = -1; lance <= 1; lance++) {
+            var _lance_y = _y - 30 - ((_focus_time * 5 + ((lance + 1) * 37)) mod 116);
+            if (_shot_asset != -1) {
+                draw_sprite_ext(_shot_asset, 0, _x + (lance * 5), _lance_y,
+                    0.65, 1.0, 90, c_white, 0.96);
+            }
+        }
+    } else {
+        var _sword_time = _cycle - 160;
+        var _charge = clamp(_sword_time / 38, 0, 1);
+        _label = (_charge < 1) ? "HOLD FIRE: CHARGING" : "SWORD SWEEP";
+
+        draw_set_alpha(0.35 + (_charge * 0.5));
+        draw_set_color(merge_color(make_color_rgb(118, 236, 255), make_color_rgb(255, 214, 112), _charge));
+        draw_circle(_x, _y, 22 + (_charge * 11), true);
+
+        if (_charge >= 1) {
+            var _sweep_angle = 230 + (GameCosineEase01(clamp((_sword_time - 38) / 42, 0, 1)) * 280);
+            if (_character.id == SHIP_SELKIE) {
+                var _disc_x = _x + lengthdir_x(58, _sweep_angle);
+                var _disc_y = _y + lengthdir_y(58, _sweep_angle);
+                draw_set_color(make_color_rgb(255, 174, 234));
+                draw_circle(_disc_x, _disc_y, 11, true);
+                draw_circle(_disc_x, _disc_y, 5, true);
+            } else {
+                var _thorn_x = _x + lengthdir_x(66, _sweep_angle);
+                var _thorn_y = _y + lengthdir_y(66, _sweep_angle);
+                draw_set_color(make_color_rgb(88, 210, 150));
+                draw_line_width(_x, _y, _thorn_x, _thorn_y, 3);
+                draw_set_color(make_color_rgb(255, 118, 204));
+                draw_circle(_thorn_x, _thorn_y, 6, false);
+            }
+        }
+    }
+
+    draw_set_alpha(1);
+    if (_ship_asset != -1 && sprite_exists(_ship_asset)) {
+        var _scale = min(1.6, 72 / max(1, sprite_get_height(_ship_asset)));
+        draw_sprite_ext(_ship_asset, 0, _x, _y, _scale,
+            _scale * GamePlayerShipDrawScaleYGet(_character.id), 0, c_white, 1);
+    }
+
+    GameUiDrawOutlinedText(_label, _x, 278, _character.accent_color);
+    draw_set_alpha(1);
+    draw_set_color(c_white);
 }
 
 /// @func GameTitleDraw(state)
 /// Draws the current title screen page for the active state.
 function GameTitleDraw(_state) {
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
     GameTitleDrawBackground(_state);
 
     if (_state.phase != "press_start") {
@@ -965,6 +1363,14 @@ function GameTitleDraw(_state) {
 
         case "options":
             GameTitleDrawOptionsPage(_state);
+            break;
+
+        case "controls_keyboard":
+            GameTitleDrawControlsPage(_state, "keyboard");
+            break;
+
+        case "controls_gamepad":
+            GameTitleDrawControlsPage(_state, "gamepad");
             break;
 
         case "practice":

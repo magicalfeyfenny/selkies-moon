@@ -1,0 +1,61 @@
+{
+  "stage": 2,
+  "slug": "aster_saltwind_ribbon_coast",
+  "blend_source": "art/3d_stage_sources/stage_02_aster_saltwind_ribbon_coast/aster_saltwind_ribbon_coast.blend",
+  "runtime_obj": "stage3d_02_aster_saltwind_ribbon_coast.obj",
+  "loop_length": 64.0,
+  "camera_path": [
+    [
+      -4.0,
+      0.0,
+      11.0
+    ],
+    [
+      -1.0,
+      15.0,
+      12.0
+    ],
+    [
+      4.0,
+      31.0,
+      9.4
+    ],
+    [
+      1.0,
+      48.0,
+      10.5
+    ],
+    [
+      -4.0,
+      64.0,
+      11.0
+    ]
+  ],
+  "camera_target_z": 0.2,
+  "scroll_speed": 0.025,
+  "lighting": {
+    "world": [
+      0.035,
+      0.04,
+      0.1
+    ],
+    "sun_color": [
+      0.55,
+      0.82,
+      1.0
+    ],
+    "sun_energy": 1.8
+  },
+  "fog": {
+    "color": [
+      0.18,
+      0.16,
+      0.34
+    ],
+    "start": 24.0,
+    "end": 92.0,
+    "density": 0.3,
+    "effect": "salt_mist_ribbons"
+  },
+  "triangles": 1108
+}

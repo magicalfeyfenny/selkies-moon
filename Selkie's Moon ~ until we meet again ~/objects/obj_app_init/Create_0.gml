@@ -1,3 +1,7 @@
+// The persistent bootstrap owns the low-resolution GUI composition surface.
+ui_surface = -1;
+ui_surface_targeted = false;
+
 // Keep exactly one app bootstrap instance alive across room loads.
 if (instance_number(obj_app_init) > 1) {
     instance_destroy();

@@ -107,7 +107,7 @@ function GameVisualTourStateEnsure() {
             pending_capture_name: "",
             pending_capture_path: "",
             capture_count: 0,
-            expected_capture_count: 27,
+            expected_capture_count: 25,
             completion_wait_logged: false,
         };
 
@@ -186,6 +186,14 @@ function GameVisualTourTitlePrepare(_page, _main_index) {
     _title.title_state.select_character_index = clamp(_main_index, 0, 1);
     _title.title_state.gallery_index = 1;
     _title.title_state.music_index = 9;
+
+    if (_page == "options") {
+        global.game_config.master_volume = 75;
+        global.game_config.music_volume = 55;
+        global.game_config.sfx_volume = 90;
+        _title.title_state.options_index = 3;
+        GameAudioVolumesApply();
+    }
 
     if (_page == "practice") {
         _title.title_state.practice_config = GamePracticeConfigNormalize({
@@ -329,12 +337,13 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
     if (_mode == "combat") {
         var _left = CAMERA_HOME_X - 70;
         var _right = CAMERA_HOME_X + 70;
+        var _tour_roster = GameStageEnemyRosterCreate(_stage);
         var _enemy_a = instance_create_layer(_left, CAMERA_HOME_Y - 88, "Instances", obj_enemy_variant);
-        GameEnemyVariantConfigure(_enemy_a, ENEMY_VARIANT_KELP, _stage, 0, 3);
+        GameEnemyVariantConfigure(_enemy_a, _tour_roster[0].id, _stage, 0, 3);
         var _enemy_b = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y - 122, "Instances", obj_enemy_variant);
-        GameEnemyVariantConfigure(_enemy_b, ENEMY_VARIANT_WISP, _stage, 1, 3);
+        GameEnemyVariantConfigure(_enemy_b, _tour_roster[1].id, _stage, 1, 3);
         var _enemy_c = instance_create_layer(_right, CAMERA_HOME_Y - 92, "Instances", obj_enemy_variant);
-        GameEnemyVariantConfigure(_enemy_c, ENEMY_VARIANT_NEEDLE, _stage, 2, 3);
+        GameEnemyVariantConfigure(_enemy_c, _tour_roster[2].id, _stage, 2, 3);
 
         for (var i = 0; i < 12; i++) {
             GameEnemyBulletLinearSpawn(CAMERA_HOME_X - 110 + (i * 20), CAMERA_HOME_Y - 18 + ((i mod 3) * 18), 260 + (i * 7), 1.8);
@@ -357,8 +366,19 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
         global.game_runtime.current_stage = _stage;
         _scene.scene_state.mode = "boss_fight";
         _scene.scene_state.boss_spawned = true;
-        var _boss = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y - 92, "Instances", obj_boss_sunset);
-        _boss.attack_timer = 90;
+        if (GameStageIsDualBoss()) {
+            var _mira_tour_boss = instance_create_layer(
+                CAMERA_HOME_X - 52, CAMERA_HOME_Y - 98, "Instances", obj_boss_sunset);
+            var _aisha_tour_boss = instance_create_layer(
+                CAMERA_HOME_X + 52, CAMERA_HOME_Y - 78, "Instances", obj_boss_sunset);
+            GameBossDualConfigure(_mira_tour_boss, "mira");
+            GameBossDualConfigure(_aisha_tour_boss, "aisha");
+            _mira_tour_boss.attack_timer = 90;
+            _aisha_tour_boss.attack_timer = 90;
+        } else {
+            var _boss = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y - 92, "Instances", obj_boss_sunset);
+            _boss.attack_timer = 90;
+        }
     } else if (_mode == "clear") {
         _scene.scene_state.mode = "stage_clear";
         _scene.scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
@@ -419,49 +439,58 @@ function GameVisualTourStep() {
             return GameVisualTourPrepareAndCapture("04_title_music_room",
                 GameVisualTourTitlePrepare("music_room", 3));
         case 5:
-            return GameVisualTourPrepareAndCapture("05_opening_story",
+            return GameVisualTourPrepareAndCapture("05_title_options",
+                GameVisualTourTitlePrepare("options", 4));
+        case 6:
+            return GameVisualTourPrepareAndCapture("06_opening_story",
                 GameVisualTourStoryPrepare(rm_opening));
     }
 
-    if (_tour.step >= 6 && _tour.step < 16) {
-        var _stage = _tour.step - 5;
+    if (_tour.step >= 7 && _tour.step < 12) {
+        var _stage = _tour.step - 6;
         var _stage_label = (_stage < 10) ? "0" + string(_stage) : string(_stage);
         return GameVisualTourPrepareAndCapture("stage_" + _stage_label + "_notice",
             GameVisualTourGameplayPrepare(_stage, "notice"));
     }
 
     switch (_tour.step) {
+        case 12:
+            return GameVisualTourPrepareAndCapture("12_stage_01_combat",
+                GameVisualTourGameplayPrepare(1, "combat"));
+        case 13:
+            return GameVisualTourPrepareAndCapture("13_stage_03_combat",
+                GameVisualTourGameplayPrepare(3, "combat"));
+        case 14:
+            return GameVisualTourPrepareAndCapture("14_stage_05_combat",
+                GameVisualTourGameplayPrepare(5, "combat"));
+        case 15:
+            return GameVisualTourPrepareAndCapture("15_dual_boss",
+                GameVisualTourGameplayPrepare(3, "boss"));
         case 16:
-            return GameVisualTourPrepareAndCapture("16_stage_04_combat",
-                GameVisualTourGameplayPrepare(4, "combat"));
-        case 17:
-            return GameVisualTourPrepareAndCapture("17_stage_08_combat",
-                GameVisualTourGameplayPrepare(8, "combat"));
-        case 18:
-            return GameVisualTourPrepareAndCapture("18_final_boss",
+            return GameVisualTourPrepareAndCapture("16_final_boss",
                 GameVisualTourGameplayPrepare(STAGE_COUNT, "boss"));
-        case 19:
-            return GameVisualTourPrepareAndCapture("19_stage_clear",
-                GameVisualTourGameplayPrepare(9, "clear"));
-        case 20:
-            return GameVisualTourPrepareAndCapture("20_ending_story",
+        case 17:
+            return GameVisualTourPrepareAndCapture("17_stage_clear",
+                GameVisualTourGameplayPrepare(4, "clear"));
+        case 18:
+            return GameVisualTourPrepareAndCapture("18_ending_story",
                 GameVisualTourStoryPrepare(rm_ending));
-        case 21:
-            return GameVisualTourPrepareAndCapture("21_credits", GameVisualTourCreditsPrepare());
-        case 22:
-            return GameVisualTourPrepareAndCapture("22_title_practice",
+        case 19:
+            return GameVisualTourPrepareAndCapture("19_credits", GameVisualTourCreditsPrepare());
+        case 20:
+            return GameVisualTourPrepareAndCapture("20_title_practice",
                 GameVisualTourTitlePrepare("practice", 5));
-        case 23:
-            return GameVisualTourPrepareAndCapture("23_pause_main",
+        case 21:
+            return GameVisualTourPrepareAndCapture("21_pause_main",
                 GameVisualTourPausePrepare("main"));
-        case 24:
-            return GameVisualTourPrepareAndCapture("24_pause_settings",
+        case 22:
+            return GameVisualTourPrepareAndCapture("22_pause_settings",
                 GameVisualTourPausePrepare("options"));
-        case 25:
-            return GameVisualTourPrepareAndCapture("25_pause_practice_tuning",
+        case 23:
+            return GameVisualTourPrepareAndCapture("23_pause_practice_tuning",
                 GameVisualTourPausePrepare("practice"));
-        case 26:
-            return GameVisualTourPrepareAndCapture("26_pause_quit_confirm",
+        case 24:
+            return GameVisualTourPrepareAndCapture("24_pause_quit_confirm",
                 GameVisualTourPausePrepare("quit_confirm"));
     }
 

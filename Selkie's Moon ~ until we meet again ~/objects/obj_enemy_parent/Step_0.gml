@@ -12,6 +12,7 @@ if (hp <= 0) {
     combat_step_blocked = true;
     GameEnemyDestroySoundPlay();
     global.game_runtime.score += points;
+    GameRankDefeatRewardApply();
     GameEnemyPowerupDropTry(x, y, points);
     instance_destroy();
     exit;

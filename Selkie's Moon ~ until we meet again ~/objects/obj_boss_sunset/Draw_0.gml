@@ -3,6 +3,7 @@ var _draw_y_scale = variable_instance_exists(id, "boss_draw_y_scale") ? boss_dra
 
 if (!destruction_active) {
     draw_sprite_ext(sprite_index, image_index, x, y, 1, _draw_y_scale, image_angle, image_blend, image_alpha);
+    GameBossCircularHealthDraw(id);
     exit;
 }
 

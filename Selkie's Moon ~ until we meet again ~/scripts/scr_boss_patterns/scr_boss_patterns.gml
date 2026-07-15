@@ -85,6 +85,34 @@ function GameBossLinearFanSpawn(_object_index, _x, _y, _center, _spread, _count,
     return _count;
 }
 
+/// @func GameBossPatternAngleVarianceGet(shot_kind)
+/// Returns a restrained whole-burst rotation range for patterns whose lanes can
+/// vary safely. Deliberate cages, crosses, and walls remain fully authored so a
+/// random roll can never erase their intended escape route.
+function GameBossPatternAngleVarianceGet(_shot_kind) {
+    switch (_shot_kind) {
+        case "blade_spiral":
+        case "redirect_spiral":
+        case "diamond_sweep":
+        case "aisha_chaos_shards":
+            return 5;
+
+        case "bead_arc":
+        case "diamond_fan":
+        case "mira_dealer_fan":
+        case "saltwind_gale":
+        case "shalmii_hammerfall":
+        case "aster_bunny_hop":
+        case "bloodtide_hunt":
+        case "caelia_constellation":
+        case "rose_thorn_arc":
+        case "chakram_lance":
+            return 3;
+    }
+
+    return 0;
+}
+
 /// @func GameBossMiraPatternFire(boss, phase, timer, target_x, target_y, stage_pressure, color)
 /// Deals Mira's four-suit formations and paired card fans. Red and gold
 /// accents make the suit groups readable without requiring portrait-bound art.
@@ -904,6 +932,33 @@ function GameBossFinalePatternFire(_boss, _phase, _timer, _target_x, _target_y,
 function GameBossPhasePatternFire(_boss, _phase, _timer, _target_x, _target_y, _stage_pressure) {
     var _x = _boss.x;
     var _y = _boss.y;
+    var _variance = GameBossPatternAngleVarianceGet(_phase.shot_kind);
+
+    // Rotate the whole burst rather than individual bullets. This produces
+    // fresh lanes while preserving spacing, symmetry, and guaranteed gaps.
+    if (_variance > 0) {
+        var _jitter = random_range(-_variance, _variance);
+        _phase = GameMemoryCorePhaseCreate(
+            _phase.id,
+            _phase.shot_kind,
+            _phase.cadence,
+            _phase.burst_count,
+            _phase.base_angle + _jitter,
+            _phase.angle_step,
+            _phase.speed,
+            _phase.turn_speed,
+            _phase.radial_speed,
+            _phase.spread,
+            _phase.redirect_interval,
+            _phase.attack_theme
+        );
+
+        var _target_distance = point_distance(_x, _y, _target_x, _target_y);
+        var _target_angle = point_direction(_x, _y, _target_x, _target_y) + _jitter;
+        _target_x = _x + lengthdir_x(_target_distance, _target_angle);
+        _target_y = _y + lengthdir_y(_target_distance, _target_angle);
+    }
+
     var _theme_color = GameBossPhaseColorGet(_phase.attack_theme);
     var _clockwise = _boss.pattern_clockwise_first;
 

@@ -20,6 +20,9 @@ function GameStoryStateCreate() {
         frame_index: -1,
         current_frame: GameStoryFrameCreate(),
         active_file: "",
+        reveal_characters: 0,
+        reveal_wait: 0,
+        reveal_complete: true,
     };
 }
 
@@ -55,10 +58,21 @@ function GameStoryPathJoin(_directory, _filename) {
 /// @func GameStoryResolveFilePath(filename)
 /// Resolves a story filename against likely runtime locations.
 function GameStoryResolveFilePath(_filename) {
-    if (file_exists(_filename)) {
-        return _filename;
+    // Prefer packaged data over a same-named stale sandbox copy. GameMaker's
+    // working_directory is the writable app-support sandbox on macOS; shipped
+    // Included Files live beside the runner in program_directory.
+    var _program_path = GameStoryPathJoin(program_directory, _filename);
+    if (file_exists(_program_path)) {
+        return _program_path;
     }
 
+    var _program_datafiles_path = GameStoryPathJoin(program_directory, "datafiles/" + _filename);
+    if (file_exists(_program_datafiles_path)) {
+        return _program_datafiles_path;
+    }
+
+    // Test fixtures and user-authored loose files resolve through writable
+    // locations only after packaged content has been exhausted.
     var _working_path = GameStoryPathJoin(working_directory, _filename);
     if (file_exists(_working_path)) {
         return _working_path;
@@ -72,6 +86,10 @@ function GameStoryResolveFilePath(_filename) {
     var _relative_datafiles_path = "datafiles/" + _filename;
     if (file_exists(_relative_datafiles_path)) {
         return _relative_datafiles_path;
+    }
+
+    if (file_exists(_filename)) {
+        return _filename;
     }
 
     return "";
@@ -216,6 +234,101 @@ function GameStoryStateClear(_state) {
     _state.frame_index = -1;
     _state.current_frame = GameStoryFrameCreate();
     _state.active_file = "";
+    _state.reveal_characters = 0;
+    _state.reveal_wait = 0;
+    _state.reveal_complete = true;
+}
+
+/// @func GameStoryTypewriterDelayForCharacter(character)
+/// Returns the number of extra steps to hold after revealing a character.
+function GameStoryTypewriterDelayForCharacter(_character) {
+    switch (_character) {
+        case ".":
+        case "!":
+        case "?":
+            return 9;
+
+        case ",":
+        case ";":
+        case ":":
+            return 4;
+
+        case "-":
+        case "—":
+            return 3;
+
+        case " ":
+            return 0;
+    }
+
+    // One hold step produces an even 30-character-per-second cadence at the
+    // game's native 60 fps without tying the reveal to rendered frame rate.
+    return 1;
+}
+
+/// @func GameStoryTextArrowFrameGet(elapsed_ms, frame_count)
+/// Returns the source-authored 3 fps loop frame for the continue arrow.
+function GameStoryTextArrowFrameGet(_elapsed_ms = current_time,
+    _frame_count = 8) {
+    _frame_count = max(1, floor(_frame_count));
+    return floor(max(0, _elapsed_ms) * 3 / 1000) mod _frame_count;
+}
+
+/// @func GameStoryRevealReset(state)
+/// Starts the current dialogue frame at its first character.
+function GameStoryRevealReset(_state) {
+    _state.reveal_characters = 0;
+    _state.reveal_wait = 0;
+    _state.reveal_complete = string_length(_state.current_frame.text) <= 0;
+    return _state.reveal_complete;
+}
+
+/// @func GameStoryRevealComplete(state)
+/// Reveals the entire current frame immediately.
+function GameStoryRevealComplete(_state) {
+    _state.reveal_characters = string_length(_state.current_frame.text);
+    _state.reveal_wait = 0;
+    _state.reveal_complete = true;
+    return _state.reveal_characters;
+}
+
+/// @func GameStoryRevealStep(state)
+/// Advances the punctuation-aware typewriter by one fixed gameplay step.
+function GameStoryRevealStep(_state) {
+    if (_state.reveal_complete || !GameStoryIsActive(_state)) {
+        return false;
+    }
+
+    if (_state.reveal_wait > 0) {
+        _state.reveal_wait -= 1;
+        return false;
+    }
+
+    var _text_length = string_length(_state.current_frame.text);
+    _state.reveal_characters = min(_text_length,
+        _state.reveal_characters + 1);
+
+    if (_state.reveal_characters >= _text_length) {
+        _state.reveal_complete = true;
+        _state.reveal_wait = 0;
+    } else {
+        var _character = string_char_at(_state.current_frame.text,
+            _state.reveal_characters);
+        _state.reveal_wait = GameStoryTypewriterDelayForCharacter(_character);
+    }
+
+    return true;
+}
+
+/// @func GameStoryContinue(state)
+/// First reveals an unfinished frame; a later press advances the queue.
+function GameStoryContinue(_state) {
+    if (!_state.reveal_complete) {
+        GameStoryRevealComplete(_state);
+        return true;
+    }
+
+    return GameStoryAdvance(_state);
 }
 
 /// @func GameStoryQueueRequest(filename)
@@ -231,13 +344,13 @@ function GameStoryQueueRequest(_filename) {
 }
 
 /// @func GameFinalBossStoryFileGet()
-/// Returns the stage 10 confrontation file for the selected route.
+/// Returns the stage 5 confrontation file for the selected route.
 function GameFinalBossStoryFileGet() {
     if (GameRunShipIdGet() == SHIP_SELKIE) {
-        return "boss_intro_story_selkie_route.json";
+        return "boss_intro_story_selkie_route_v2.json";
     }
 
-    return "boss_intro_story.json";
+    return "boss_intro_story_v2.json";
 }
 
 /// @func GameCharacterBossStoryFileGet(stage, after_defeat, ship_id)
@@ -254,17 +367,17 @@ function GameCharacterBossStoryFileGet(_stage, _after_defeat = false, _ship_id =
 
     var _route = (_ship_id == SHIP_SELKIE) ? "selkie_route" : "moon_route";
     var _seam = _after_defeat ? "defeat" : "intro";
-    return _character_boss.story_id + "_" + _seam + "_story_" + _route + ".json";
+    return _character_boss.story_id + "_" + _seam + "_story_" + _route + "_v2.json";
 }
 
 /// @func GameEndingStoryFileGet()
 /// Returns the ending file for the selected route.
 function GameEndingStoryFileGet() {
     if (GameRunShipIdGet() == SHIP_SELKIE) {
-        return "ending_story_selkie_route.json";
+        return "ending_story_selkie_route_v2.json";
     }
 
-    return "ending_story.json";
+    return "ending_story_v2.json";
 }
 
 /// @func GameStoryDefaultFileGet(room_id)
@@ -275,7 +388,7 @@ function GameStoryDefaultFileGet(_room_id) {
             return GameEndingStoryFileGet();
 
         case rm_opening:
-            return "opening_story.json";
+            return "opening_story_v2.json";
     }
 
     return "";
@@ -337,6 +450,7 @@ function GameStoryBegin(_state, _filename) {
     _state.frame_index = 0;
     _state.current_frame = _frames[0];
     _state.active_file = _filename;
+    GameStoryRevealReset(_state);
 
     global.game_runtime.story.requested_file = "";
     global.game_runtime.story.current_file = _filename;
@@ -361,6 +475,7 @@ function GameStoryAdvance(_state) {
     }
 
     _state.current_frame = _state.frames[_state.frame_index];
+    GameStoryRevealReset(_state);
     return true;
 }
 
@@ -391,8 +506,10 @@ function GameStoryUpdate(_state) {
         return;
     }
 
+    GameStoryRevealStep(_state);
+
     if (GameStoryAdvanceInputPressed()) {
-        GameStoryAdvance(_state);
+        GameStoryContinue(_state);
     }
 }
 
@@ -630,6 +747,34 @@ function GameStoryTextLinesCreate(_text, _max_width, _max_lines = 2) {
     return _lines;
 }
 
+/// @func GameStoryVisibleLinesCreate(text, max_width, max_lines, visible_characters)
+/// Reveals characters against the final wrapped layout so words never jump
+/// between lines while the typewriter is running.
+function GameStoryVisibleLinesCreate(_text, _max_width, _max_lines,
+    _visible_characters) {
+    var _full_lines = GameStoryTextLinesCreate(_text, _max_width, _max_lines);
+    var _visible_lines = array_create(array_length(_full_lines), "");
+    var _remaining = max(0, floor(_visible_characters));
+
+    for (var i = 0; i < array_length(_full_lines); i++) {
+        var _line = _full_lines[i];
+        var _line_length = string_length(_line);
+        var _line_visible = min(_line_length, _remaining);
+
+        if (_line_visible > 0) {
+            _visible_lines[i] = string_copy(_line, 1, _line_visible);
+        }
+
+        _remaining = max(0, _remaining - _line_length);
+        if (_remaining > 0 && i < array_length(_full_lines) - 1) {
+            // Wrapped lines replace one source-space character.
+            _remaining -= 1;
+        }
+    }
+
+    return _visible_lines;
+}
+
 /// @func GameUiStoryFramePaletteCreate(selected)
 /// Returns the shared moon-purple, pearl, and rose palette derived from the story textbox.
 function GameUiStoryFramePaletteCreate(_selected = false) {
@@ -639,6 +784,8 @@ function GameUiStoryFramePaletteCreate(_selected = false) {
         border_color: make_color_rgb(242, 232, 255),
         inner_border_color: make_color_rgb(255, 184, 224),
         ornament_color: make_color_rgb(255, 116, 198),
+        vine_color: make_color_rgb(104, 214, 204),
+        jewel_color: make_color_rgb(132, 102, 224),
         title_color: make_color_rgb(255, 232, 184),
         text_color: c_white,
         muted_text_color: make_color_rgb(180, 204, 232),
@@ -648,6 +795,8 @@ function GameUiStoryFramePaletteCreate(_selected = false) {
         _palette.fill_color = make_color_rgb(70, 24, 98);
         _palette.inner_border_color = make_color_rgb(255, 220, 150);
         _palette.ornament_color = make_color_rgb(255, 230, 164);
+        _palette.vine_color = make_color_rgb(138, 242, 218);
+        _palette.jewel_color = make_color_rgb(255, 142, 208);
         _palette.title_color = make_color_rgb(255, 246, 188);
     }
 
@@ -664,8 +813,241 @@ function GameUiDrawOrnamentDiamond(_x, _y, _radius, _color, _alpha = 1.0) {
     draw_set_alpha(1.0);
 }
 
+/// @func GameUiDrawPixelFiligreeCorner(x, y, x_sign, y_sign, palette, alpha)
+/// Draws one compact vine curl derived from the layered story textbox.
+function GameUiDrawPixelFiligreeCorner(_x, _y, _sx, _sy, _palette, _alpha = 1.0) {
+    GameUiDrawQuadraticThread(_x, _y,
+        _x + (_sx * 8), _y - (_sy * 2),
+        _x + (_sx * 16), _y + (_sy * 4),
+        _palette.vine_color, _alpha, 10);
+    GameUiDrawQuadraticThread(_x, _y,
+        _x - (_sx * 2), _y + (_sy * 8),
+        _x + (_sx * 4), _y + (_sy * 16),
+        _palette.vine_color, _alpha, 10);
+
+    // Rose threads curl back toward their stems instead of terminating in
+    // clipped geometric corners.
+    GameUiDrawQuadraticThread(_x + (_sx * 7), _y + (_sy * 2),
+        _x + (_sx * 15), _y - (_sy * 4),
+        _x + (_sx * 12), _y + (_sy * 7),
+        _palette.ornament_color, 0.88 * _alpha, 8);
+    GameUiDrawQuadraticThread(_x + (_sx * 2), _y + (_sy * 7),
+        _x - (_sx * 4), _y + (_sy * 15),
+        _x + (_sx * 7), _y + (_sy * 12),
+        _palette.inner_border_color, 0.76 * _alpha, 8);
+    GameUiDrawOrnamentDiamond(_x + (_sx * 5), _y + (_sy * 5), 2,
+        _palette.jewel_color, _alpha);
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+}
+
+/// @func GameUiDrawQuadraticThread(x0, y0, cx, cy, x1, y1, color, alpha, segments)
+/// Draws a one-pixel, integer-snapped thread suitable for 640x360 filigree.
+function GameUiDrawQuadraticThread(_x0, _y0, _cx, _cy, _x1, _y1,
+    _color, _alpha = 1.0, _segments = 12) {
+    var _previous_x = round(_x0);
+    var _previous_y = round(_y0);
+    _segments = max(2, round(_segments));
+
+    draw_set_alpha(_alpha);
+    draw_set_color(_color);
+    for (var i = 1; i <= _segments; i++) {
+        var _t = i / _segments;
+        var _inverse = 1 - _t;
+        var _next_x = round((_inverse * _inverse * _x0)
+            + (2 * _inverse * _t * _cx) + (_t * _t * _x1));
+        var _next_y = round((_inverse * _inverse * _y0)
+            + (2 * _inverse * _t * _cy) + (_t * _t * _y1));
+
+        if (_next_x != _previous_x || _next_y != _previous_y) {
+            draw_line(_previous_x, _previous_y, _next_x, _next_y);
+        }
+        _previous_x = _next_x;
+        _previous_y = _next_y;
+    }
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+}
+
+/// @func GameUiDrawFiligreeDivider(left, right, y, palette, alpha, arc, thread_color)
+/// Draws an open pearl-and-vine flourish with a rose jewel at its centre.
+function GameUiDrawFiligreeDivider(_left, _right, _y, _palette,
+    _alpha = 1.0, _arc = -3, _thread_color = -1) {
+    var _center = round((_left + _right) * 0.5);
+    var _gap = 7;
+    var _thread = (_thread_color == -1) ? _palette.border_color : _thread_color;
+    var _left_inner = _center - _gap;
+    var _right_inner = _center + _gap;
+    var _left_span = max(1, _left_inner - _left);
+    var _right_span = max(1, _right - _right_inner);
+    var _left_wave = round(_left + (_left_span * 0.52));
+    var _right_wave = round(_right - (_right_span * 0.52));
+
+    GameUiDrawQuadraticThread(_left, _y,
+        _left + (_left_span * 0.24), _y + (_arc * 1.35),
+        _left_wave, _y - (_arc * 0.42),
+        _thread, _alpha, max(3, _left_span div 15));
+    GameUiDrawQuadraticThread(_left_wave, _y - (_arc * 0.42),
+        _left + (_left_span * 0.78), _y - (_arc * 1.18),
+        _left_inner, _y,
+        _thread, _alpha, max(3, _left_span div 15));
+    GameUiDrawQuadraticThread(_right_inner, _y,
+        _right - (_right_span * 0.78), _y - (_arc * 1.18),
+        _right_wave, _y - (_arc * 0.42),
+        _thread, _alpha, max(3, _right_span div 15));
+    GameUiDrawQuadraticThread(_right_wave, _y - (_arc * 0.42),
+        _right - (_right_span * 0.24), _y + (_arc * 1.35),
+        _right, _y,
+        _thread, _alpha, max(3, _right_span div 15));
+
+    // A second broken thread gives the same airy cyan/pink layering as the
+    // original dialogue box without enclosing the panel in a hard rectangle.
+    GameUiDrawQuadraticThread(_left + 8, _y - sign(_arc) * 3,
+        _left + (_left_span * 0.55), _y - (_arc * 0.55),
+        _left_inner - 4, _y - sign(_arc),
+        _palette.vine_color, 0.74 * _alpha, max(5, _left_span div 9));
+    GameUiDrawQuadraticThread(_right_inner + 4, _y - sign(_arc),
+        _right - (_right_span * 0.55), _y - (_arc * 0.55),
+        _right - 8, _y - sign(_arc) * 3,
+        _palette.vine_color, 0.74 * _alpha, max(5, _right_span div 9));
+
+    GameUiDrawQuadraticThread(_center - 18, _y + sign(_arc) * 2,
+        _center - 10, _y + (_arc * 2.2),
+        _center - 3, _y + sign(_arc) * 5,
+        _palette.ornament_color, 0.82 * _alpha, 7);
+    GameUiDrawQuadraticThread(_center + 3, _y + sign(_arc) * 5,
+        _center + 10, _y + (_arc * 2.2),
+        _center + 18, _y + sign(_arc) * 2,
+        _palette.inner_border_color, 0.82 * _alpha, 7);
+    GameUiDrawOrnamentDiamond(_center, _y, 3, _palette.jewel_color, _alpha);
+
+    if ((_right - _left) >= 140) {
+        GameUiDrawOrnamentDiamond(round(lerp(_left, _center, 0.56)),
+            _y + round(_arc * 0.45), 1, _palette.ornament_color, 0.72 * _alpha);
+        GameUiDrawOrnamentDiamond(round(lerp(_center, _right, 0.44)),
+            _y + round(_arc * 0.45), 1, _palette.ornament_color, 0.72 * _alpha);
+    }
+}
+
+/// @func GameUiDrawVolumeGauge(left, right, y, ratio, selected)
+/// Draws a compact rose-vine slider that sits inside a menu row rather than
+/// competing with the row's lower filigree divider.
+function GameUiDrawVolumeGauge(_left, _right, _y, _ratio, _selected = false) {
+    var _palette = GameUiStoryFramePaletteCreate(_selected);
+    var _left_x = round(min(_left, _right));
+    var _right_x = round(max(_left, _right));
+    var _center_y = round(_y);
+    var _value = clamp(_ratio, 0, 1);
+    var _thumb_x = round(lerp(_left_x, _right_x, _value));
+    var _filled_color = _selected
+        ? _palette.title_color : _palette.vine_color;
+    var _petal_color = _selected
+        ? _palette.ornament_color : _palette.inner_border_color;
+
+    // A dim pair of loose threads defines the whole range. Their opposing
+    // curves echo the dialogue-box vines without becoming another hard bar.
+    GameUiDrawQuadraticThread(_left_x, _center_y,
+        round((_left_x + _right_x) * 0.5), _center_y - 2,
+        _right_x, _center_y,
+        _palette.jewel_color, 0.42, max(8, (_right_x - _left_x) div 9));
+    GameUiDrawQuadraticThread(_left_x, _center_y + 1,
+        round((_left_x + _right_x) * 0.5), _center_y + 3,
+        _right_x, _center_y + 1,
+        _palette.inner_border_color, 0.28,
+        max(8, (_right_x - _left_x) div 9));
+
+    // The live portion blooms into brighter interlaced threads.
+    if (_thumb_x > _left_x) {
+        var _fill_center = round((_left_x + _thumb_x) * 0.5);
+        GameUiDrawQuadraticThread(_left_x, _center_y,
+            _fill_center, _center_y - 2,
+            _thumb_x, _center_y,
+            _filled_color, 0.96, max(3, (_thumb_x - _left_x) div 7));
+        GameUiDrawQuadraticThread(_left_x, _center_y + 1,
+            _fill_center, _center_y + 3,
+            _thumb_x, _center_y + 1,
+            _petal_color, 0.76, max(3, (_thumb_x - _left_x) div 7));
+    }
+
+    // Five restrained petal marks make the adjustment scale legible while
+    // remaining decorative at the native 640x360 resolution.
+    for (var i = 0; i <= 4; i++) {
+        var _tick_x = round(lerp(_left_x, _right_x, i / 4));
+        var _tick_active = (i / 4) <= _value;
+        draw_set_alpha(_tick_active ? 0.88 : 0.38);
+        draw_set_color(_tick_active ? _petal_color : _palette.jewel_color);
+        draw_point(_tick_x, _center_y - 2);
+        draw_point(_tick_x, _center_y + 3);
+    }
+
+    // Curl the stems inward at each end, then use a luminous rose jewel as
+    // the thumb so 0% and 100% still have an intentional silhouette.
+    GameUiDrawQuadraticThread(_left_x - 4, _center_y + 2,
+        _left_x - 1, _center_y - 4,
+        _left_x + 3, _center_y,
+        _palette.vine_color, 0.72, 5);
+    GameUiDrawQuadraticThread(_right_x + 4, _center_y + 2,
+        _right_x + 1, _center_y - 4,
+        _right_x - 3, _center_y,
+        _palette.ornament_color, 0.68, 5);
+    GameUiDrawOrnamentDiamond(_thumb_x, _center_y, 3,
+        _selected ? _palette.ornament_color : _palette.jewel_color, 1);
+    draw_set_color(_palette.border_color);
+    draw_point(_thumb_x, _center_y - 1);
+
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+}
+
+/// @func GameUiDrawPixelHeart(x, y, state, alpha)
+/// Draws one 9x8 phase heart: spent, future, or active.
+function GameUiDrawPixelHeart(_x, _y, _state, _alpha = 1.0) {
+    var _palette = GameUiStoryFramePaletteCreate(_state == 2);
+    var _fill = (_state == 0) ? _palette.shadow_color
+        : ((_state == 2) ? _palette.title_color : _palette.ornament_color);
+    var _outline = (_state == 0) ? _palette.jewel_color : _palette.border_color;
+    _x = round(_x);
+    _y = round(_y);
+
+    draw_set_alpha((_state == 0 ? 0.42 : 0.94) * _alpha);
+    draw_set_color(_outline);
+    draw_rectangle(_x + 1, _y, _x + 3, _y + 1, false);
+    draw_rectangle(_x + 5, _y, _x + 7, _y + 1, false);
+    draw_rectangle(_x, _y + 2, _x + 8, _y + 4, false);
+    draw_rectangle(_x + 1, _y + 5, _x + 7, _y + 5, false);
+    draw_rectangle(_x + 2, _y + 6, _x + 6, _y + 6, false);
+    draw_rectangle(_x + 4, _y + 7, _x + 4, _y + 7, false);
+
+    draw_set_color(_fill);
+    draw_rectangle(_x + 2, _y + 1, _x + 2, _y + 2, false);
+    draw_rectangle(_x + 6, _y + 1, _x + 6, _y + 2, false);
+    draw_rectangle(_x + 1, _y + 3, _x + 7, _y + 4, false);
+    draw_rectangle(_x + 2, _y + 5, _x + 6, _y + 5, false);
+    draw_rectangle(_x + 3, _y + 6, _x + 5, _y + 6, false);
+
+    if (_state == 2) {
+        draw_set_color(c_white);
+        draw_point(_x + 2, _y + 2);
+    }
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+}
+
+/// @func GameUiDrawBossPhaseHearts(x, y, phase_index, phase_count, alpha)
+/// Wraps phase hearts into compact rows suitable for the redesigned gutter.
+function GameUiDrawBossPhaseHearts(_x, _y, _phase_index, _phase_count, _alpha = 1.0) {
+    var _states = GameBossPhaseHeartStatesCreate(_phase_index, _phase_count);
+    var _per_row = 10;
+
+    for (var i = 0; i < array_length(_states); i++) {
+        var _heart_x = _x + ((i mod _per_row) * 12);
+        var _heart_y = _y + ((i div _per_row) * 11);
+        GameUiDrawPixelHeart(_heart_x, _heart_y, _states[i], _alpha);
+    }
+}
+
 /// @func GameUiDrawOrnateFrame(x, y, width, height, fill_color, fill_alpha, accent_color, selected, frame_alpha)
-/// Draws a scalable panel that echoes the pearl lines and rose ornaments of spr_textbox.
+/// Draws a scalable open filigree panel derived from spr_textbox's wispy threads.
 function GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color = -1, _fill_alpha = 0.76, _accent_color = -1, _selected = false, _frame_alpha = 1.0) {
     var _palette = GameUiStoryFramePaletteCreate(_selected);
     var _fill = (_fill_color == -1) ? _palette.fill_color : _fill_color;
@@ -674,70 +1056,108 @@ function GameUiDrawOrnateFrame(_x, _y, _w, _h, _fill_color = -1, _fill_alpha = 0
     var _top = round(_y);
     var _right = round(_x + _w);
     var _bottom = round(_y + _h);
-    var _corner = max(3, min(8, floor(min(_w, _h) * 0.24)));
     _frame_alpha = clamp(_frame_alpha, 0, 1);
 
-    // Soft offset shadow and translucent ink-dark fill preserve contrast over art.
-    draw_set_alpha(min(0.5, _fill_alpha * 0.7) * _frame_alpha);
-    draw_set_color(_palette.shadow_color);
-    draw_rectangle(_left + 3, _top + 3, _right + 3, _bottom + 3, false);
+    // Soft offset shadow and translucent ink-dark fill preserve contrast over
+    // art. Compact rows are inset and feathered so their silhouettes do not
+    // become a stack of hard purple bricks.
+    if (_h < 34) {
+        draw_set_alpha(min(0.38, _fill_alpha * 0.54) * _frame_alpha);
+        draw_set_color(_palette.shadow_color);
+        draw_rectangle(_left + 7, _top + 5, _right - 1, _bottom + 3, false);
 
-    draw_set_alpha(_fill_alpha * _frame_alpha);
-    draw_set_color(_fill);
-    draw_rectangle(_left, _top, _right, _bottom, false);
+        draw_set_alpha(_fill_alpha * _frame_alpha);
+        draw_set_color(_fill);
+        draw_rectangle(_left + 6, _top + 3, _right - 6, _bottom - 3, false);
+        draw_set_alpha(_fill_alpha * 0.42 * _frame_alpha);
+        draw_rectangle(_left + 2, _top + 6, _left + 5, _bottom - 6, false);
+        draw_rectangle(_right - 5, _top + 6, _right - 2, _bottom - 6, false);
+    } else {
+        draw_set_alpha(min(0.5, _fill_alpha * 0.7) * _frame_alpha);
+        draw_set_color(_palette.shadow_color);
+        draw_rectangle(_left + 3, _top + 3, _right + 3, _bottom + 3, false);
 
-    // Pearl outer line, rose inner line, and clipped corners mirror the textbox sprite.
-    draw_set_alpha(_frame_alpha);
-    draw_set_color(_outer);
-    draw_rectangle(_left, _top, _right, _bottom, true);
-
-    if (_w >= 12 && _h >= 12) {
-        draw_set_alpha(0.86 * _frame_alpha);
-        draw_set_color(_palette.inner_border_color);
-        draw_rectangle(_left + 3, _top + 3, _right - 3, _bottom - 3, true);
+        draw_set_alpha(_fill_alpha * _frame_alpha);
+        draw_set_color(_fill);
+        draw_rectangle(_left, _top, _right, _bottom, false);
     }
 
-    draw_set_alpha(_frame_alpha);
-    draw_set_color(_palette.ornament_color);
-    draw_line(_left, _top + _corner, _left + _corner, _top);
-    draw_line(_right - _corner, _top, _right, _top + _corner);
-    draw_line(_left, _bottom - _corner, _left + _corner, _bottom);
-    draw_line(_right - _corner, _bottom, _right, _bottom - _corner);
-
-    if (_w >= 48 && _h >= 20) {
-        var _diamond_radius = (_h >= 34) ? 3 : 2;
-        GameUiDrawOrnamentDiamond((_left + _right) * 0.5, _top + 1, _diamond_radius, _palette.ornament_color, _frame_alpha);
-        GameUiDrawOrnamentDiamond((_left + _right) * 0.5, _bottom - 1, _diamond_radius, _palette.ornament_color, _frame_alpha);
+    // Open, broken flourishes replace the former doubled rectangles. Small
+    // rows deliberately omit side rails so stacked menu entries feel like
+    // floating ribbons rather than a spreadsheet.
+    if (_w >= 32 && _h < 34) {
+        if (_selected) {
+            GameUiDrawFiligreeDivider(_left + 12, _right - 12, _top + 2,
+                _palette, 0.62 * _frame_alpha, -3, _outer);
+        }
+        GameUiDrawFiligreeDivider(_left + 4, _right - 4, _bottom - 1,
+            _palette, _frame_alpha, 4,
+            _selected ? _palette.title_color : _palette.inner_border_color);
+    } else if (_w >= 32 && _h >= 34) {
+        GameUiDrawFiligreeDivider(_left + 5, _right - 5, _top + 1,
+            _palette, _frame_alpha, -3, _outer);
+        GameUiDrawFiligreeDivider(_left + 5, _right - 5, _bottom - 1,
+            _palette, 0.88 * _frame_alpha, 3, _palette.inner_border_color);
     }
 
-    if (_h >= 48) {
-        GameUiDrawOrnamentDiamond(_left + 1, (_top + _bottom) * 0.5, 2, _palette.ornament_color, _frame_alpha);
-        GameUiDrawOrnamentDiamond(_right - 1, (_top + _bottom) * 0.5, 2, _palette.ornament_color, _frame_alpha);
+    if (_w >= 42 && _h >= 34) {
+        GameUiDrawPixelFiligreeCorner(_left + 3, _top + 3, 1, 1,
+            _palette, _frame_alpha);
+        GameUiDrawPixelFiligreeCorner(_right - 3, _top + 3, -1, 1,
+            _palette, _frame_alpha);
+        GameUiDrawPixelFiligreeCorner(_left + 3, _bottom - 3, 1, -1,
+            _palette, 0.88 * _frame_alpha);
+        GameUiDrawPixelFiligreeCorner(_right - 3, _bottom - 3, -1, -1,
+            _palette, 0.88 * _frame_alpha);
+    }
+
+    if (_h >= 54) {
+        var _center_y = round((_top + _bottom) * 0.5);
+        var _side_gap = min(9, max(5, _h div 10));
+        var _side_segments = max(5, (_h div 2) div 7);
+
+        GameUiDrawQuadraticThread(_left + 1, _top + 10,
+            _left - 2, _center_y - 16,
+            _left + 2, _center_y - _side_gap,
+            _palette.vine_color, 0.74 * _frame_alpha, _side_segments);
+        GameUiDrawQuadraticThread(_left + 2, _center_y + _side_gap,
+            _left - 2, _center_y + 16,
+            _left + 1, _bottom - 10,
+            _palette.ornament_color, 0.70 * _frame_alpha, _side_segments);
+        GameUiDrawQuadraticThread(_right - 1, _top + 10,
+            _right + 2, _center_y - 16,
+            _right - 2, _center_y - _side_gap,
+            _palette.inner_border_color, 0.72 * _frame_alpha, _side_segments);
+        GameUiDrawQuadraticThread(_right - 2, _center_y + _side_gap,
+            _right + 2, _center_y + 16,
+            _right - 1, _bottom - 10,
+            _palette.vine_color, 0.74 * _frame_alpha, _side_segments);
+        GameUiDrawOrnamentDiamond(_left + 1, _center_y, 2,
+            _palette.jewel_color, _frame_alpha);
+        GameUiDrawOrnamentDiamond(_right - 1, _center_y, 2,
+            _palette.jewel_color, _frame_alpha);
     }
 
     draw_set_alpha(1.0);
     draw_set_color(c_white);
 }
 
-/// @func GameStoryDrawBox(frame)
+/// @func GameStoryDrawBox(frame, visible_characters, reveal_complete)
 /// Draws the dialogue textbox sprite and current text content.
-function GameStoryDrawBox(_frame) {
+function GameStoryDrawBox(_frame, _visible_characters = -1,
+    _reveal_complete = true) {
     var _gui_width = display_get_gui_width();
     var _gui_height = display_get_gui_height();
-    var _box_asset = asset_get_index("spr_textbox");
     var _box_top = _gui_height - 130;
     var _text_width = 520;
     var _lines = [];
     var _palette = GameUiStoryFramePaletteCreate(false);
 
-    if (_box_asset != -1 && sprite_exists(_box_asset)) {
-        draw_set_alpha(1.0);
-        draw_set_color(c_white);
-        draw_sprite(_box_asset, 0, _gui_width * 0.5, _gui_height);
-    } else {
-        GameUiDrawOrnateFrame(38, _box_top + 4, _gui_width - 76, 116,
-            _palette.fill_color, 0.78, _palette.border_color, false);
-    }
+    // The old sprite enclosed the entire dialogue area in a heavy octagonal
+    // hull. Keep its rose-and-vine language, but let an open filigree frame
+    // breathe around the words instead.
+    GameUiDrawOrnateFrame(38, _box_top + 4, _gui_width - 76, 116,
+        _palette.fill_color, 0.78, _palette.border_color, false);
 
     draw_set_halign(fa_center);
     draw_set_valign(fa_top);
@@ -745,16 +1165,31 @@ function GameStoryDrawBox(_frame) {
     GameUiDrawOutlinedText(_frame.name, _gui_width * 0.5, _box_top + 10, _palette.title_color);
 
     draw_set_font(fn_dialogue_speech);
-    _lines = GameStoryTextLinesCreate(_frame.text, _text_width, 2);
+    if (_visible_characters < 0) {
+        _visible_characters = string_length(_frame.text);
+    }
+    _lines = GameStoryVisibleLinesCreate(_frame.text, _text_width, 2,
+        _visible_characters);
 
     for (var i = 0; i < array_length(_lines); i++) {
         GameUiDrawOutlinedText(_lines[i], _gui_width * 0.5, _box_top + 42 + (i * 22), _palette.text_color);
     }
 
-    draw_set_halign(fa_right);
-    draw_set_valign(fa_bottom);
-    draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Z/C/X or A/B/X continue", _gui_width - 34, _gui_height - 16, _palette.muted_text_color);
+    // Once the typewriter completes, thpj3's jeweled chevron replaces the
+    // former textual input prompt. Its 64x64 source targets 1280x720, so the
+    // 640x360 presentation uses an exact 50% nearest-neighbour scale.
+    if (_reveal_complete) {
+        var _arrow_asset = asset_get_index("spr_text_arrow");
+        if (_arrow_asset != -1 && sprite_exists(_arrow_asset)) {
+            var _arrow_frame = GameStoryTextArrowFrameGet(current_time,
+                sprite_get_number(_arrow_asset));
+            draw_set_alpha(1);
+            draw_set_color(c_white);
+            draw_sprite_ext(_arrow_asset, _arrow_frame,
+                _gui_width - 86, _gui_height - 49,
+                0.5, 0.5, 0, c_white, 1);
+        }
+    }
 }
 
 /// @func GameStoryDraw(state)
@@ -765,5 +1200,6 @@ function GameStoryDraw(_state) {
     }
 
     GameStoryDrawBackground(_state.current_frame);
-    GameStoryDrawBox(_state.current_frame);
+    GameStoryDrawBox(_state.current_frame, _state.reveal_characters,
+        _state.reveal_complete);
 }

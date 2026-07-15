@@ -8,7 +8,7 @@
 #macro GAME_VIEW_HALF_WIDTH 320
 #macro GAME_VIEW_HALF_HEIGHT 180
 
-#macro PLAYFIELD_HALF_WIDTH 101
+#macro PLAYFIELD_HALF_WIDTH 120
 #macro PLAYFIELD_HALF_HEIGHT 180
 #macro PLAYFIELD_VERTICAL_PADDING 10
 
@@ -20,20 +20,22 @@
 #macro STAGE_SPAWN_ABOVE_VIEW 100
 #macro STAGE_SPAWN_SIDE_MARGIN 16
 #macro STAGE_BEE_WAVE_COUNT 3
-#macro STAGE_COUNT 10
-#macro MIRA_BOSS_STAGE 2
+#macro STAGE_COUNT 5
+#macro LEGACY_STAGE_COUNT 10
+#macro SHALMII_BOSS_STAGE 1
+#macro ASTER_BOSS_STAGE 2
+#macro DUAL_BOSS_STAGE 3
+#macro MIRA_BOSS_STAGE DUAL_BOSS_STAGE
+#macro AISHA_BOSS_STAGE DUAL_BOSS_STAGE
+#macro CAELIA_BOSS_STAGE 4
 #macro MIRA_BOSS_NAME "Mira"
 #macro MIRA_SHIP_NAME "Wildheart"
-#macro SHALMII_BOSS_STAGE 5
 #macro SHALMII_BOSS_NAME "Shalmii"
 #macro SHALMII_SHIP_NAME "Lockstep"
-#macro AISHA_BOSS_STAGE 6
 #macro AISHA_BOSS_NAME "Aisha"
 #macro AISHA_SHIP_NAME "Wishbound"
-#macro ASTER_BOSS_STAGE 7
 #macro ASTER_BOSS_NAME "Aster"
 #macro ASTER_SHIP_NAME "Ribbonstar"
-#macro CAELIA_BOSS_STAGE 9
 #macro CAELIA_BOSS_NAME "Caelia"
 #macro CAELIA_SHIP_NAME "Zenith"
 #macro STAGE_NOTICE_FRAMES 150
@@ -72,6 +74,10 @@
 #macro MAYFLY_BURST_COUNT 12
 #macro MAYFLY_BLADE_TURN_SPEED 12
 #macro MAYFLY_BLADE_RADIAL_SPEED 1.5
+#macro BLADE_TURN_RATE_SCALE 0.10
+#macro BLADE_MAX_SCREEN_SPEED 3.0
+#macro BLADE_MAX_RADIAL_SPEED 2.55
+#macro BLADE_REDIRECT_MAX_SCREEN_SPEED 2.75
 #macro MAYFLY_FLOAT_X_RADIUS 42
 #macro MAYFLY_FLOAT_Y_RADIUS 14
 #macro MAYFLY_FLOAT_RATE 3
@@ -97,19 +103,21 @@
 
 #macro STAGE_LENGTH_FRAMES 2400
 #macro BOSS_PHASE_COUNT 3
-#macro FINAL_BOSS_PHASE_COUNT 16
-#macro FINAL_BOSS_EXPANDED_PHASE_COUNT 15
+#macro FINAL_BOSS_PHASE_COUNT 15
+#macro FINAL_BOSS_EXPANDED_PHASE_COUNT 14
 #macro BOSS_PHASE_HP 300
 #macro BOSS_PHASE_HP_STAGE_STEP 30
 #macro BOSS_PHASE_MIN_HP 240
 #macro BOSS_DAMAGE_SCALE_MIN 0.2
 #macro BOSS_DESTRUCTION_FRAMES 90
-#macro BOSS_PHASE3_FREEZE_FRAMES 5
+#macro BOSS_PHASE3_FREEZE_FRAMES 24
 #macro BOSS_PHASE3_REDIRECT_SPEED 1.5
 #macro BOSS_PHASE3_REDIRECT_ACCELERATION 0.05
 #macro BOSS_PHASE_NOTICE_FRAMES 120
 #macro BOSS_PHASE_NOTICE_FADE_IN_FRAMES 12
 #macro BOSS_PHASE_NOTICE_FADE_OUT_FRAMES 30
+#macro BOSS_PHASE_TRANSITION_FRAMES 72
+#macro BOSS_PHASE_REFILL_FRAMES 48
 
 // Ship identities, pickups, and point-blank resource economy.
 #macro SHIP_SUNRISE "ship_A"
@@ -126,9 +134,11 @@
 #macro RESOURCE_DROP_LIMIT_BASE 3
 #macro SCORE_PICKUP_DROP_PERIOD_BASE 9
 #macro RANK_MIN 0
-#macro RANK_MAX 100
+#macro RANK_MAX 50
 #macro RANK_DEFAULT 50
 #macro RANK_PASSIVE_INTERVAL 600
+#macro RANK_DEFEATS_PER_POINT 12
+#macro RANK_HYPER_GAIN 15
 #macro PRACTICE_SEGMENT_FULL "full"
 #macro PRACTICE_SEGMENT_WAVES "waves"
 #macro PRACTICE_SEGMENT_BOSS "boss"
@@ -137,6 +147,30 @@
 #macro ENEMY_VARIANT_WISP "wisp"
 #macro ENEMY_VARIANT_NEEDLE "needle"
 #macro ENEMY_VARIANT_MIRROR "mirror"
+#macro ENEMY_VARIANT_TIDEGLASS "tideglass"
+#macro ENEMY_VARIANT_SALTWIND "saltwind"
+#macro ENEMY_VARIANT_BRAMBLE "bramble"
+#macro ENEMY_VARIANT_BLOODTIDE "bloodtide"
+#macro ENEMY_FORGE_SPARK "forge_spark"
+#macro ENEMY_ANVIL_FAMILIAR "anvil_familiar"
+#macro ENEMY_BELLOWS_IMP "bellows_imp"
+#macro ENEMY_HAMMER_CHERUB "hammer_cherub"
+#macro ENEMY_RIBBON_HARE "ribbon_hare"
+#macro ENEMY_WINGED_STAFF "winged_staff"
+#macro ENEMY_LAVENDER_KNOT "lavender_knot"
+#macro ENEMY_SALTWIND_PINWHEEL "saltwind_pinwheel"
+#macro ENEMY_SPADE_FAMILIAR "spade_familiar"
+#macro ENEMY_DEALER_MASK "dealer_mask"
+#macro ENEMY_ORDER_TALISMAN "order_talisman"
+#macro ENEMY_CHAOS_SHARD "chaos_shard"
+#macro ENEMY_CLOCKWORK_PLANET "clockwork_planet"
+#macro ENEMY_ASTROLABE_EYE "astrolabe_eye"
+#macro ENEMY_CONSTELLATION_LANCE "constellation_lance"
+#macro ENEMY_BLOODSTAR_HEART "bloodstar_heart"
+#macro ENEMY_VIOLET_BEE "violet_bee"
+#macro ENEMY_TWILIGHT_MAYFLY "twilight_mayfly"
+#macro ENEMY_THORN_RELIQUARY "thorn_reliquary"
+#macro ENEMY_CHAKRAM_SERAPH "chakram_seraph"
 
 /// @func GameContinueStateCreate()
 /// Creates the runtime state used by the continue prompt.
@@ -171,7 +205,7 @@ function GamePracticeConfigCreateDefault() {
         stage: 1,
         segment: PRACTICE_SEGMENT_FULL,
         power: 3,
-        rank: RANK_DEFAULT,
+        rank: RANK_MIN,
         dynamic_rank: false,
         lives: DEFAULT_LIVES,
         bombs: DEFAULT_BOMBS,
@@ -243,6 +277,16 @@ function GamePracticeSegmentNameGet(_segment) {
     }
 
     return "Full Stage";
+}
+
+/// @func GamePracticeSegmentNameForStageGet(segment, stage)
+/// Names the boss seam honestly on chapters that end in a pattern gauntlet.
+function GamePracticeSegmentNameForStageGet(_segment, _stage) {
+    if (_segment == PRACTICE_SEGMENT_BOSS && !GameStageHasCharacterBoss(_stage)) {
+        return "Finale Wave";
+    }
+
+    return GamePracticeSegmentNameGet(_segment);
 }
 
 /// @func GamePauseInputSnapshotCreate(up, down, left, right, fire, bomb, pause)
@@ -395,7 +439,7 @@ function GamePauseStateStep(_state, _input, _practice) {
             break;
 
         case "options":
-            var _options = GameTitleConfigEntriesCreate();
+            var _options = GameTitleConfigEntriesCreate(false);
             var _options_count = array_length(_options);
             _state.options_index = GameMenuIndexStep(
                 _state.options_index, _input.up, _input.down, _options_count + 1);
@@ -448,9 +492,9 @@ function GamePauseStateStep(_state, _input, _practice) {
     return _result;
 }
 
-/// @func GamePauseDrawRow(x, y, width, label, value, selected)
+/// @func GamePauseDrawRow(x, y, width, label, value, selected, meter_ratio)
 /// Draws one textbox-styled pause row.
-function GamePauseDrawRow(_x, _y, _width, _label, _value, _selected) {
+function GamePauseDrawRow(_x, _y, _width, _label, _value, _selected, _meter_ratio = -1) {
     var _style = GameTitlePanelStyleCreate(_selected);
     GameUiDrawOrnateFrame(_x, _y, _width, 26, _style.fill_color, _style.fill_alpha,
         _style.border_color, _selected);
@@ -463,6 +507,11 @@ function GamePauseDrawRow(_x, _y, _width, _label, _value, _selected) {
     if (_value != "") {
         draw_set_halign(fa_right);
         GameUiDrawOutlinedText(_value, _x + _width - 10, _y + 14, _style.text_color);
+    }
+
+    if (_meter_ratio >= 0) {
+        GameUiDrawVolumeGauge(_x + 140, _x + _width - 58,
+            _y + 14, _meter_ratio, _selected);
     }
 }
 
@@ -497,12 +546,17 @@ function GamePauseDraw(_state) {
 
         case "options":
             GameUiDrawOutlinedText("Settings", GAME_VIEW_HALF_WIDTH, 62, _palette.title_color);
-            var _options = GameTitleConfigEntriesCreate();
+            var _options = GameTitleConfigEntriesCreate(false);
+            var _options_start_y = 78;
+            var _options_gap = 34;
             for (var o = 0; o < array_length(_options); o++) {
-                GamePauseDrawRow(170, 112 + (o * 46), 300, _options[o].label, _options[o].value,
-                    o == _state.options_index);
+                var _option_ratio = struct_exists(_options[o], "meter_ratio")
+                    ? _options[o].meter_ratio : -1;
+                GamePauseDrawRow(170, _options_start_y + (o * _options_gap), 300,
+                    _options[o].label, _options[o].value,
+                    o == _state.options_index, _option_ratio);
             }
-            GamePauseDrawRow(170, 112 + (array_length(_options) * 46), 300, "Back", "",
+            GamePauseDrawRow(170, _options_start_y + (array_length(_options) * _options_gap), 300, "Back", "",
                 _state.options_index == array_length(_options));
             break;
 
@@ -535,9 +589,23 @@ function GamePauseDraw(_state) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("Arrows / D-pad move   Z / A confirm",
-        GAME_VIEW_HALF_WIDTH, 306, _palette.muted_text_color);
-    GameUiDrawOutlinedText("X / B back   Esc / Start resume",
+    var _help_line = "Move to select   " + GameInputActiveBindingLabel("fire") + " confirms";
+    switch (_state.page) {
+        case "options":
+        case "practice":
+            _help_line = "Move to select / adjust   "
+                + GameInputActiveBindingLabel("fire") + " toggles";
+            break;
+
+        case "quit_confirm":
+            _help_line = "Move left / right to choose   "
+                + GameInputActiveBindingLabel("fire") + " confirms";
+            break;
+    }
+    GameUiDrawOutlinedText(_help_line, GAME_VIEW_HALF_WIDTH, 306,
+        _palette.muted_text_color);
+    GameUiDrawOutlinedText(GameInputActiveBindingLabel("bomb") + " returns   "
+        + GameInputActiveBindingLabel("pause") + " resumes",
         GAME_VIEW_HALF_WIDTH, 322, _palette.muted_text_color);
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
@@ -731,6 +799,24 @@ function GameRankStep() {
     return GameRankGet();
 }
 
+/// @func GameRankDefeatRewardApply()
+/// Converts ordinary shootdowns into deliberately slow one-point rank gains.
+function GameRankDefeatRewardApply() {
+    GameRuntimeGameplayEnsure();
+
+    if (!GameRankDynamicEnabled()) {
+        return GameRankGet();
+    }
+
+    global.game_runtime.rank_defeats += 1;
+    if (global.game_runtime.rank_defeats >= RANK_DEFEATS_PER_POINT) {
+        global.game_runtime.rank_defeats -= RANK_DEFEATS_PER_POINT;
+        GameRankEventApply(1);
+    }
+
+    return GameRankGet();
+}
+
 /// @func GameRankPressureCreate(rank)
 /// Converts rank into stable spawn, fire-cadence, and bullet-speed multipliers.
 function GameRankPressureCreate(_rank = undefined) {
@@ -762,6 +848,44 @@ function GameRankFireIntervalGet(_base_interval, _minimum = 1, _rank = undefined
 /// Returns the current enemy-bullet speed multiplier.
 function GameRankBulletSpeedScaleGet(_rank = undefined) {
     return GameRankPressureCreate(_rank).bullet_speed_scale;
+}
+
+/// @func GameBladeMotionStepCreate(radius, radial_speed, turn_speed, rank_speed_scale)
+/// Converts authored spiral values into one bounded screen-space motion step.
+/// Authored turn values are expressive pattern weights, not literal degrees per
+/// frame: applying them literally makes outer blades cross dozens of pixels in
+/// one step. The chord calculation below keeps every spiral below the same fair
+/// velocity ceiling while preserving its rotation direction and overall shape.
+function GameBladeMotionStepCreate(_radius, _radial_speed, _turn_speed, _rank_speed_scale = 1) {
+    var _old_radius = max(0, _radius);
+    var _radial_step = clamp(abs(_radial_speed) * max(0, _rank_speed_scale),
+        0, min(BLADE_MAX_RADIAL_SPEED, BLADE_MAX_SCREEN_SPEED));
+    var _new_radius = _old_radius + _radial_step;
+    var _desired_turn = abs(_turn_speed) * BLADE_TURN_RATE_SCALE;
+    var _turn_step = _desired_turn;
+
+    if (_old_radius > 0 && _new_radius > 0) {
+        var _cos_limit = ((_old_radius * _old_radius) + (_new_radius * _new_radius)
+            - (BLADE_MAX_SCREEN_SPEED * BLADE_MAX_SCREEN_SPEED))
+            / (2 * _old_radius * _new_radius);
+
+        if (_cos_limit >= 1) {
+            _turn_step = 0;
+        } else if (_cos_limit > -1) {
+            _turn_step = min(_desired_turn, arccos(_cos_limit) * (180 / pi));
+        }
+    }
+
+    var _turn_radians = _turn_step * (pi / 180);
+    var _screen_step = sqrt(max(0,
+        (_old_radius * _old_radius) + (_new_radius * _new_radius)
+        - (2 * _old_radius * _new_radius * cos(_turn_radians))));
+
+    return {
+        radial_step: _radial_step,
+        turn_step: _turn_step,
+        screen_step: _screen_step,
+    };
 }
 
 /// @func GameRunStartInitialize()
@@ -816,7 +940,7 @@ function GameRunStartInitialize() {
     global.game_runtime.bombs = DEFAULT_BOMBS;
     global.game_runtime.meter = 0;
     global.game_runtime.is_berserk = false;
-    global.game_runtime.rank = RANK_DEFAULT;
+    global.game_runtime.rank = RANK_MIN;
     global.game_runtime.rank_locked = false;
     global.game_runtime.resource_drop_threshold = GameResourceDropChargeThresholdGet(1);
 
@@ -888,12 +1012,21 @@ function GamePracticeSceneStateApply(_state) {
     _state.stage_clear_timer = 0;
 
     if (_practice.segment == PRACTICE_SEGMENT_BOSS) {
-        _state.frame = STAGE_LENGTH_FRAMES;
-        _state.camera_y = CAMERA_HOME_Y - STAGE_LENGTH_FRAMES;
-        _state.scroll_speed = 0;
-        _state.mode = "boss_intro";
-        global.game_runtime.stage_frame = STAGE_LENGTH_FRAMES;
-        global.game_runtime.stage_notice_timer = 0;
+        if (GameStageHasCharacterBoss(_practice.stage)) {
+            _state.frame = STAGE_LENGTH_FRAMES;
+            _state.camera_y = CAMERA_HOME_Y - STAGE_LENGTH_FRAMES;
+            _state.scroll_speed = 0;
+            _state.mode = "boss_intro";
+            global.game_runtime.stage_frame = STAGE_LENGTH_FRAMES;
+            global.game_runtime.stage_notice_timer = 0;
+        } else {
+            // Removed abstract bosses leave their signature patterns behind as
+            // the last ten seconds of a normal enemy gauntlet.
+            _state.frame = STAGE_LENGTH_FRAMES - 600;
+            _state.camera_y = CAMERA_HOME_Y - _state.frame;
+            global.game_runtime.stage_frame = _state.frame;
+            global.game_runtime.stage_notice_timer = 0;
+        }
     } else {
         global.game_runtime.stage_notice_timer = STAGE_NOTICE_FRAMES;
     }
@@ -921,25 +1054,58 @@ function GameStageIsFinal() {
     return GameCurrentStageGet() >= STAGE_COUNT;
 }
 
+/// @func GameStageHasCharacterBoss(stage)
+/// Only the five guardian girls and the selected route's lover are bosses.
+function GameStageHasCharacterBoss(_stage) {
+    _stage = clamp(_stage, 1, STAGE_COUNT);
+    return _stage >= STAGE_COUNT || is_struct(GameCharacterBossInfoCreate(_stage));
+}
+
 /// @func GameStageInfoGet(stage)
-/// Returns display metadata for one of the ten stage chapters.
+/// Returns display metadata for one of the five stage chapters.
 function GameStageInfoGet(_stage) {
     _stage = clamp(_stage, 1, STAGE_COUNT);
 
     var _stages = [
-        { name: "Moonlit Garden", subtitle: "the first tide answers", accent: make_color_rgb(118, 226, 255) },
-        { name: "Petal Shoal", subtitle: "flowers blooming under glass", accent: make_color_rgb(255, 146, 212) },
-        { name: "Glass Reef", subtitle: "where reflected stars bite back", accent: make_color_rgb(126, 255, 196) },
-        { name: "Sunken Chapel", subtitle: "bells ring below the wake", accent: make_color_rgb(198, 166, 255) },
-        { name: "Aurora Breakwater", subtitle: "a bright wall across the dark", accent: make_color_rgb(255, 214, 112) },
-        { name: "Grief-Tide Observatory", subtitle: "orbiting what was lost", accent: make_color_rgb(112, 196, 255) },
-        { name: "Needle Rain Coast", subtitle: "every wish returns sharpened", accent: make_color_rgb(255, 116, 116) },
-        { name: "Luminous Abyss", subtitle: "light surviving without sky", accent: make_color_rgb(92, 255, 232) },
-        { name: "Where Wishes Drift", subtitle: "the sea keeps every promise", accent: make_color_rgb(238, 172, 255) },
-        { name: "Until We Meet Again", subtitle: "the chase reaches moonrise", accent: make_color_rgb(255, 236, 138) },
+        { name: "Shalmii's Runebound Garden", subtitle: "old tides ring beneath the first lock", accent: make_color_rgb(255, 214, 112) },
+        { name: "Aster's Ribbon-Saltwind Coast", subtitle: "a soft wish dances through sharpened air", accent: make_color_rgb(255, 146, 212) },
+        { name: "Mira & Aisha's Velvet Wishcourt", subtitle: "chance and desire share one hand", accent: make_color_rgb(112, 196, 255) },
+        { name: "Caelia's Bloodstar Orrery", subtitle: "every orbit guards the violet gate", accent: make_color_rgb(238, 172, 255) },
+        { name: "The Violet Garden at Moonrise", subtitle: "Sunset finally catches Sunrise", accent: make_color_rgb(255, 236, 138) },
     ];
 
     return _stages[_stage - 1];
+}
+
+/// @func GameStageBackgroundThemeCreate(stage)
+/// Returns the palette and architectural motif for the infinite perspective set.
+function GameStageBackgroundThemeCreate(_stage) {
+    var _themes = [
+        { motif: "runes", sky_top: make_color_rgb(20, 12, 30), sky_bottom: make_color_rgb(94, 58, 46), floor: make_color_rgb(46, 30, 44), accent: make_color_rgb(255, 214, 112) },
+        { motif: "ribbons", sky_top: make_color_rgb(16, 10, 34), sky_bottom: make_color_rgb(82, 42, 92), floor: make_color_rgb(34, 32, 64), accent: make_color_rgb(255, 146, 212) },
+        { motif: "duet", sky_top: make_color_rgb(12, 8, 34), sky_bottom: make_color_rgb(72, 30, 92), floor: make_color_rgb(28, 34, 70), accent: make_color_rgb(112, 196, 255) },
+        { motif: "orrery", sky_top: make_color_rgb(12, 4, 26), sky_bottom: make_color_rgb(76, 18, 70), floor: make_color_rgb(32, 16, 58), accent: make_color_rgb(238, 172, 255) },
+        { motif: "violets", sky_top: make_color_rgb(10, 4, 24), sky_bottom: make_color_rgb(62, 24, 84), floor: make_color_rgb(28, 16, 52), accent: make_color_rgb(194, 126, 255) },
+    ];
+
+    return _themes[clamp(_stage, 1, STAGE_COUNT) - 1];
+}
+
+/// @func GameStageLegacyPatternStageGet(stage, frame)
+/// Maps each consolidated stage section onto the old wave/pattern material.
+function GameStageLegacyPatternStageGet(_stage, _frame = 0) {
+    _stage = clamp(_stage, 1, STAGE_COUNT);
+    var _progress = clamp(_frame / max(1, STAGE_LENGTH_FRAMES), 0, 0.9999);
+
+    switch (_stage) {
+        case 1: return 1 + floor(_progress * 2);       // old 1-2
+        case 2: return 3 + floor(_progress * 2);       // old 3-4
+        case 3: return 5 + floor(_progress * 3);       // old 5-7
+        case 4: return 8 + floor(_progress * 2);       // old 8-9
+        case 5: return 10;                             // old 10
+    }
+
+    return 1;
 }
 
 /// @func GameStageNoticeRestart()
@@ -1005,9 +1171,14 @@ function GameSceneStageAdvance(_state) {
     global.game_runtime.stage_frame = _state.frame;
 
     if (_state.frame >= _state.stage_length_frames) {
-        _state.mode = "boss_intro";
         _state.scroll_speed = 0;
-        return "boss_intro";
+        if (GameStageHasCharacterBoss(GameCurrentStageGet())) {
+            _state.mode = "boss_intro";
+            return "boss_intro";
+        }
+
+        _state.mode = "stage_complete";
+        return "stage_complete";
     }
 
     return "none";
@@ -1190,6 +1361,75 @@ function GameEnemyBulletLinearSpawn(_x, _y, _direction, _speed, _object_index = 
     return _bullet;
 }
 
+/// @func GameEnemyBulletFlashAlphaGet(age, phase)
+/// Returns a restrained readability pulse for every enemy projectile.
+function GameEnemyBulletFlashAlphaGet(_age, _phase = 0) {
+    return 0.045 + (0.055 * (0.5 + (0.5 * dsin((_age * 7.2) + _phase))));
+}
+
+/// @func GameStageEnemyRosterCreate(stage)
+/// Returns four basic enemies authored specifically for one consolidated stage.
+/// Pattern ids name the Memory Core/boss family being miniaturized; none of the
+/// old basic-enemy identities are used as presentation authority.
+function GameStageEnemyRosterCreate(_stage) {
+    switch (clamp(_stage, 1, STAGE_COUNT)) {
+        case 1:
+            return [
+                { id: ENEMY_FORGE_SPARK, name: "Forge Spark", role: "chaser", pattern: "tideglass_fan", shape: "spark", sprite: spr_enemy_forge_spark, accent: make_color_rgb(255, 174, 72), core: make_color_rgb(255, 238, 166) },
+                { id: ENEMY_ANVIL_FAMILIAR, name: "Anvil Familiar", role: "anchor", pattern: "tideglass_spiral", shape: "anvil", sprite: spr_enemy_anvil_familiar, accent: make_color_rgb(92, 112, 142), core: make_color_rgb(255, 156, 72) },
+                { id: ENEMY_BELLOWS_IMP, name: "Bellows Imp", role: "dancer", pattern: "shalmii_shockwave", shape: "bellows", sprite: spr_enemy_bellows_imp, accent: make_color_rgb(154, 72, 66), core: make_color_rgb(255, 214, 112) },
+                { id: ENEMY_HAMMER_CHERUB, name: "Hammer Cherub", role: "lancer", pattern: "shalmii_hammerfall", shape: "hammer", sprite: spr_enemy_hammer_cherub, accent: make_color_rgb(198, 166, 255), core: make_color_rgb(255, 214, 112) },
+            ];
+
+        case 2:
+            return [
+                { id: ENEMY_RIBBON_HARE, name: "Ribbon Hare", role: "chaser", pattern: "saltwind_gale", shape: "hare", sprite: spr_enemy_ribbon_hare, accent: make_color_rgb(255, 164, 218), core: make_color_rgb(224, 206, 255) },
+                { id: ENEMY_WINGED_STAFF, name: "Winged Staff", role: "anchor", pattern: "kelp_wall", shape: "staff", sprite: spr_enemy_winged_staff, accent: make_color_rgb(184, 154, 255), core: make_color_rgb(118, 236, 255) },
+                { id: ENEMY_LAVENDER_KNOT, name: "Lavender Knot", role: "dancer", pattern: "aster_ribbon_loop", shape: "knot", sprite: spr_enemy_lavender_knot, accent: make_color_rgb(214, 166, 255), core: make_color_rgb(255, 244, 220) },
+                { id: ENEMY_SALTWIND_PINWHEEL, name: "Saltwind Pinwheel", role: "lancer", pattern: "saltwind_spindrift", shape: "pinwheel", sprite: spr_enemy_saltwind_pinwheel, accent: make_color_rgb(126, 255, 196), core: make_color_rgb(255, 174, 234) },
+            ];
+
+        case 3:
+            return [
+                { id: ENEMY_SPADE_FAMILIAR, name: "Spade Familiar", role: "chaser", pattern: "mira_four_suits", shape: "spade", sprite: spr_enemy_spade_familiar, accent: make_color_rgb(255, 146, 212), core: make_color_rgb(24, 12, 42) },
+                { id: ENEMY_DEALER_MASK, name: "Dealer Mask", role: "anchor", pattern: "mira_dealer_fan", shape: "mask", sprite: spr_enemy_dealer_mask, accent: make_color_rgb(255, 214, 112), core: make_color_rgb(255, 244, 220) },
+                { id: ENEMY_ORDER_TALISMAN, name: "Order Talisman", role: "dancer", pattern: "aisha_order_circle", shape: "talisman", sprite: spr_enemy_order_talisman, accent: make_color_rgb(112, 196, 255), core: make_color_rgb(255, 214, 112) },
+                { id: ENEMY_CHAOS_SHARD, name: "Chaos Shard", role: "lancer", pattern: "aisha_chaos_shards", shape: "shard", sprite: spr_enemy_chaos_shard, accent: make_color_rgb(118, 236, 255), core: make_color_rgb(255, 96, 196) },
+            ];
+
+        case 4:
+            return [
+                { id: ENEMY_CLOCKWORK_PLANET, name: "Clockwork Planet", role: "chaser", pattern: "bloodtide_pulse", shape: "planet", sprite: spr_enemy_clockwork_planet, accent: make_color_rgb(238, 172, 255), core: make_color_rgb(255, 92, 126) },
+                { id: ENEMY_ASTROLABE_EYE, name: "Astrolabe Eye", role: "anchor", pattern: "caelia_astrolabe", shape: "astrolabe", sprite: spr_enemy_astrolabe_eye, accent: make_color_rgb(255, 214, 112), core: make_color_rgb(118, 236, 255) },
+                { id: ENEMY_CONSTELLATION_LANCE, name: "Constellation Lance", role: "dancer", pattern: "caelia_constellation", shape: "constellation", sprite: spr_enemy_constellation_lance, accent: make_color_rgb(188, 176, 255), core: make_color_rgb(255, 244, 220) },
+                { id: ENEMY_BLOODSTAR_HEART, name: "Bloodstar Heart", role: "lancer", pattern: "bloodtide_hunt", shape: "heart", sprite: spr_enemy_bloodstar_heart, accent: make_color_rgb(255, 72, 116), core: make_color_rgb(255, 210, 112) },
+            ];
+
+        case 5:
+            return [
+                { id: ENEMY_VIOLET_BEE, name: "Violet Bee", role: "chaser", pattern: "rose_thorn_arc", shape: "bee", sprite: spr_violet_bee, accent: make_color_rgb(255, 214, 112), core: make_color_rgb(194, 126, 255) },
+                { id: ENEMY_TWILIGHT_MAYFLY, name: "Twilight Mayfly", role: "dancer", pattern: "rose_petal_spiral", shape: "mayfly", sprite: spr_twilight_mayfly, accent: make_color_rgb(118, 236, 255), core: make_color_rgb(255, 132, 92) },
+                { id: ENEMY_THORN_RELIQUARY, name: "Thorn Reliquary", role: "anchor", pattern: "rose_bloom", shape: "reliquary", sprite: spr_enemy_thorn_reliquary, accent: make_color_rgb(255, 96, 196), core: make_color_rgb(88, 210, 150) },
+                { id: ENEMY_CHAKRAM_SERAPH, name: "Chakram Seraph", role: "lancer", pattern: "chakram_orbit", shape: "chakram", sprite: spr_enemy_chakram_seraph, accent: make_color_rgb(255, 174, 234), core: make_color_rgb(118, 236, 255) },
+            ];
+    }
+
+    return [];
+}
+
+/// @func GameStageEnemyDefinitionGet(stage, enemy_id)
+/// Resolves one stage-authored enemy definition by id.
+function GameStageEnemyDefinitionGet(_stage, _enemy_id) {
+    var _roster = GameStageEnemyRosterCreate(_stage);
+    for (var i = 0; i < array_length(_roster); i++) {
+        if (_roster[i].id == _enemy_id) {
+            return _roster[i];
+        }
+    }
+
+    return (array_length(_roster) > 0) ? _roster[0] : undefined;
+}
+
 /// @func GameEnemyVariantConfigure(enemy, kind, stage, slot, slot_count)
 /// Applies variant stats and an initial stage-scaled movement profile.
 function GameEnemyVariantConfigure(_enemy, _kind, _stage, _slot = 0, _slot_count = 1) {
@@ -1198,7 +1438,19 @@ function GameEnemyVariantConfigure(_enemy, _kind, _stage, _slot = 0, _slot_count
     }
 
     _stage = clamp(_stage, 1, STAGE_COUNT);
-    _enemy.variant_kind = _kind;
+    var _definition = GameStageEnemyDefinitionGet(_stage, _kind);
+    if (!is_struct(_definition)) {
+        return noone;
+    }
+
+    _enemy.variant_kind = _definition.id;
+    _enemy.enemy_name = _definition.name;
+    _enemy.variant_role = _definition.role;
+    _enemy.pattern_kind = _definition.pattern;
+    _enemy.draw_shape = _definition.shape;
+    _enemy.variant_sprite = _definition.sprite;
+    _enemy.accent_color = _definition.accent;
+    _enemy.core_color = _definition.core;
     _enemy.stage_rank = _stage;
     _enemy.slot_index = _slot;
     _enemy.slot_count = max(1, _slot_count);
@@ -1208,42 +1460,35 @@ function GameEnemyVariantConfigure(_enemy, _kind, _stage, _slot = 0, _slot_count
     _enemy.wave_phase = irandom(359);
     _enemy.anchor_offset_x = 0;
     _enemy.anchor_offset_y = 0;
+    _enemy.flyaway_committed = false;
     _enemy.hit_radius = 18;
-    _enemy.points = 900 + (_stage * 60);
+    _enemy.points = 900 + (_stage * 90);
     _enemy.hp = 14 + (_stage * 2);
     _enemy.move_direction = 270;
-    _enemy.move_speed = 0.95 + (_stage * 0.04);
+    _enemy.move_speed = 1.05 + (_stage * 0.04);
 
-    switch (_kind) {
-        case ENEMY_VARIANT_KELP:
-            _enemy.hp = 32 + (_stage * 3);
-            _enemy.points = 1500 + (_stage * 90);
+    switch (_definition.role) {
+        case "anchor":
+            _enemy.hp = 30 + (_stage * 3);
+            _enemy.points = 1600 + (_stage * 110);
             _enemy.hit_radius = 20;
-            _enemy.move_speed = 0.42;
-            _enemy.fire_interval = max(54, 112 - (_stage * 4));
+            _enemy.move_speed = 0.36;
+            _enemy.fire_interval = max(48, 98 - (_stage * 4));
             break;
 
-        case ENEMY_VARIANT_WISP:
-            _enemy.hp = 22 + (_stage * 2);
-            _enemy.points = 1300 + (_stage * 75);
-            _enemy.hit_radius = 16;
+        case "dancer":
+            _enemy.hp = 22 + (_stage * 3);
+            _enemy.points = 1350 + (_stage * 100);
+            _enemy.hit_radius = 17;
             _enemy.move_speed = 0;
-            _enemy.fire_interval = max(42, 84 - (_stage * 3));
+            _enemy.fire_interval = max(40, 82 - (_stage * 3));
             break;
 
-        case ENEMY_VARIANT_NEEDLE:
+        case "lancer":
             _enemy.hp = 12 + _stage;
-            _enemy.points = 800 + (_stage * 65);
+            _enemy.points = 1050 + (_stage * 85);
             _enemy.hit_radius = 14;
-            _enemy.move_speed = 2.05 + (_stage * 0.06);
-            _enemy.fire_interval = max(58, 98 - (_stage * 3));
-            break;
-
-        case ENEMY_VARIANT_MIRROR:
-            _enemy.hp = 34 + (_stage * 3);
-            _enemy.points = 1800 + (_stage * 120);
-            _enemy.hit_radius = 22;
-            _enemy.move_speed = 0.5;
+            _enemy.move_speed = 2.0 + (_stage * 0.07);
             _enemy.fire_interval = max(48, 92 - (_stage * 3));
             break;
     }
@@ -1255,6 +1500,38 @@ function GameEnemyVariantConfigure(_enemy, _kind, _stage, _slot = 0, _slot_count
     }
 
     return _enemy;
+}
+
+/// @func GameStageEnemyBulletDecorate(bullet, enemy_id)
+/// Assigns the final-stage insects their own readable projectile silhouettes.
+function GameStageEnemyBulletDecorate(_bullet, _enemy_id) {
+    if (!instance_exists(_bullet)) {
+        return noone;
+    }
+
+    switch (_enemy_id) {
+        case ENEMY_VIOLET_BEE:
+            _bullet.sprite_index = spr_violet_bee_bullet;
+            _bullet.image_xscale = 1;
+            _bullet.image_yscale = 1;
+            break;
+
+        case ENEMY_TWILIGHT_MAYFLY:
+            _bullet.sprite_index = spr_twilight_mayfly_bullet;
+            _bullet.image_xscale = 1;
+            _bullet.image_yscale = 1;
+            break;
+    }
+
+    return _bullet;
+}
+
+/// @func GameStageEnemyBulletSpawn(enemy_id, x, y, direction, speed, object_index)
+/// Spawns a linear bullet and applies its stage-family presentation.
+function GameStageEnemyBulletSpawn(_enemy_id, _x, _y, _direction, _speed, _object_index = obj_bullet_bead) {
+    return GameStageEnemyBulletDecorate(
+        GameEnemyBulletLinearSpawn(_x, _y, _direction, _speed, _object_index),
+        _enemy_id);
 }
 
 /// @func GameStageTimelineVariantWaveSpawn(camera_x, camera_y, kind, count)
@@ -1277,6 +1554,34 @@ function GameStageTimelineVariantWaveSpawn(_camera_x, _camera_y, _kind, _count =
     return _spawned;
 }
 
+/// @func GameStageBasicEnemyWaveSpawn(camera_x, camera_y, stage, roster_index, count)
+/// Spawns one wave from the active stage's four bespoke basic-enemy families.
+function GameStageBasicEnemyWaveSpawn(_camera_x, _camera_y, _stage, _roster_index, _count = 1) {
+    var _roster = GameStageEnemyRosterCreate(_stage);
+    if (array_length(_roster) <= 0) {
+        return 0;
+    }
+
+    _roster_index = clamp(round(_roster_index), 0, array_length(_roster) - 1);
+    return GameStageTimelineVariantWaveSpawn(
+        _camera_x, _camera_y, _roster[_roster_index].id, max(1, _count));
+}
+
+/// @func GameStageEliteVariantKindGet(stage, cycle)
+/// Rehomes the four removed abstract-boss pattern families on elite enemies.
+function GameStageEliteVariantKindGet(_stage, _cycle = 0) {
+    switch (clamp(_stage, 1, LEGACY_STAGE_COUNT)) {
+        case 1: return ENEMY_VARIANT_TIDEGLASS;
+        case 3: return ENEMY_VARIANT_SALTWIND;
+        case 4: return ENEMY_VARIANT_BRAMBLE;
+        case 8: return ENEMY_VARIANT_BLOODTIDE;
+    }
+
+    var _elites = [ENEMY_VARIANT_TIDEGLASS, ENEMY_VARIANT_SALTWIND,
+        ENEMY_VARIANT_BRAMBLE, ENEMY_VARIANT_BLOODTIDE];
+    return _elites[abs(_stage + _cycle) mod array_length(_elites)];
+}
+
 /// @func GameStageDirectorStep(state)
 /// Runs the per-stage wave director for the active scrolling section.
 function GameStageDirectorStep(_state) {
@@ -1286,6 +1591,7 @@ function GameStageDirectorStep(_state) {
 
     var _stage = GameCurrentStageGet();
     var _frame = _state.frame;
+    var _pattern_stage = GameStageLegacyPatternStageGet(_stage, _frame);
     var _spawned = 0;
 
     if (_frame < 45) {
@@ -1293,47 +1599,28 @@ function GameStageDirectorStep(_state) {
     }
 
     var _rank = GameRankGet();
-    var _turret_interval = GameRankSpawnIntervalGet(max(58, 132 - (_stage * 6)), 44, _rank);
-    var _bee_interval = GameRankSpawnIntervalGet(max(72, 156 - (_stage * 5)), 54, _rank);
-    var _variant_interval = GameRankSpawnIntervalGet(max(88, 188 - (_stage * 6)), 66, _rank);
-    var _mayfly_interval = GameRankSpawnIntervalGet(max(210, 460 - (_stage * 18)), 160, _rank);
+    var _chaser_interval = GameRankSpawnIntervalGet(max(64, 142 - (_pattern_stage * 5)), 48, _rank);
+    var _anchor_interval = GameRankSpawnIntervalGet(max(126, 252 - (_pattern_stage * 8)), 92, _rank);
+    var _dancer_interval = GameRankSpawnIntervalGet(max(96, 206 - (_pattern_stage * 7)), 72, _rank);
+    var _lancer_interval = GameRankSpawnIntervalGet(max(148, 302 - (_pattern_stage * 9)), 108, _rank);
 
-    if ((_frame mod _turret_interval) == 0) {
-        GameStageTimelineTurretSpawn(_state.target_x, _state.camera_y);
-        _spawned += 1;
+    if ((_frame mod _chaser_interval) == 0) {
+        _spawned += GameStageBasicEnemyWaveSpawn(
+            _state.target_x, _state.camera_y, _stage, 0, 2 + (_pattern_stage >= 6));
     }
 
-    if (((_frame + 30) mod _bee_interval) == 0) {
-        _spawned += GameStageTimelineBeeWaveSpawn(_state.target_x, _state.camera_y);
+    if (((_frame + 41) mod _anchor_interval) == 0) {
+        _spawned += GameStageBasicEnemyWaveSpawn(_state.target_x, _state.camera_y, _stage, 1, 1);
     }
 
-    if (_stage >= 2 && (((_frame + (_stage * 17)) mod _variant_interval) == 0)) {
-        var _kind = ENEMY_VARIANT_MOTH;
-
-        switch (((_stage + (_frame div _variant_interval)) mod 5)) {
-            case 1:
-                _kind = ENEMY_VARIANT_KELP;
-                break;
-
-            case 2:
-                _kind = ENEMY_VARIANT_WISP;
-                break;
-
-            case 3:
-                _kind = ENEMY_VARIANT_NEEDLE;
-                break;
-
-            case 4:
-                _kind = ENEMY_VARIANT_MIRROR;
-                break;
-        }
-
-        _spawned += GameStageTimelineVariantWaveSpawn(_state.target_x, _state.camera_y, _kind, 1 + min(2, _stage div 4));
+    if (((_frame + 83 + (_pattern_stage * 7)) mod _dancer_interval) == 0) {
+        _spawned += GameStageBasicEnemyWaveSpawn(
+            _state.target_x, _state.camera_y, _stage, 2, 1 + (_pattern_stage >= 8));
     }
 
-    if (_stage >= 3 && (((_frame + 90) mod _mayfly_interval) == 0)) {
-        GameStageTimelineMayflySpawn(_state.target_x, _state.camera_y);
-        _spawned += 1;
+    if (((_frame + 127 + (_pattern_stage * 11)) mod _lancer_interval) == 0) {
+        _spawned += GameStageBasicEnemyWaveSpawn(
+            _state.target_x, _state.camera_y, _stage, 3, 1 + (_pattern_stage >= 10));
     }
 
     return _spawned;
@@ -1343,46 +1630,51 @@ function GameStageDirectorStep(_state) {
 /// Estimates whether one stage stays inside no-continue clearability bounds.
 function GameStageBalanceReportCreate(_stage, _rank = RANK_DEFAULT) {
     _stage = clamp(_stage, 1, STAGE_COUNT);
+    // Use the newest legacy section in the consolidated chapter for a
+    // deliberately conservative pressure/viability estimate.
+    var _pattern_stage = GameStageLegacyPatternStageGet(_stage, STAGE_LENGTH_FRAMES - 1);
 
-    var _turret_interval = GameRankSpawnIntervalGet(max(58, 132 - (_stage * 6)), 44, _rank);
-    var _bee_interval = GameRankSpawnIntervalGet(max(72, 156 - (_stage * 5)), 54, _rank);
-    var _variant_interval = GameRankSpawnIntervalGet(max(88, 188 - (_stage * 6)), 66, _rank);
-    var _mayfly_interval = GameRankSpawnIntervalGet(max(210, 460 - (_stage * 18)), 160, _rank);
-    var _turret_count = 0;
-    var _bee_count = 0;
-    var _variant_count = 0;
-    var _mayfly_count = 0;
-    var _variant_wave_size = 1 + min(2, _stage div 4);
+    var _chaser_interval = GameRankSpawnIntervalGet(max(64, 142 - (_pattern_stage * 5)), 48, _rank);
+    var _anchor_interval = GameRankSpawnIntervalGet(max(126, 252 - (_pattern_stage * 8)), 92, _rank);
+    var _dancer_interval = GameRankSpawnIntervalGet(max(96, 206 - (_pattern_stage * 7)), 72, _rank);
+    var _lancer_interval = GameRankSpawnIntervalGet(max(148, 302 - (_pattern_stage * 9)), 108, _rank);
+    var _chaser_count = 0;
+    var _anchor_count = 0;
+    var _dancer_count = 0;
+    var _lancer_count = 0;
+    var _chaser_wave_size = 2 + (_pattern_stage >= 6);
+    var _dancer_wave_size = 1 + (_pattern_stage >= 8);
+    var _lancer_wave_size = 1 + (_pattern_stage >= 10);
 
     for (var frame = 45; frame < STAGE_LENGTH_FRAMES; frame++) {
-        if ((frame mod _turret_interval) == 0) {
-            _turret_count += 1;
+        if ((frame mod _chaser_interval) == 0) {
+            _chaser_count += _chaser_wave_size;
         }
 
-        if (((frame + 30) mod _bee_interval) == 0) {
-            _bee_count += STAGE_BEE_WAVE_COUNT;
+        if (((frame + 41) mod _anchor_interval) == 0) {
+            _anchor_count += 1;
         }
 
-        if (_stage >= 2 && (((frame + (_stage * 17)) mod _variant_interval) == 0)) {
-            _variant_count += _variant_wave_size;
+        if (((frame + 83 + (_pattern_stage * 7)) mod _dancer_interval) == 0) {
+            _dancer_count += _dancer_wave_size;
         }
 
-        if (_stage >= 3 && (((frame + 90) mod _mayfly_interval) == 0)) {
-            _mayfly_count += 1;
+        if (((frame + 127 + (_pattern_stage * 11)) mod _lancer_interval) == 0) {
+            _lancer_count += _lancer_wave_size;
         }
     }
 
-    var _total_enemy_count = _turret_count + _bee_count + _variant_count + _mayfly_count;
+    var _total_enemy_count = _chaser_count + _anchor_count + _dancer_count + _lancer_count;
     var _score_drop_period = GameScorePickupDropPeriodGet(_stage);
     var _resource_drop_threshold = GameResourceDropChargeThresholdGet(_stage);
     var _resource_drop_limit = GameResourceDropLimitGet(_stage);
     var _estimated_score_pickups = _total_enemy_count div _score_drop_period;
     var _estimated_resource_pickups = min(_resource_drop_limit, _total_enemy_count div _resource_drop_threshold);
     var _estimated_powerups = _estimated_score_pickups + _estimated_resource_pickups;
-    var _max_spawn_pressure = ceil(300 / _turret_interval)
-        + (ceil(300 / _bee_interval) * STAGE_BEE_WAVE_COUNT)
-        + ((_stage >= 2) ? (ceil(300 / _variant_interval) * _variant_wave_size) : 0)
-        + ((_stage >= 3) ? (ceil(300 / _mayfly_interval) * 4) : 0);
+    var _max_spawn_pressure = (ceil(300 / _chaser_interval) * _chaser_wave_size)
+        + ceil(300 / _anchor_interval)
+        + (ceil(300 / _dancer_interval) * _dancer_wave_size)
+        + (ceil(300 / _lancer_interval) * _lancer_wave_size);
 
     var _sunrise_focus = GamePlayerShotSpawnSpecsCreate(0, 0, SHIP_SUNRISE, true, PLAYER_POWER_MAX);
     var _selkie_focus = GamePlayerShotSpawnSpecsCreate(0, 0, SHIP_SELKIE, true, PLAYER_POWER_MAX);
@@ -1400,14 +1692,16 @@ function GameStageBalanceReportCreate(_stage, _rank = RANK_DEFAULT) {
     var _boss_phase_count = GameBossPhaseCountForStage(_stage);
     var _boss_phase_hp = GameBossPhaseHpGet(_stage, _boss_phase_count);
     var _boss_damage_scale = GameBossDamageScaleGet(_boss_phase_count);
-    var _reliable_focus_damage = max(1, min(_sunrise_damage, _selkie_damage) * 0.62 * _boss_damage_scale);
+    var _reliable_focus_damage = max(1, min(_sunrise_damage, _selkie_damage) * _boss_damage_scale);
     var _maximum_focus_damage = max(1, max(_sunrise_damage, _selkie_damage) * _boss_damage_scale);
     var _boss_total_hp = _boss_phase_hp * _boss_phase_count;
     var _focus_boss_clear_frames = ceil(_boss_total_hp / _reliable_focus_damage) * SHOT_VOLLEY_INTERVAL;
     var _fastest_phase_clear_frames = ceil(_boss_phase_hp / _maximum_focus_damage) * SHOT_VOLLEY_INTERVAL;
+    var _expected_boss_frames = _boss_phase_count
+        * ((GameBossPhaseTargetSecondsGet(_stage) * 60) + BOSS_PHASE_TRANSITION_FRAMES);
     var _no_continue_viable = _estimated_score_pickups > 4
         && _max_spawn_pressure < 42
-        && _focus_boss_clear_frames < (60 * 70);
+        && _focus_boss_clear_frames <= (_expected_boss_frames * 1.08);
 
     return {
         stage: _stage,
@@ -1610,6 +1904,26 @@ function GameBossPhaseDisplayNameGet(_phase) {
     }
 
     var _id = string_lower(string(_phase.id));
+    // Attack banners name the spell itself; the boss identity already owns a
+    // dedicated gutter label and should not be repeated in limited playfield space.
+    var _boss_prefixes = [
+        "shalmii_", "aster_", "mira_", "aisha_", "caelia_",
+        "moon_", "selkie_", "sunset_", "sunrise_", "boss_"
+    ];
+    var _prefix_removed = true;
+
+    while (_prefix_removed) {
+        _prefix_removed = false;
+        for (var prefix = 0; prefix < array_length(_boss_prefixes); prefix++) {
+            var _prefix = _boss_prefixes[prefix];
+            if (string_pos(_prefix, _id) == 1) {
+                _id = string_delete(_id, 1, string_length(_prefix));
+                _prefix_removed = true;
+                break;
+            }
+        }
+    }
+
     var _variant_label = "";
     var _variant_pos = string_pos("_v", _id);
 
@@ -1673,15 +1987,14 @@ function GameBossExpandedPhaseCountForStage(_stage) {
         return FINAL_BOSS_EXPANDED_PHASE_COUNT;
     }
 
-    if (_stage <= 2) {
-        return 4;
+    switch (_stage) {
+        case 1: return 2;
+        case 2: return 4;
+        case DUAL_BOSS_STAGE: return 2;
+        case 4: return 6;
     }
 
-    if (_stage <= 6) {
-        return 6;
-    }
-
-    return 8;
+    return 2;
 }
 
 /// @func GameBossPhaseCountForStage(stage)
@@ -1699,8 +2012,39 @@ function GameBossPhaseHpGet(_stage, _phase_count = undefined) {
         _phase_count = GameBossPhaseCountForStage(_stage);
     }
 
-    var _original_total_hp = (BOSS_PHASE_HP + ((_stage - 1) * BOSS_PHASE_HP_STAGE_STEP)) * BOSS_PHASE_COUNT;
-    return max(BOSS_PHASE_MIN_HP, ceil(_original_total_hp / max(1, _phase_count)));
+    var _sunrise_focus = GamePlayerShotSpawnSpecsCreate(0, 0, SHIP_SUNRISE, true, PLAYER_POWER_MAX);
+    var _selkie_focus = GamePlayerShotSpawnSpecsCreate(0, 0, SHIP_SELKIE, true, PLAYER_POWER_MAX);
+    var _sunrise_damage = 0;
+    var _selkie_damage = 0;
+
+    for (var sunrise = 0; sunrise < array_length(_sunrise_focus); sunrise++) {
+        _sunrise_damage += _sunrise_focus[sunrise].damage;
+    }
+
+    for (var selkie = 0; selkie < array_length(_selkie_focus); selkie++) {
+        _selkie_damage += _selkie_focus[selkie].damage;
+    }
+
+    var _focus_damage_per_volley = max(1, min(_sunrise_damage, _selkie_damage));
+    var _focus_volleys_per_second = 60 / SHOT_VOLLEY_INTERVAL;
+    var _target_seconds = GameBossPhaseTargetSecondsGet(_stage);
+    var _damage_scale = GameBossDamageScaleGet(_phase_count);
+    return max(BOSS_PHASE_MIN_HP,
+        ceil(_focus_damage_per_volley * _focus_volleys_per_second
+            * _target_seconds * _damage_scale));
+}
+
+/// @func GameBossPhaseTargetSecondsGet(stage)
+/// Returns the intended full-power focused-fire lifetime of one attack pattern.
+function GameBossPhaseTargetSecondsGet(_stage) {
+    switch (clamp(_stage, 1, STAGE_COUNT)) {
+        case 1: return 12;
+        case 2: return 20;
+        case 3: return 22;
+        case 4: return 25;
+    }
+
+    return 28;
 }
 
 /// @func GameBossDamageScaleGet(phase_count)
@@ -1721,6 +2065,11 @@ function GameBossDamageApply(_boss, _damage) {
         return 0;
     }
 
+    if (variable_instance_exists(_boss, "phase_transition_timer")
+        && _boss.phase_transition_timer > 0) {
+        return 0;
+    }
+
     var _phase_count = variable_instance_exists(_boss, "phase_count") ? _boss.phase_count : BOSS_PHASE_COUNT;
     var _applied_damage = max(0, _damage) * GameBossDamageScaleGet(_phase_count);
     _boss.hp -= _applied_damage;
@@ -1730,7 +2079,7 @@ function GameBossDamageApply(_boss, _damage) {
 /// @func GameMemoryCoreNameGet(stage)
 /// Returns the display name for a non-final Memory Core.
 function GameMemoryCoreNameGet(_stage) {
-    switch (clamp(_stage, 1, STAGE_COUNT - 1)) {
+    switch (clamp(_stage, 1, LEGACY_STAGE_COUNT - 1)) {
         case 1: return "Tideglass Core";
         case 2: return "Lantern Core";
         case 3: return "Saltwind Core";
@@ -1749,7 +2098,7 @@ function GameMemoryCoreNameGet(_stage) {
 /// Returns the boss-specific seed phases for any non-final encounter. The
 /// legacy function name is retained because stage and practice data call it.
 function GameMemoryCoreBasePhasePlanCreate(_stage) {
-    switch (clamp(_stage, 1, STAGE_COUNT - 1)) {
+    switch (clamp(_stage, 1, LEGACY_STAGE_COUNT - 1)) {
         case 1:
             return [
                 GameMemoryCorePhaseCreate("tideglass_spiral", "blade_spiral", 24, 10, 0, 19, 0, 12, 1.55, 0),
@@ -1825,7 +2174,7 @@ function GameMemoryCoreBasePhasePlanCreate(_stage) {
 /// @func GameMemoryCoreFinalPhaseCreate(stage)
 /// Returns the one-off attack appended after every non-final seed and variant set.
 function GameMemoryCoreFinalPhaseCreate(_stage) {
-    switch (clamp(_stage, 1, STAGE_COUNT - 1)) {
+    switch (clamp(_stage, 1, LEGACY_STAGE_COUNT - 1)) {
         case 1:
             return GameMemoryCorePhaseCreate("tideglass_maelstrom_finale", "tideglass_maelstrom", 18, 18, 0, 23, 3.4, 15, 1.65, 96, 0, "tideglass");
 
@@ -1915,11 +2264,21 @@ function GameBossPhasePlanExpand(_seed_plan, _target_count) {
 /// @func GameMemoryCorePhasePlanCreate(stage)
 /// Returns the expanding unique phase descriptors for a non-final Memory Core.
 function GameMemoryCorePhasePlanCreate(_stage) {
-    _stage = clamp(_stage, 1, STAGE_COUNT - 1);
-    var _expanded_count = GameBossExpandedPhaseCountForStage(_stage);
+    _stage = clamp(_stage, 1, LEGACY_STAGE_COUNT - 1);
+    var _expanded_count = (_stage <= 2) ? 4 : ((_stage <= 6) ? 6 : 8);
     var _seed_plan = GameMemoryCoreBasePhasePlanCreate(_stage);
     var _phase_plan = GameBossPhasePlanExpand(_seed_plan, _expanded_count);
     array_push(_phase_plan, GameMemoryCoreFinalPhaseCreate(_stage));
+    return _phase_plan;
+}
+
+/// @func GameCharacterBossPhasePlanCreate(encounter_stage, pattern_stage)
+/// Fits a character's original motif plan to the new five-stage difficulty arc.
+function GameCharacterBossPhasePlanCreate(_encounter_stage, _pattern_stage) {
+    var _expanded_count = GameBossExpandedPhaseCountForStage(_encounter_stage);
+    var _seed_plan = GameMemoryCoreBasePhasePlanCreate(_pattern_stage);
+    var _phase_plan = GameBossPhasePlanExpand(_seed_plan, _expanded_count);
+    array_push(_phase_plan, GameMemoryCoreFinalPhaseCreate(_pattern_stage));
     return _phase_plan;
 }
 
@@ -2010,28 +2369,14 @@ function GameMemoryCorePhasePlanSignatureCreate(_phase_plan) {
 /// The encounter's original phase plan remains owned by its stage.
 function GameCharacterBossInfoCreate(_stage) {
     switch (clamp(_stage, 1, STAGE_COUNT)) {
-        case MIRA_BOSS_STAGE:
-            return {
-                story_id: "mira",
-                display_name: MIRA_BOSS_NAME,
-                ship_name: MIRA_SHIP_NAME,
-                sprite_id: spr_mira_ship,
-            };
-
         case SHALMII_BOSS_STAGE:
             return {
                 story_id: "shalmii",
                 display_name: SHALMII_BOSS_NAME,
                 ship_name: SHALMII_SHIP_NAME,
                 sprite_id: spr_shalmii_ship,
-            };
-
-        case AISHA_BOSS_STAGE:
-            return {
-                story_id: "aisha",
-                display_name: AISHA_BOSS_NAME,
-                ship_name: AISHA_SHIP_NAME,
-                sprite_id: spr_aisha_ship,
+                pattern_stage: 5,
+                is_dual: false,
             };
 
         case ASTER_BOSS_STAGE:
@@ -2040,6 +2385,18 @@ function GameCharacterBossInfoCreate(_stage) {
                 display_name: ASTER_BOSS_NAME,
                 ship_name: ASTER_SHIP_NAME,
                 sprite_id: spr_aster_ship,
+                pattern_stage: 7,
+                is_dual: false,
+            };
+
+        case DUAL_BOSS_STAGE:
+            return {
+                story_id: "mira_aisha",
+                display_name: "Mira & Aisha",
+                ship_name: "Wildheart / Wishbound",
+                sprite_id: spr_mira_ship,
+                pattern_stage: 2,
+                is_dual: true,
             };
 
         case CAELIA_BOSS_STAGE:
@@ -2048,10 +2405,71 @@ function GameCharacterBossInfoCreate(_stage) {
                 display_name: CAELIA_BOSS_NAME,
                 ship_name: CAELIA_SHIP_NAME,
                 sprite_id: spr_caelia_ship,
+                pattern_stage: 9,
+                is_dual: false,
             };
     }
 
     return undefined;
+}
+
+/// @func GameStageIsDualBoss(stage)
+/// Returns whether this stage fields Mira and Aisha together.
+function GameStageIsDualBoss(_stage = undefined) {
+    if (_stage == undefined) {
+        _stage = GameCurrentStageGet();
+    }
+
+    return clamp(_stage, 1, STAGE_COUNT) == DUAL_BOSS_STAGE;
+}
+
+/// @func GameDualBossIdentityCreate(role)
+/// Builds one half of the Mira/Aisha duet from each girl's original motifs.
+function GameDualBossIdentityCreate(_role) {
+    var _is_aisha = (_role == "aisha");
+    var _pattern_stage = _is_aisha ? 6 : 2;
+    var _phase_plan = GameCharacterBossPhasePlanCreate(DUAL_BOSS_STAGE, _pattern_stage);
+
+    return {
+        is_final: false,
+        is_character: true,
+        is_dual: true,
+        dual_role: _is_aisha ? "aisha" : "mira",
+        opponent_ship_id: "",
+        display_name: _is_aisha ? AISHA_BOSS_NAME : MIRA_BOSS_NAME,
+        ship_name: _is_aisha ? AISHA_SHIP_NAME : MIRA_SHIP_NAME,
+        sprite_id: _is_aisha ? spr_aisha_ship : spr_mira_ship,
+        draw_y_scale: 1,
+        phase_plan: _phase_plan,
+        phase_signature: GameMemoryCorePhasePlanSignatureCreate(_phase_plan),
+    };
+}
+
+/// @func GameBossDualConfigure(boss, role)
+/// Places and tunes one independently damageable half of the dual encounter.
+function GameBossDualConfigure(_boss, _role) {
+    if (!instance_exists(_boss)) {
+        return noone;
+    }
+
+    var _identity = GameDualBossIdentityCreate(_role);
+    var _is_aisha = (_identity.dual_role == "aisha");
+    _boss.boss_identity = _identity;
+    _boss.boss_display_name = _identity.display_name;
+    _boss.boss_ship_name = _identity.ship_name;
+    _boss.boss_draw_y_scale = _identity.draw_y_scale;
+    _boss.sprite_index = _identity.sprite_id;
+    _boss.phase_count = max(1, array_length(_identity.phase_plan));
+    _boss.phase_max_hp = max(BOSS_PHASE_MIN_HP,
+        ceil(GameBossPhaseHpGet(DUAL_BOSS_STAGE, _boss.phase_count) * 0.64));
+    _boss.hp = _boss.phase_max_hp;
+    _boss.anchor_offset_x = _is_aisha ? 52 : -52;
+    _boss.anchor_offset_y = _is_aisha ? -82 : -102;
+    _boss.float_phase = _is_aisha ? 180 : 0;
+    _boss.dual_boss = true;
+    _boss.dual_role = _identity.dual_role;
+    _boss.points = 22000;
+    return _boss;
 }
 
 /// @func GameBossEncounterInfoCreate(stage, player_ship_id)
@@ -2068,17 +2486,21 @@ function GameBossEncounterInfoCreate(_stage = undefined, _player_ship_id = undef
     _stage = clamp(_stage, 1, STAGE_COUNT);
     var _is_final = _stage >= STAGE_COUNT;
     if (!_is_final) {
-        var _phase_plan = GameMemoryCorePhasePlanCreate(_stage);
         var _character_boss = GameCharacterBossInfoCreate(_stage);
-        var _is_character = is_struct(_character_boss);
+        if (!is_struct(_character_boss)) {
+            return undefined;
+        }
+
+        var _phase_plan = GameCharacterBossPhasePlanCreate(_stage, _character_boss.pattern_stage);
 
         return {
             is_final: false,
-            is_character: _is_character,
+            is_character: true,
+            is_dual: _character_boss.is_dual,
             opponent_ship_id: "",
-            display_name: _is_character ? _character_boss.display_name : GameMemoryCoreNameGet(_stage),
-            ship_name: _is_character ? _character_boss.ship_name : "",
-            sprite_id: _is_character ? _character_boss.sprite_id : spr_mayfly,
+            display_name: _character_boss.display_name,
+            ship_name: _character_boss.ship_name,
+            sprite_id: _character_boss.sprite_id,
             draw_y_scale: 1,
             phase_plan: _phase_plan,
             phase_signature: GameMemoryCorePhasePlanSignatureCreate(_phase_plan),
@@ -2213,7 +2635,9 @@ function GamePlayerShotVisualsApply(_shots, _ship_id, _power, _focused) {
 /// Returns the Sunrise shot pattern for one queued volley tick.
 function GamePlayerSunriseShotSpawnSpecsCreate(_x, _y, _focused, _power) {
     var _shots = [];
-    var _damage = PLAYER_SHOT_DAMAGE + (_power div 3);
+    // Keep both routes' focused DPS close enough that the duration-based boss
+    // phase targets hold for either character.
+    var _damage = PLAYER_SHOT_DAMAGE + 1 + (_power div 2);
     var _speed = SHOT_SPEED + (_focused ? 1 : 0);
 
     if (_focused) {
@@ -2446,6 +2870,7 @@ function GamePlayerMeterRewardApply(_meter_amount) {
 
     if (global.game_runtime.meter >= METER_MAX) {
         global.game_runtime.is_berserk = true;
+        GameRankEventApply(RANK_HYPER_GAIN);
         return true;
     }
 
@@ -2721,7 +3146,7 @@ function GamePlayerFireStep(_state, _input) {
     }
 
     _use_sword = global.game_runtime.is_berserk
-        || (_input.fire_down && !_input.autofire_down && _state.fire_hold_frames > FIRE_HOLD_FRAMES);
+        || (_input.fire_down && !_input.autofire_down && _state.fire_hold_frames >= FIRE_HOLD_FRAMES);
 
     if (_use_sword) {
         var _period = GamePlayerSwordPeriodFramesGet(global.game_runtime.is_berserk);
@@ -2790,15 +3215,15 @@ function GameGameplayHudLayoutCreate() {
         left_panel_right: _playfield_left,
         right_panel_left: _playfield_right,
         right_panel_right: GAME_VIEW_WIDTH,
-        panel_padding: 16,
-        line_height: 17,
-        meter_left: _playfield_right + 16,
+        panel_padding: 12,
+        line_height: 16,
+        meter_left: _playfield_right + 12,
         meter_top: 86,
-        meter_width: GAME_VIEW_WIDTH - _playfield_right - 32,
+        meter_width: GAME_VIEW_WIDTH - _playfield_right - 24,
         meter_height: 12,
-        boss_bar_left: _playfield_right + 16,
+        boss_bar_left: _playfield_right + 12,
         boss_bar_top: 152,
-        boss_bar_width: GAME_VIEW_WIDTH - _playfield_right - 32,
+        boss_bar_width: GAME_VIEW_WIDTH - _playfield_right - 24,
         boss_bar_height: 8,
         boss_bar_gap: 5,
         sidebar_color: make_color_rgb(22, 12, 44),
@@ -2815,7 +3240,7 @@ function GameGameplayHudLinesCreate() {
     if (GameRunIsPractice()) {
         var _practice = GamePracticeConfigNormalize(global.game_runtime.practice_config);
         _stage_label = "Practice S" + string(GameCurrentStageGet()) + ": "
-            + GamePracticeSegmentNameGet(_practice.segment);
+            + GamePracticeSegmentNameForStageGet(_practice.segment, _practice.stage);
     }
 
     var _rank_label = "Rank: " + string(GameRankGet()) + " "
@@ -2855,6 +3280,26 @@ function GamePowerupColorGet(_type) {
     }
 
     return make_color_rgb(180, 255, 156);
+}
+
+/// @func GamePowerupSpriteGet(type)
+/// Returns the route-neutral pixel-art icon for a collectible type.
+function GamePowerupSpriteGet(_type) {
+    switch (_type) {
+        case POWERUP_POWER:
+            return spr_powerup_power;
+
+        case POWERUP_BOMB:
+            return spr_powerup_bomb;
+
+        case POWERUP_LIFE:
+            return spr_powerup_life;
+
+        case POWERUP_METER:
+            return spr_powerup_meter;
+    }
+
+    return spr_powerup_score;
 }
 
 /// @func GamePowerupLabelGet(type)
@@ -3123,9 +3568,10 @@ function GameBladeBulletRedirectMark(_bullet_id, _freeze_frames, _redirect_speed
             exit;
         }
 
-        freeze_timer = _freeze_frames;
+        freeze_timer = max(BOSS_PHASE3_FREEZE_FRAMES, _freeze_frames);
         redirect_pending = true;
-        redirect_speed = _redirect_speed;
+        redirect_speed = min(_redirect_speed,
+            BLADE_REDIRECT_MAX_SCREEN_SPEED / max(0.01, rank_speed_scale));
         redirect_acceleration = _redirect_acceleration;
         redirect_direction = irandom(359);
         move_speed = 0;
@@ -3158,4 +3604,68 @@ function GameBossBarSegmentsCreate(_phase_index, _hp, _phase_max_hp, _phase_coun
     }
 
     return _segments;
+}
+
+/// @func GameBossPhaseHeartStatesCreate(phase_index, phase_count)
+/// Returns 0 for spent hearts, 2 for the active heart, and 1 for future hearts.
+function GameBossPhaseHeartStatesCreate(_phase_index, _phase_count) {
+    _phase_count = max(1, floor(_phase_count));
+    _phase_index = floor(clamp(_phase_index, 0, _phase_count - 1));
+    var _states = array_create(_phase_count, 1);
+
+    for (var i = 0; i < _phase_count; i++) {
+        _states[i] = (i < _phase_index) ? 0 : ((i == _phase_index) ? 2 : 1);
+    }
+
+    return _states;
+}
+
+/// @func GameBossCircularHealthDraw(boss)
+/// Draws a crisp segmented health ring around the boss itself.
+function GameBossCircularHealthDraw(_boss) {
+    if (!instance_exists(_boss)
+        || !variable_instance_exists(_boss, "hp")
+        || !variable_instance_exists(_boss, "phase_max_hp")) {
+        return false;
+    }
+
+    var _ratio = clamp(_boss.hp / max(1, _boss.phase_max_hp), 0, 1);
+    var _transitioning = variable_instance_exists(_boss, "phase_transition_timer")
+        && _boss.phase_transition_timer > 0;
+    var _radius = max(34, _boss.hit_radius + 10);
+    var _segments = 48;
+    var _filled_segments = floor((_ratio * _segments) + 0.001);
+    var _center_x = round(_boss.x);
+    var _center_y = round(_boss.y);
+
+    for (var segment = 0; segment < _segments; segment++) {
+        var _angle_a = -90 + ((segment / _segments) * 360);
+        var _angle_b = -90 + (((segment + 0.72) / _segments) * 360);
+        var _x1 = round(_center_x + lengthdir_x(_radius, _angle_a));
+        var _y1 = round(_center_y + lengthdir_y(_radius, _angle_a));
+        var _x2 = round(_center_x + lengthdir_x(_radius, _angle_b));
+        var _y2 = round(_center_y + lengthdir_y(_radius, _angle_b));
+        var _filled = segment < _filled_segments;
+
+        draw_set_alpha(_filled ? 0.96 : 0.38);
+        if (_filled) {
+            draw_set_color(_transitioning
+                ? make_color_rgb(255, 220, 132)
+                : merge_color(make_color_rgb(255, 102, 174),
+                    make_color_rgb(112, 226, 236), segment / _segments));
+        } else {
+            draw_set_color(make_color_rgb(38, 20, 56));
+        }
+        draw_line_width(_x1, _y1, _x2, _y2, 2);
+    }
+
+    if (_transitioning) {
+        draw_set_alpha(0.42 + (0.18 * abs(dsin(_boss.phase_transition_timer * 14))));
+        draw_set_color(make_color_rgb(255, 242, 198));
+        draw_circle(_center_x, _center_y, _radius + 3, true);
+    }
+
+    draw_set_alpha(1);
+    draw_set_color(c_white);
+    return true;
 }

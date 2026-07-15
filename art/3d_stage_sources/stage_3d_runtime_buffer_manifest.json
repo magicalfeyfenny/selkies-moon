@@ -1,0 +1,72 @@
+[
+  {
+    "stage": 1,
+    "source_obj": "stage3d_01_shalmii_forge_procession.obj",
+    "runtime_buffer": "stage3d_01_shalmii_forge_procession.vbuff",
+    "vertex_format": [
+      "position_3d",
+      "normal",
+      "texcoord"
+    ],
+    "stride_bytes": 32,
+    "vertices": 7068,
+    "triangles": 2356,
+    "bytes": 226176
+  },
+  {
+    "stage": 2,
+    "source_obj": "stage3d_02_aster_saltwind_ribbon_coast.obj",
+    "runtime_buffer": "stage3d_02_aster_saltwind_ribbon_coast.vbuff",
+    "vertex_format": [
+      "position_3d",
+      "normal",
+      "texcoord"
+    ],
+    "stride_bytes": 32,
+    "vertices": 3324,
+    "triangles": 1108,
+    "bytes": 106368
+  },
+  {
+    "stage": 3,
+    "source_obj": "stage3d_03_mira_aisha_velvet_wishcourt.obj",
+    "runtime_buffer": "stage3d_03_mira_aisha_velvet_wishcourt.vbuff",
+    "vertex_format": [
+      "position_3d",
+      "normal",
+      "texcoord"
+    ],
+    "stride_bytes": 32,
+    "vertices": 8784,
+    "triangles": 2928,
+    "bytes": 281088
+  },
+  {
+    "stage": 4,
+    "source_obj": "stage3d_04_caelia_bloodstar_orrery.obj",
+    "runtime_buffer": "stage3d_04_caelia_bloodstar_orrery.vbuff",
+    "vertex_format": [
+      "position_3d",
+      "normal",
+      "texcoord"
+    ],
+    "stride_bytes": 32,
+    "vertices": 9516,
+    "triangles": 3172,
+    "bytes": 304512
+  },
+  {
+    "stage": 5,
+    "source_obj": "stage3d_05_moon_selkie_infinite_violet_garden.obj",
+    "runtime_buffer": "stage3d_05_moon_selkie_infinite_violet_garden.vbuff",
+    "vertex_format": [
+      "position_3d",
+      "normal",
+      "texcoord"
+    ],
+    "stride_bytes": 32,
+    "vertices": 190476,
+    "triangles": 63492,
+    "bytes": 6095232
+  }
+]

@@ -1,0 +1,61 @@
+{
+  "stage": 1,
+  "slug": "shalmii_forge_procession",
+  "blend_source": "art/3d_stage_sources/stage_01_shalmii_forge_procession/shalmii_forge_procession.blend",
+  "runtime_obj": "stage3d_01_shalmii_forge_procession.obj",
+  "loop_length": 64.0,
+  "camera_path": [
+    [
+      -1.0,
+      0.0,
+      10.0
+    ],
+    [
+      1.5,
+      16.0,
+      9.2
+    ],
+    [
+      -1.5,
+      32.0,
+      10.4
+    ],
+    [
+      0.8,
+      48.0,
+      8.8
+    ],
+    [
+      -1.0,
+      64.0,
+      10.0
+    ]
+  ],
+  "camera_target_z": 1.2,
+  "scroll_speed": 0.028,
+  "lighting": {
+    "world": [
+      0.018,
+      0.006,
+      0.02
+    ],
+    "sun_color": [
+      1.0,
+      0.35,
+      0.12
+    ],
+    "sun_energy": 2.6
+  },
+  "fog": {
+    "color": [
+      0.12,
+      0.035,
+      0.045
+    ],
+    "start": 20.0,
+    "end": 78.0,
+    "density": 0.42,
+    "effect": "embers"
+  },
+  "triangles": 2356
+}
