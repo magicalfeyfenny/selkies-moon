@@ -42,7 +42,7 @@ jobs:
         uses: bscotch/igor-setup@v3.0.1
         with:
           access-key: ${{ secrets.ACCESS_KEY }}
-          runtime-version: 2026.0.0.23
+          runtime-version: 2024.14.4.268
           modules: windows
           cache: true
 
