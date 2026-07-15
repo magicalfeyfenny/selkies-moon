@@ -9,6 +9,7 @@ kept as an interchange source and Krita converts it to a native editable KRA.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -59,16 +60,16 @@ THEMES = {
 }
 
 
-def checker(draw: ImageDraw.ImageDraw, box, left, right, step: int = 32) -> None:
+def gradient_box(image: Image.Image, box, top, bottom) -> None:
+    """Fill one atlas region with a smooth opaque material gradient."""
     x0, y0, x1, y1 = box
-    draw.rectangle(box, fill=left)
-    for y in range(y0, y1 + 1, step):
-        for x in range(x0, x1 + 1, step):
-            if ((x - x0) // step + (y - y0) // step) % 2:
-                draw.rectangle(
-                    (x, y, min(x1, x + step - 1), min(y1, y + step - 1)),
-                    fill=right,
-                )
+    draw = ImageDraw.Draw(image)
+    height = max(1, y1 - y0)
+    for y in range(y0, y1 + 1):
+        ratio = (y - y0) / height
+        color = tuple(round(top[channel] + (bottom[channel] - top[channel]) * ratio)
+                      for channel in range(3)) + (255,)
+        draw.line((x0, y, x1, y), fill=color)
 
 
 def cell_box(index: int, inset: int = 0) -> tuple[int, int, int, int]:
@@ -333,6 +334,252 @@ def draw_violet_billboards(draw: ImageDraw.ImageDraw, emission: ImageDraw.ImageD
             emission.point((cx, cy), fill=(*gold, 255))
 
 
+def draw_stage_mesh_surfaces(stage: int, layers: dict[str, Image.Image], palette) -> None:
+    """Paint the three opaque mesh regions as actual location materials.
+
+    The former atlases used high-contrast checker fills to make UV regions easy
+    to debug. Those guides survived into the shipped art and read as missing
+    textures, so every quadrant now has a dense, stage-authored material.
+    """
+    ink, mid, accent, cool, gold = palette
+    base_image = layers["base_materials"]
+    base = ImageDraw.Draw(base_image)
+    detail = ImageDraw.Draw(layers["surface_detail"])
+    motif = ImageDraw.Draw(layers["stage_motifs"])
+    emission = ImageDraw.Draw(layers["emissive_details"])
+    highlight = ImageDraw.Draw(layers["highlights"])
+    ground = (0, 0, HALF - 1, HALF - 1)
+    architecture = (HALF, 0, 1023, HALF - 1)
+    accent_region = (0, HALF, HALF - 1, 1023)
+
+    if stage == 1:
+        # Hammered iron road, soot-dark forge walls, and a molten foundry bed.
+        gradient_box(base_image, ground, ink, (72, 35, 40))
+        for y in range(26, HALF, 62):
+            detail.line((0, y, HALF - 1, y - 8), fill=(129, 76, 62, 210), width=5)
+            offset = 34 if (y // 62) % 2 else 0
+            for x in range(offset, HALF, 86):
+                detail.line((x, y - 62, x - 5, y), fill=(91, 70, 78, 190), width=4)
+                detail.ellipse((x - 4, y - 35, x + 4, y - 27), fill=(*gold, 180))
+        for crack in range(24):
+            x = 12 + ((crack * 79) % 478)
+            y = 18 + ((crack * 137) % 468)
+            detail.line((x, y, x + 18, y + 7, x + 29, y - 5), fill=(19, 13, 22, 190), width=3)
+
+        gradient_box(base_image, architecture, (72, 34, 42), ink)
+        for panel in range(6):
+            left = HALF + panel * 86
+            detail.rounded_rectangle((left + 7, 14, min(1017, left + 79), 496), 10,
+                                     outline=(111, 91, 104, 235), width=5)
+            for bolt_y in range(40, 490, 76):
+                highlight.ellipse((left + 13, bolt_y, left + 19, bolt_y + 6), fill=(*gold, 210))
+        for slit in range(5):
+            x = HALF + 54 + slit * 102
+            emission.rounded_rectangle((x, 134, x + 18, 438), 8, fill=(*accent, 225))
+            highlight.line((x + 6, 144, x + 6, 426), fill=(*gold, 180), width=3)
+
+        gradient_box(base_image, accent_region, (93, 38, 37), (31, 18, 28))
+        for flow in range(7):
+            x = 18 + flow * 75
+            emission.line((x, 1008, x + 28, 790, x - 5, 618), fill=(*accent, 225), width=17)
+            highlight.line((x + 4, 1008, x + 32, 790, x - 1, 618), fill=(*gold, 180), width=5)
+        for island in range(14):
+            x = 10 + ((island * 97) % 468)
+            y = 560 + ((island * 71) % 420)
+            motif.polygon([(x, y + 24), (x + 22, y), (x + 52, y + 11),
+                           (x + 61, y + 43), (x + 17, y + 52)], fill=(*ink, 245))
+
+    elif stage == 2:
+        # Mossy forest floor, ancient bark halls, and a flowering rabbit glade.
+        gradient_box(base_image, ground, (18, 43, 38), (52, 82, 55))
+        for root in range(12):
+            x = 12 + root * 46
+            points = [(x, 512), (x - 18, 370), (x + 16, 244), (x - 8, 80)]
+            detail.line(points, fill=(92, 64, 46, 220), width=8, joint="curve")
+        for leaf in range(92):
+            x = 7 + ((leaf * 67) % 494)
+            y = 8 + ((leaf * 109) % 494)
+            shade = cool if leaf % 3 else (92, 148, 84)
+            motif.ellipse((x, y, x + 9 + leaf % 8, y + 5 + leaf % 5), fill=(*shade, 190))
+            if leaf % 13 == 0:
+                emission.ellipse((x + 3, y - 4, x + 11, y + 4), fill=(*accent, 230))
+
+        gradient_box(base_image, architecture, (72, 67, 48), (28, 49, 42))
+        for trunk in range(6):
+            center = HALF + 44 + trunk * 90
+            detail.line((center, 0, center - 18, 132, center + 14, 272,
+                         center - 9, 511), fill=(104, 73, 50, 245), width=42)
+            highlight.line((center - 8, 0, center - 22, 132, center + 2, 272,
+                            center - 18, 511), fill=(*gold, 76), width=5)
+            motif.ellipse((center - 28, 196, center + 17, 251),
+                          outline=(40, 27, 28, 220), width=8)
+        for moss in range(34):
+            x = HALF + ((moss * 73) % 500)
+            y = 12 + ((moss * 131) % 480)
+            motif.ellipse((x, y, x + 28, y + 16), fill=(*cool, 165))
+
+        gradient_box(base_image, accent_region, (43, 83, 58), (19, 45, 39))
+        for blade in range(78):
+            x = 4 + ((blade * 43) % 504)
+            top = 550 + ((blade * 59) % 350)
+            detail.line((x, 1023, x + ((blade % 5) - 2) * 7, top), fill=(*cool, 205), width=3)
+        for flower in range(32):
+            x = 12 + ((flower * 83) % 482)
+            y = 565 + ((flower * 127) % 425)
+            motif.ellipse((x - 11, y - 4, x + 11, y + 4), fill=(*accent, 230))
+            motif.ellipse((x - 4, y - 11, x + 4, y + 11), fill=(*accent, 230))
+            emission.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(*gold, 255))
+        for print_index in range(10):
+            x = 54 + print_index * 43
+            y = 610 + (print_index % 4) * 88
+            motif.ellipse((x, y, x + 15, y + 29), fill=(231, 219, 184, 115))
+            motif.ellipse((x + 18, y - 7, x + 33, y + 22), fill=(231, 219, 184, 115))
+
+    elif stage == 3:
+        # Casino carpet, velvet proscenium, and a split trick/sorcery stage.
+        gradient_box(base_image, ground, (42, 12, 62), (91, 20, 76))
+        for ring in range(7):
+            radius = 46 + ring * 38
+            detail.ellipse((256 - radius, 256 - radius, 256 + radius, 256 + radius),
+                           outline=(*gold, 125), width=4)
+        for suit in range(28):
+            x = 16 + ((suit * 79) % 480)
+            y = 18 + ((suit * 137) % 474)
+            color = accent if suit % 2 else cool
+            motif.polygon([(x, y - 10), (x + 10, y), (x, y + 14), (x - 10, y)],
+                          fill=(*color, 180))
+            if suit % 5 == 0:
+                highlight.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(*gold, 230))
+
+        gradient_box(base_image, architecture, (73, 18, 83), (22, 11, 40))
+        for fold in range(11):
+            x = HALF + fold * 49
+            detail.polygon([(x, 0), (x + 24, 0), (x + 42, 511), (x - 10, 511)],
+                           fill=(*(accent if fold % 2 else mid), 82))
+            highlight.line((x + 4, 0, x + 20, 511), fill=(*gold, 80), width=3)
+        for bulb in range(22):
+            x = HALF + 18 + bulb * 23
+            emission.ellipse((x - 5, 22, x + 5, 32), fill=(*gold, 245))
+            emission.ellipse((x - 5, 478, x + 5, 488), fill=(*cool, 225))
+
+        gradient_box(base_image, accent_region, (66, 18, 84), (18, 12, 42))
+        base.rectangle((0, HALF, 252, 1023), fill=(77, 18, 67, 255))
+        for radius in (54, 104, 156, 208):
+            motif.arc((126 - radius, 768 - radius, 126 + radius, 768 + radius),
+                      200, 520, fill=(*gold, 195), width=7)
+        for pip in range(18):
+            x = 20 + ((pip * 61) % 214)
+            y = 548 + ((pip * 101) % 444)
+            emission.ellipse((x - 6, y - 6, x + 6, y + 6),
+                             fill=(*(accent if pip % 2 else gold), 230))
+        for radius in (48, 92, 132, 184):
+            motif.ellipse((382 - radius, 768 - radius, 382 + radius, 768 + radius),
+                          outline=(*cool, 190), width=5)
+        for arm in range(12):
+            import math
+            angle = arm * math.tau / 12
+            emission.line((382, 768, 382 + round(math.cos(angle) * 208),
+                           768 + round(math.sin(angle) * 208)), fill=(*gold, 135), width=3)
+
+    elif stage == 4:
+        # Nebulae replace any terrestrial floor; the architecture is an orrery.
+        gradient_box(base_image, ground, (5, 7, 28), (42, 19, 76))
+        for cloud in range(18):
+            x = 10 + ((cloud * 89) % 480)
+            y = 12 + ((cloud * 157) % 470)
+            radius = 28 + (cloud % 6) * 15
+            color = accent if cloud % 3 == 0 else cool
+            motif.ellipse((x - radius, y - radius // 2, x + radius, y + radius // 2),
+                          fill=(*color, 42 + (cloud % 4) * 13))
+        for star in range(180):
+            x = (star * 83) % 510
+            y = (star * 149) % 510
+            radius = 1 + (star % 5 == 0) + (star % 17 == 0)
+            emission.ellipse((x - radius, y - radius, x + radius, y + radius),
+                             fill=(*(gold if star % 11 == 0 else cool), 220))
+
+        gradient_box(base_image, architecture, (17, 16, 52), (5, 8, 30))
+        for radius in (58, 104, 158, 218, 282):
+            motif.ellipse((768 - radius, 256 - radius // 2,
+                           768 + radius, 256 + radius // 2),
+                          outline=(*(gold if radius % 2 else cool), 150), width=5)
+        for spoke in range(16):
+            import math
+            angle = spoke * math.tau / 16
+            detail.line((768, 256, 768 + round(math.cos(angle) * 290),
+                         256 + round(math.sin(angle) * 145)),
+                        fill=(90, 89, 132, 140), width=3)
+        for planet in range(8):
+            x = HALF + 44 + planet * 61
+            y = 72 + (planet % 4) * 108
+            emission.ellipse((x - 12, y - 12, x + 12, y + 12),
+                             fill=(*(accent if planet % 2 else gold), 240))
+
+        gradient_box(base_image, accent_region, (36, 17, 78), (6, 8, 31))
+        for cloud in range(14):
+            x = 15 + ((cloud * 101) % 475)
+            y = 542 + ((cloud * 173) % 456)
+            rx = 42 + (cloud % 5) * 17
+            ry = 20 + (cloud % 4) * 13
+            color = accent if cloud % 2 else cool
+            motif.ellipse((x - rx, y - ry, x + rx, y + ry), fill=(*color, 92))
+        for planet, (x, y, radius) in enumerate(((96, 654, 52), (338, 820, 78), (188, 944, 34))):
+            base.ellipse((x - radius, y - radius, x + radius, y + radius),
+                         fill=(*(cool if planet % 2 else accent), 255))
+            highlight.arc((x - radius - 24, y - radius // 2,
+                           x + radius + 24, y + radius // 2), 5, 175,
+                          fill=(*gold, 230), width=8)
+
+    else:
+        # Dense violet meadow, vine-covered ruins, and an endless flower field.
+        gradient_box(base_image, ground, (20, 45, 37), (55, 75, 54))
+        for grass in range(150):
+            x = 2 + ((grass * 47) % 508)
+            y = 44 + ((grass * 83) % 466)
+            detail.line((x, y + 18, x + ((grass % 5) - 2) * 3, y),
+                        fill=(*cool, 165), width=2)
+            if grass % 9 == 0:
+                motif.ellipse((x - 8, y - 4, x + 8, y + 4), fill=(*accent, 220))
+                emission.ellipse((x - 2, y - 2, x + 2, y + 2), fill=(*gold, 240))
+
+        gradient_box(base_image, architecture, (53, 53, 73), (24, 31, 42))
+        for stone_y in range(18, 512, 76):
+            detail.line((HALF, stone_y, 1023, stone_y - 12), fill=(112, 104, 128, 150), width=4)
+        for vine in range(9):
+            x = HALF + 26 + vine * 61
+            points = [(x, 511), (x + 20, 382), (x - 11, 250), (x + 18, 106), (x, 0)]
+            motif.line(points, fill=(*cool, 230), width=9, joint="curve")
+            for leaf in range(5):
+                y = 50 + leaf * 92 + (vine % 2) * 18
+                motif.ellipse((x - 25, y - 10, x + 1, y + 12), fill=(*cool, 210))
+                motif.ellipse((x - 1, y - 12, x + 25, y + 10), fill=(*cool, 210))
+                if (leaf + vine) % 3 == 0:
+                    motif.ellipse((x - 11, y - 31, x + 11, y - 9), fill=(*accent, 230))
+
+        gradient_box(base_image, accent_region, (46, 84, 52), (22, 46, 38))
+        for stem in range(74):
+            x = 4 + ((stem * 37) % 504)
+            y = 548 + ((stem * 97) % 438)
+            tip_x = x + ((stem % 7) - 3) * 4
+            detail.line((x, 1023, tip_x, y), fill=(*cool, 220), width=4)
+            petal = 9 + stem % 7
+            for dx, dy in ((-petal, 0), (petal, 0), (0, -petal), (0, petal),
+                           (-petal * 2 // 3, -petal * 2 // 3)):
+                motif.ellipse((tip_x + dx - 6, y + dy - 6,
+                               tip_x + dx + 6, y + dy + 6), fill=(*accent, 225))
+            emission.ellipse((tip_x - 3, y - 3, tip_x + 3, y + 3), fill=(*gold, 255))
+
+    # Fine deterministic grain keeps the 1024px sources rich when magnified,
+    # while never resolving into debugging squares at the 640x360 output size.
+    for fleck in range(420):
+        x = (fleck * 83 + stage * 29) % 1018
+        y = (fleck * 151 + stage * 47) % 1018
+        if x >= HALF and y >= HALF:
+            continue
+        color = (*gold, 28) if fleck % 5 == 0 else (*ink, 36)
+        detail.ellipse((x, y, x + 1 + fleck % 3, y + 1 + fleck % 2), fill=color)
+
+
 def build_texture(stage: int) -> tuple[dict[str, Image.Image], list[str]]:
     theme = THEMES[stage]
     ink, mid, accent, cool, gold = theme["palette"]
@@ -354,25 +601,8 @@ def build_texture(stage: int) -> tuple[dict[str, Image.Image], list[str]]:
     emission = ImageDraw.Draw(layers["emissive_details"])
     highlight = ImageDraw.Draw(layers["highlights"])
 
-    # Opaque mesh quadrants: ground, architecture, and modeled accents.
-    checker(base, (0, 0, HALF - 1, HALF - 1), (*ink, 255), (*mid, 255), 48)
-    checker(base, (HALF, 0, 1023, HALF - 1), (*mid, 255), (*ink, 255), 36)
-    checker(base, (0, HALF, HALF - 1, 1023), (*accent, 255), (*mid, 255), 44)
-
-    # High-resolution seams, grain, rivets, bark, carpet, stars, and leaf litter.
-    for y in range(24, HALF, 48):
-        detail.line((0, y, HALF - 1, y), fill=(*gold, 150), width=3)
-        for x in range((y // 48 % 2) * 42, HALF, 84):
-            detail.line((x, y - 24, x, y + 24), fill=(*gold, 95), width=3)
-    for x in range(HALF + 18, 1024, 32):
-        detail.line((x, 0, x, HALF - 1), fill=(*cool, 115), width=2)
-    for index in range(160):
-        x = (index * 83) % 1018
-        y = (index * 151) % 1018
-        if x >= HALF and y >= HALF:
-            continue
-        color = (*gold, 44) if index % 3 == 0 else (*ink, 54)
-        detail.rectangle((x, y, x + 2 + index % 5, y + 2 + index % 4), fill=color)
+    # Opaque mesh quadrants: location-authored ground, architecture, and accents.
+    draw_stage_mesh_surfaces(stage, layers, theme["palette"])
 
     if stage == 1:
         for x in range(34, 490, 76):
@@ -433,9 +663,27 @@ def build_texture(stage: int) -> tuple[dict[str, Image.Image], list[str]]:
 def export_kra(ora: Path, kra: Path) -> None:
     if not KRITA.exists():
         raise FileNotFoundError(f"Krita is required to create native editable source: {KRITA}")
+
+    # Krita shares a resource database with any open GUI instance. Give the
+    # deterministic exporter its own database so an artist can keep Krita open
+    # while this build produces genuine native KRA files.
+    cli_root = ROOT / "tmp" / "krita-cli"
+    config_dir = cli_root / "config"
+    data_dir = cli_root / "data"
+    cache_dir = cli_root / "cache"
+    resource_dir = cli_root / "resources"
+    for directory in (config_dir, data_dir, cache_dir, resource_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env["XDG_CONFIG_HOME"] = str(config_dir)
+    env["XDG_DATA_HOME"] = str(data_dir)
+    env["XDG_CACHE_HOME"] = str(cache_dir)
+
     subprocess.run(
-        [str(KRITA), "--export", "--export-filename", str(kra), str(ora)],
+        [str(KRITA), "--nosplash", "--resource-location", str(resource_dir),
+         "--export", "--export-filename", str(kra), str(ora)],
         check=True,
+        env=env,
     )
     if not kra.exists() or kra.stat().st_size <= 0:
         raise RuntimeError(f"Krita did not create {kra}")

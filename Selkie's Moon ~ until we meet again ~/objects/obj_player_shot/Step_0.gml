@@ -17,6 +17,8 @@ for (var i = instance_number(obj_enemy_parent) - 1; i >= 0; i--) {
 
     if (point_distance(x, y, _enemy.x, _enemy.y) <= _enemy.hit_radius) {
         _enemy.hp -= damage;
+        GamePlayerPointBlankAttackRewardApply(
+            _enemy.x, _enemy.y, BERSERK_POINT_BLANK_SHOT_GAIN);
         instance_destroy();
         exit;
     }
@@ -34,7 +36,10 @@ for (var i = instance_number(obj_boss_parent) - 1; i >= 0; i--) {
     }
 
     if (point_distance(x, y, _boss.x, _boss.y) <= _boss.hit_radius) {
-        GameBossDamageApply(_boss, damage);
+        if (GameBossDamageApply(_boss, damage) > 0) {
+            GamePlayerPointBlankAttackRewardApply(
+                _boss.x, _boss.y, BERSERK_POINT_BLANK_SHOT_GAIN);
+        }
         instance_destroy();
         exit;
     }

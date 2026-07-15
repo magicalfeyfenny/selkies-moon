@@ -76,7 +76,7 @@ Every project-owned top-level function has a `/// @func` signature and a one-lin
 ### Gameplay
 
 - `obj_scene_manager`: owns the gameplay camera target, an independent presentation clock for the true-3D modular background, and stage mode (`scroll`, `boss_intro`, `boss_fight`, `boss_outro`, `stage_clear`). Its Draw Begin event restores every world/view/projection and depth state before normal 2D drawing begins.
-- `obj_player`: owns local action state; shared resources remain in `global.game_runtime`.
+- `obj_player`: owns local action state; shared resources remain in `global.game_runtime`. Its normal Draw places the ship below enemy bullets, while Draw End isolates the visible hitbox above them.
 - `obj_player_shot`: carries a normalized shot specification into collision and rendering.
 - `obj_enemy_parent`: centralizes freeze, damage, defeat rewards, and movement.
 - `obj_enemy_variant`: resolves one of 20 stage-authored identities, then runs role movement and its redistributed attack family after the parent Step. Legacy turret/bee/mayfly objects are test fixtures, not live roster entries.

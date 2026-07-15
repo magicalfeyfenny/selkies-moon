@@ -13,6 +13,7 @@ if (hp <= 0) {
     GameEnemyDestroySoundPlay();
     global.game_runtime.score += points;
     GameRankDefeatRewardApply();
+    GameEnemyMedalsDrop(id);
     GameEnemyPowerupDropTry(x, y, points);
     instance_destroy();
     exit;

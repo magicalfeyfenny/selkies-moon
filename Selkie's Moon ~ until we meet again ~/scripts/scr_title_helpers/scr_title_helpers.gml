@@ -177,7 +177,7 @@ function GameTitleConfigEntriesCreate(_include_controls = true) {
 /// Builds the device-specific action rows plus reset and return commands.
 function GameTitleControlEntriesCreate(_device) {
     var _labels = ["Move Up", "Move Down", "Move Left", "Move Right",
-        "Fire / Charge", "Autofire", "Bomb", "Pause"];
+        "Fire / Charge", "Autofire", "Focus", "Bomb", "Pause"];
     var _verbs = GameInputVerbNamesCreate();
     var _entries = [];
 
@@ -369,7 +369,7 @@ function GameTitlePracticeEntriesCreate(_state) {
         { id: "dynamic_rank", label: "Dynamic Rank", value: _practice.dynamic_rank ? "On" : "Off" },
         { id: "lives", label: "Lives", value: string(_practice.lives) },
         { id: "bombs", label: "Bombs", value: string(_practice.bombs) },
-        { id: "meter", label: "Meter", value: string(_practice.meter) + " / " + string(METER_MAX) },
+        { id: "meter", label: "Berserk Meter", value: string(_practice.meter) + " / " + string(METER_MAX) },
         { id: "start", label: "Start", value: "" },
         { id: "back", label: "Back", value: "" },
     ];

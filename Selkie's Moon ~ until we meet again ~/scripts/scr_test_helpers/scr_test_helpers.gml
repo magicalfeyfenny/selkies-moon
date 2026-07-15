@@ -107,7 +107,7 @@ function GameVisualTourStateEnsure() {
             pending_capture_name: "",
             pending_capture_path: "",
             capture_count: 0,
-            expected_capture_count: 25,
+            expected_capture_count: 26,
             completion_wait_logged: false,
         };
 
@@ -394,6 +394,16 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
         _scene.scene_state.mode = "stage_clear";
         _scene.scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
         global.game_runtime.stage_complete = true;
+    } else if (_mode == "continue") {
+        global.game_runtime.signals.paused = false;
+        global.game_runtime.signals.continue_request = true;
+        global.game_runtime.continue_screen = GameContinueStateCreate();
+        global.game_runtime.continue_screen.selected_index = CONTINUE_OPTION_NO;
+
+        var _pause = instance_find(obj_UI_menu, 0);
+        if (_pause != noone) {
+            _pause.pause_state.active = false;
+        }
     }
 
     return true;
@@ -503,6 +513,9 @@ function GameVisualTourStep() {
         case 24:
             return GameVisualTourPrepareAndCapture("24_pause_quit_confirm",
                 GameVisualTourPausePrepare("quit_confirm"));
+        case 25:
+            return GameVisualTourPrepareAndCapture("25_continue_prompt",
+                GameVisualTourGameplayPrepare(3, "continue"));
     }
 
     if (_tour.pending_capture_name != "" || _tour.capture_count < _tour.expected_capture_count) {

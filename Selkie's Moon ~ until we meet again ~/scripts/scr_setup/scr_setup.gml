@@ -1,6 +1,6 @@
 // Boot, persistence, migration, display configuration, and runtime defaults.
 // Increment these schema versions only when persisted or runtime data changes shape.
-#macro CONFIG_VERSION 5
+#macro CONFIG_VERSION 6
 #macro SAVE_VERSION 2
 #macro RUNTIME_VERSION 7
 
@@ -94,7 +94,7 @@ function GameRuntimeDataCreateDefault() {
         power: 0,
         powerup_drop_counter: 0,
         resource_drop_charge: 0,
-        resource_drop_threshold: RESOURCE_DROP_CHARGE_BASE,
+        resource_drop_threshold: RESOURCE_DROP_CHARGE_BASE * RESOURCE_DROP_DEFEAT_MULTIPLIER,
         resource_drops_this_stage: 0,
         resource_drop_counter: 0,
         rank: RANK_DEFAULT,
