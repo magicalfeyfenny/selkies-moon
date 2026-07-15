@@ -18,6 +18,9 @@ uniform float u_time;
 void main() {
     vec2 atlas_uv = u_tex_uv.xy + (v_texcoord * u_tex_uv.zw);
     vec4 albedo = texture2D(gm_BaseTexture, atlas_uv);
+    if (albedo.a < 0.04) {
+        discard;
+    }
     vec3 normal = normalize(v_world_normal);
     float key = max(dot(normal, -normalize(u_light_dir)), 0.0);
     float rim = max(dot(normal, -normalize(u_rim_dir)), 0.0);

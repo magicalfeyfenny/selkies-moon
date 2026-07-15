@@ -74,12 +74,14 @@ Boss plans are arrays of structs created by `GameMemoryCorePhaseCreate()`:
 
 Every `shot_kind` must have one explicit runtime interpreter case. Unknown values log a warning and fire nothing. Phase signatures include all behavior fields and are used by regression tests to enforce unique plans.
 
-Boss themes are `poker`, `rune`, `desire`, `ribbon`, and `astral` for character bosses, and `rose` or `chakram` for the route finale. Tideglass, Saltwind, Kelp, and Bloodtide survive as pattern material on stage-themed basic enemies rather than boss identity. Plan construction preserves seed order when fitting a motif to its encounter's phase count:
+Boss themes are `casino`, `sorcery`, `rune`, `ribbon`, and `astral` for character bosses, `sisters` for Mira and Aisha's post-defeat shared finale, and `rose` or `chakram` for the route finale. Tideglass, Saltwind, Kelp, and Bloodtide survive as pattern material on stage-themed basic enemies rather than boss identity. Plan construction preserves seed order when fitting a motif to its encounter's phase count:
 
 1. every base seed in declaration order;
 2. every `_v1` phase in the same order;
 3. every `_v2` phase when used by a route-final boss;
 4. one non-repeated `_finale` phase.
+
+Mira and Aisha each complete that four-step construction independently. Once both sisters are individually defeated, their encounter replaces both active plans with the single `sisters_grand_illusion_finale` descriptor and synchronizes its HP across the two boss objects.
 
 ## Practice configuration
 

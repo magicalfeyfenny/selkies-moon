@@ -1,6 +1,7 @@
 {
   "stage": 3,
   "slug": "mira_aisha_velvet_wishcourt",
+  "location": "Mira and Aisha's Vegas Grand Illusion",
   "blend_source": "art/3d_stage_sources/stage_03_mira_aisha_velvet_wishcourt/mira_aisha_velvet_wishcourt.blend",
   "runtime_obj": "stage3d_03_mira_aisha_velvet_wishcourt.obj",
   "loop_length": 64.0,
@@ -24,6 +25,33 @@
       -2.0,
       48.0,
       9.0
+    ],
+    [
+      0.0,
+      64.0,
+      9.5
+    ]
+  ],
+  "boss_camera_path": [
+    [
+      0.0,
+      0.0,
+      9.5
+    ],
+    [
+      4.2,
+      16.0,
+      8.1
+    ],
+    [
+      -4.0,
+      32.0,
+      9.4
+    ],
+    [
+      3.0,
+      48.0,
+      7.8
     ],
     [
       0.0,
@@ -55,7 +83,8 @@
     "start": 22.0,
     "end": 82.0,
     "density": 0.34,
-    "effect": "split_magenta_cyan_dust"
+    "effect": "vegas_magic_dust"
   },
-  "triangles": 2928
+  "triangles": 8360,
+  "billboard_proxy_count": 14
 }

@@ -75,7 +75,7 @@ Every project-owned top-level function has a `/// @func` signature and a one-lin
 
 ### Gameplay
 
-- `obj_scene_manager`: owns the camera target, presentation-only true-3D modular background, and stage mode (`scroll`, `boss_intro`, `boss_fight`, `boss_outro`, `stage_clear`). Its Draw Begin event restores every world/view/projection and depth state before normal 2D drawing begins.
+- `obj_scene_manager`: owns the gameplay camera target, an independent presentation clock for the true-3D modular background, and stage mode (`scroll`, `boss_intro`, `boss_fight`, `boss_outro`, `stage_clear`). Its Draw Begin event restores every world/view/projection and depth state before normal 2D drawing begins.
 - `obj_player`: owns local action state; shared resources remain in `global.game_runtime`.
 - `obj_player_shot`: carries a normalized shot specification into collision and rendering.
 - `obj_enemy_parent`: centralizes freeze, damage, defeat rewards, and movement.
@@ -90,16 +90,16 @@ Child Step events that call `event_inherited()` must immediately stop when the p
 
 ## Stage and encounter data flow
 
-`GameStageDirectorStep()` is the sole live wave source. It resolves one four-entry roster through `GameStageEnemyRosterCreate()`, spawns camera-relative waves above the visible field, and scales cadence with the legacy pattern-section mapping plus rank. The old GameMaker timeline is held permanently idle. `obj_scene_manager` stops the director when scrolling ends, clears ordinary combat actors, queues boss dialogue, and creates either one boss or the stage-three dual encounter after the intro seam. A boss defeat may queue an outro; the frozen dialogue signal keeps the manager in `boss_outro` until it can enter the normal stage-clear seam.
+`GameStageDirectorStep()` is the sole live wave source. It resolves one four-entry roster through `GameStageEnemyRosterCreate()`, spawns camera-relative waves above the visible field, and scales cadence with the legacy pattern-section mapping plus rank. The old GameMaker timeline is held permanently idle. `obj_scene_manager` stops the director when scrolling ends, but its 3D presentation clock continues and blends onto a second valid downward-looping camera route. The manager clears ordinary combat actors, queues boss dialogue, and creates either one boss or the stage-three dual encounter after the intro seam. A boss defeat may queue an outro; the frozen dialogue signal keeps the manager in `boss_outro` until it can enter the normal stage-clear seam without freezing the background route.
 
 Bosses use a two-layer design:
 
 1. `GameBossEncounterInfoCreate()` chooses identity and creates a `phase_plan`.
 2. `GameBossPhaseAttackStep()` interprets the current phase and creates bullets.
 
-Encounter plans fit each character's existing motif seeds to the consolidated structure: Shalmii has 3 phases, Aster 5, Mira and Aisha each have 3 simultaneous phases, Caelia has 7, and the route-final opponent has 15. Rune, Ribbon, Poker, Desire, and Astral interpreters remain character-specific. Moon's final opponent uses rose patterns; Selkie's final opponent uses chakram patterns. Total endurance is normalized by `GameBossPhaseHpGet()` and incoming damage by `GameBossDamageScaleGet()`.
+Encounter plans fit each character's motif seeds to the consolidated structure: Shalmii has 3 phases, Aster 5, Mira and Aisha each have 3 personal phases, Caelia has 7, and the route-final opponent has 15. Mira's interpreters use casino odds, cards, dice, and roulette; Aisha's use spell circles, mirrored hexes, grimoires, and grand sorcery. When both sisters' personal plans are defeated, they reform for one synchronized `sisters_grand_illusion` phase with shared HP. Moon's final opponent uses rose patterns; Selkie's final opponent uses chakram patterns. Total endurance is normalized by `GameBossPhaseHpGet()` and incoming damage by `GameBossDamageScaleGet()`.
 
-`GameCharacterBossInfoCreate()` maps stages 1, 2, and 4 to Shalmii, Aster, and Caelia. Stage 3 uses `GameDualBossIdentityCreate()` and configures separate Mira and Aisha boss objects, health, phase plans, positions, and HUD bars. Stage 5 selects the route opponent. `GameCharacterBossStoryFileGet()` resolves route/seam files from this encounter registry; portraits remain data-driven through sprite names in JSON and can be replaced independently.
+`GameCharacterBossInfoCreate()` maps stages 1, 2, and 4 to Shalmii, Aster, and Caelia. Stage 3 uses `GameDualBossIdentityCreate()` and configures separate Mira and Aisha boss objects, health, personal phase plans, positions, and HUD bars. Each defeated sister becomes harmless while her sibling still fights; the second personal defeat replaces both plans with the shared finale and synchronizes damage across both objects. Stage 5 selects the route opponent. `GameCharacterBossStoryFileGet()` resolves route/seam files from this encounter registry; the combined Stage 3 dialogue identifies Mira and Aisha as sisters, while portraits remain data-driven through sprite names in JSON and can be replaced independently.
 
 `obj_UI_gameplay` reads the active descriptor directly from the boss identity and uses `phase_timer` to display a two-second phase-title banner. Formatting and fade calculations remain pure gameplay helpers; drawing stays in the GUI event and reuses the shared ornate story-frame theme.
 

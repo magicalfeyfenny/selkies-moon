@@ -682,8 +682,30 @@ suite(function() {
             expect(GameSceneStageAdvance(_state)).toBe("boss_intro");
             expect(_state.mode).toBe("boss_intro");
             expect(_state.scroll_speed).toBe(0);
+            expect(_state.background_route).toBe("boss");
             expect(_state.stage_length_frames).toBe(STAGE_LENGTH_FRAMES);
             expect(global.game_runtime.stage_frame).toBe(STAGE_LENGTH_FRAMES);
+
+            var _background_before = _state.background_frame;
+            GameSceneBackgroundStep(_state);
+            expect(_state.background_frame).toBe(_background_before + 1);
+            expect(_state.background_route_blend).toBeGreaterThan(0);
+        });
+
+        test("Every 3D stage has valid travel and boss loops plus billboard scenery", function() {
+            for (var stage = 1; stage <= STAGE_COUNT; stage++) {
+                var _config = GameStage3DConfigGet(stage);
+                expect(GameStage3DPathLoopIsValid(_config, false)).toBeTruthy();
+                expect(GameStage3DPathLoopIsValid(_config, true)).toBeTruthy();
+                expect(array_length(_config.billboards)).toBeGreaterThan(15);
+
+                var _travel = GameStage3DPathSample(_config, 18, false);
+                var _boss = GameStage3DPathSample(_config, 18, true);
+                var _blend = GameStage3DPathBlendSample(_config, 18, 0.5);
+                expect(_blend.y).toBe(18);
+                expect(_blend.x >= min(_travel.x, _boss.x)
+                    && _blend.x <= max(_travel.x, _boss.x)).toBeTruthy();
+            }
         });
 
         test("Stage clear advances to the next stage and restarts scroll state", function() {
@@ -1235,6 +1257,46 @@ suite(function() {
             expect(_selkie_route.draw_y_scale).toBe(-1);
         });
 
+        test("Mira and Aisha unlock one shared finale only after both personal defeats", function() {
+            with (obj_boss_parent) {
+                instance_destroy();
+            }
+
+            var _mira = instance_create_layer(250, 80, "Instances", obj_boss_parent);
+            var _aisha = instance_create_layer(390, 80, "Instances", obj_boss_parent);
+            GameBossDualConfigure(_mira, "mira");
+            GameBossDualConfigure(_aisha, "aisha");
+
+            expect(GameBossDualIndividualDefeatBegin(_mira)).toBeFalsy();
+            expect(_mira.dual_individual_defeated).toBeTruthy();
+            expect(_mira.dual_finale_active).toBeFalsy();
+            expect(_aisha.dual_individual_defeated).toBeFalsy();
+
+            expect(GameBossDualIndividualDefeatBegin(_aisha)).toBeTruthy();
+            expect(_mira.dual_finale_active).toBeTruthy();
+            expect(_aisha.dual_finale_active).toBeTruthy();
+            expect(_mira.phase_count).toBe(1);
+            expect(_aisha.phase_count).toBe(1);
+            expect(_mira.boss_identity.phase_plan[0].shot_kind).toBe("sisters_grand_illusion");
+            expect(_aisha.boss_identity.phase_plan[0].attack_theme).toBe("sisters");
+
+            _mira.phase_transition_timer = 0;
+            _aisha.phase_transition_timer = 0;
+            _mira.hp = _mira.phase_max_hp;
+            _aisha.hp = _aisha.phase_max_hp;
+            var _shared_hp = _mira.hp;
+            expect(GameBossDamageApply(_mira, 40)).toBe(40);
+            expect(_mira.hp).toBe(_shared_hp - 40);
+            expect(_aisha.hp).toBe(_shared_hp - 40);
+
+            with (_mira) {
+                instance_destroy();
+            }
+            with (_aisha) {
+                instance_destroy();
+            }
+        });
+
         test("Consolidated boss plans preserve each character's original motif source", function() {
             var _expected = [
                 { stage: 1, source: 5, count: 3, first: "shalmii_hex_runes" },
@@ -1263,9 +1325,9 @@ suite(function() {
 
         test("Character bosses use motif-specific seed families and finales", function() {
             var _motifs = [
-                { stage: 2, theme: "poker", first: "mira_four_suits", finale: "mira_royal_flush" },
+                { stage: 2, theme: "casino", first: "mira_three_card_monte", finale: "mira_house_always_wins" },
                 { stage: 5, theme: "rune", first: "shalmii_hex_runes", finale: "shalmii_runebreaker" },
-                { stage: 6, theme: "desire", first: "aisha_order_circle", finale: "aisha_blade_of_desires" },
+                { stage: 6, theme: "sorcery", first: "aisha_arcane_circle", finale: "aisha_grand_sorcery" },
                 { stage: 7, theme: "ribbon", first: "aster_ribbon_loop", finale: "aster_ribbonstar_wish" },
                 { stage: 9, theme: "astral", first: "caelia_planetary_orbit", finale: "caelia_cosmic_zenith" },
             ];
@@ -2388,8 +2450,8 @@ suite(function() {
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
             for (var texture_index = 0; texture_index < array_length(_stage3d_textures); texture_index++) {
                 expect(_stage3d_textures[texture_index] != -1 && sprite_exists(_stage3d_textures[texture_index])).toBeTruthy();
-                expect(sprite_get_width(_stage3d_textures[texture_index])).toBe(256);
-                expect(sprite_get_height(_stage3d_textures[texture_index])).toBe(256);
+                expect(sprite_get_width(_stage3d_textures[texture_index])).toBe(1024);
+                expect(sprite_get_height(_stage3d_textures[texture_index])).toBe(1024);
             }
             expect(object_exists(obj_boss_sunset)).toBeTruthy();
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
@@ -2446,7 +2508,7 @@ suite(function() {
         });
 
         test("Five modular 3D stage scenes expose looping camera, lighting, fog, and runtime buffers", function() {
-            var _effects = ["embers", "salt_mist", "duet_dust", "astral_sparks", "violet_pollen"];
+            var _effects = ["embers", "forest_fireflies", "vegas_magic_dust", "deep_space", "violet_pollen"];
 
             for (var stage = 1; stage <= 5; stage++) {
                 var _config = GameStage3DConfigGet(stage);
@@ -2800,6 +2862,7 @@ suite(function() {
             expect(_boss_state.mode).toBe("boss_intro");
             expect(_boss_state.frame).toBe(STAGE_LENGTH_FRAMES);
             expect(_boss_state.scroll_speed).toBe(0);
+            expect(_boss_state.background_route).toBe("boss");
             expect(global.game_runtime.current_stage).toBe(4);
             expect(global.game_runtime.stage_frame).toBe(STAGE_LENGTH_FRAMES);
             expect(global.game_runtime.stage_notice_timer).toBe(0);

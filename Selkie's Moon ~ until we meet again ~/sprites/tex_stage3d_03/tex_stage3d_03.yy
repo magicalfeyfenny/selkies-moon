@@ -2,15 +2,15 @@
   "$GMSprite": "v2",
   "%Name": "tex_stage3d_03",
   "bboxMode": 0,
-  "bbox_bottom": 255,
+  "bbox_bottom": 1023,
   "bbox_left": 0,
-  "bbox_right": 255,
+  "bbox_right": 1023,
   "bbox_top": 0,
   "collisionKind": 1,
   "collisionTolerance": 0,
   "DynamicTexturePage": false,
   "edgeFiltering": false,
-  "For3D": true,
+  "For3D": false,
   "frames": [
     {
       "$GMSpriteFrame": "v1",
@@ -22,7 +22,7 @@
   ],
   "gridX": 0,
   "gridY": 0,
-  "height": 256,
+  "height": 1024,
   "HTile": false,
   "layers": [
     {
@@ -132,8 +132,8 @@
     ],
     "visibleRange": null,
     "volume": 1.0,
-    "xorigin": 128,
-    "yorigin": 128
+    "xorigin": 512,
+    "yorigin": 512
   },
   "swatchColours": null,
   "swfPrecision": 2.525,
@@ -143,5 +143,5 @@
   },
   "type": 0,
   "VTile": false,
-  "width": 256
+  "width": 1024
 }

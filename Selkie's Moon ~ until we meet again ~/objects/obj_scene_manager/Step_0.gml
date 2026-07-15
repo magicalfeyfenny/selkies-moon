@@ -4,6 +4,10 @@ if (instance_exists(camera_id)) {
     camera_id.y = scene_state.camera_y;
 }
 
+// The native 3D route is presentation-only and keeps advancing through boss
+// dialogue, phase transitions, and combat while the 2D playfield stays anchored.
+GameSceneBackgroundStep(scene_state);
+
 // The data-driven stage director owns wave spawning; the legacy timeline stays idle.
 timeline_running = false;
 

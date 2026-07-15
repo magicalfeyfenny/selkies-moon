@@ -116,7 +116,10 @@ if (_boss_count > 1) {
         _layout.sidebar_color, 0.50, make_color_rgb(255, 174, 234), false);
 
     draw_set_font(fn_dialogue_speech);
-    GameUiDrawOutlinedText("DUAL ENCOUNTER", _layout.boss_bar_left, 132,
+    var _dual_finale = variable_instance_exists(_boss, "dual_finale_active")
+        && _boss.dual_finale_active;
+    GameUiDrawOutlinedText(_dual_finale ? "SISTERS' GRAND FINALE" : "DUAL ENCOUNTER",
+        _layout.boss_bar_left, 132,
         make_color_rgb(255, 214, 112));
 
     for (var dual = 0; dual < _boss_count; dual++) {
@@ -126,15 +129,23 @@ if (_boss_count > 1) {
             ? _dual_boss.boss_display_name : "Boss";
         var _dual_transition = variable_instance_exists(_dual_boss, "phase_transition_timer")
             && _dual_boss.phase_transition_timer > 0;
+        var _dual_waiting = variable_instance_exists(_dual_boss, "dual_individual_defeated")
+            && _dual_boss.dual_individual_defeated
+            && (!variable_instance_exists(_dual_boss, "dual_finale_active")
+                || !_dual_boss.dual_finale_active);
 
         draw_set_font(fn_dialogue_speech);
         GameUiDrawOutlinedText(_dual_name, _layout.boss_bar_left, _dual_top,
             (dual == 0) ? make_color_rgb(255, 188, 226) : make_color_rgb(168, 222, 255));
         GameUiDrawBossPhaseHearts(_layout.boss_bar_left, _dual_top + 21,
             _dual_boss.phase_index, _dual_boss.phase_count);
-        GameUiDrawOutlinedText(_dual_transition ? "REFORMING" : "Pattern "
-            + string(_dual_boss.phase_index + 1), _layout.boss_bar_left, _dual_top + 36,
-            _dual_transition ? _story_palette.title_color : _story_palette.muted_text_color);
+        var _dual_status = _dual_waiting ? "DEFEATED - SISTER STANDS"
+            : (_dual_transition ? "REFORMING TOGETHER"
+                : (_dual_finale ? "SHARED FINAL ATTACK" : "Pattern "
+                    + string(_dual_boss.phase_index + 1)));
+        GameUiDrawOutlinedText(_dual_status, _layout.boss_bar_left, _dual_top + 36,
+            (_dual_transition || _dual_waiting)
+                ? _story_palette.title_color : _story_palette.muted_text_color);
     }
 } else if (_boss != noone) {
     var _boss_label = variable_instance_exists(_boss, "boss_display_name") ? _boss.boss_display_name : "Boss";

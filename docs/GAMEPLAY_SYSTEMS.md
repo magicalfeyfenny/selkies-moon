@@ -78,7 +78,7 @@ Bombs consume stock, run for 60 frames, cancel bullets throughout their active w
 | ---: | --- | --- |
 | 1: Shalmii | Forge Spark, Anvil Familiar, Bellows Imp, Hammer Cherub | Tideglass fan/spiral; shockwave; hammerfall |
 | 2: Aster | Ribbon Hare, Winged Staff, Lavender Knot, Saltwind Pinwheel | gale; kelp wall; ribbon loop; spindrift |
-| 3: Mira & Aisha | Spade Familiar, Dealer Mask, Order Talisman, Chaos Shard | four suits; dealer fan; order circle; chaos shards |
+| 3: Mira & Aisha | Spade Familiar, Dealer Mask, Order Talisman, Chaos Shard | three-card monte; loaded dice; spell circles; mirrored hexes |
 | 4: Caelia | Clockwork Planet, Astrolabe Eye, Constellation Lance, Bloodstar Heart | Bloodtide pulse/hunt; astrolabe; constellation |
 | 5: Moon or Selkie | Violet Bee, Twilight Mayfly, Thorn Reliquary, Chakram Seraph | thorn arc; petal spiral; rose bloom; chakram orbit |
 
@@ -103,11 +103,11 @@ There are five stages and no abstract Memory Core boss encounters. Their useful 
 | ---: | --- | --- | --- | --- |
 | 1 | Shalmii / Lockstep | Hex runes and blacksmith hammerwork | Hex Runes; Hammerfall; Shockwave | Runebreaker (3 phases total) |
 | 2 | Aster / Ribbonstar | Ribbons, bunny arcs, and winged staff | Ribbon Loop; Bunny Hop; Winged Staff; Lavender Knot | Ribbonstar Wish (5 phases total) |
-| 3 | Mira & Aisha / Wildheart and Wishbound | Poker chance paired with order, chaos, and talismans | Paired character seeds | Royal Flush and Blade of Desires (3 phases each, simultaneous) |
+| 3 | Mira & Aisha / Wildheart and Wishbound | Mira's casino trickery paired with Aisha's stage sorcery | Three-Card Monte; Loaded Dice; Arcane Circle; Mirrored Hex | House Always Wins and Grand Sorcery (3 personal phases each), then Sisters' Grand Illusion |
 | 4 | Caelia / Zenith | Astral orrery | Planetary Orbit; Constellation; Astrolabe; Star Cage | Cosmic Zenith (7 phases total) |
 | 5 | Moon or Selkie | Rose or chakram | Route-specific seeds | Rose Eternity or Chakram Apotheosis (15 phases total) |
 
-A finale is appended after expansion and is never used as a seed or variant. Expanded phase HP and damage scaling keep total endurance near the original curve while giving each phase enough time to express its pattern. Portrait, dialogue, and ship sprites remain presentation data, so replacing provisional character art does not require changing an attack plan.
+A finale is appended after expansion and is never used as a seed or variant. Mira and Aisha are the exception only in encounter flow: after both three-phase personal plans have been defeated, the sisters reform for one additional synchronized casino-and-sorcery attack backed by a shared life pool. Expanded phase HP and damage scaling keep total endurance near the original curve while giving each phase enough time to express its pattern. Portrait, dialogue, and ship sprites remain presentation data, so replacing provisional character art does not require changing an attack plan.
 
 Each phase descriptor schedules a `shot_kind`, cadence, burst size, angles, speeds, spread, optional redirect interval, and theme. `scr_boss_patterns` provides shared bullet-spawn primitives, but each boss-family interpreter owns its complete attack geometry. Generic `blade_spiral`, `redirect_spiral`, and `blade_cross` attacks use coherent rings, offset counter-rotation, and layered four-arm crosses respectively. `diamond_fan` uses speed-tiered chevron wings while `bead_arc` remains an evenly spaced aimed fan.
 
@@ -137,12 +137,12 @@ finale route while every one-shot enters through a semantic helper.
 
 ## Story and ending
 
-Opening and ending rooms auto-start their default story files. Stages 1-4 queue Shalmii, Aster, Mira and Aisha together, then Caelia; each uses route-specific introduction and defeat dialogue around its motif-specific fight. Practice skips both seams. Stage 5 queues the Moon-or-Selkie confrontation inside `rm_game`, preserving Sunset chasing Sunrise as the spine of both yuri routes. After the final boss, the scene enters the ending; ending completion records the run before credits cache the result. Credits reset runtime only when they finish or are skipped.
+Opening and ending rooms auto-start their default story files. Stages 1-4 queue Shalmii, Aster, Mira and Aisha together, then Caelia; each uses route-specific introduction and defeat dialogue around its motif-specific fight. Mira and Aisha's combined files explicitly establish their sisterhood and frame their final spell as sibling coordination rather than a new character encounter. Practice skips both seams. Stage 5 queues the Moon-or-Selkie confrontation inside `rm_game`, preserving Sunset chasing Sunrise as the spine of both yuri routes. After the final boss, the scene enters the ending; ending completion records the run before credits cache the result. Credits reset runtime only when they finish or are skipped.
 
 ## Background and draw hierarchy
 
-The old violet tile layer is hidden. `obj_scene_manager` submits a true-3D modular model in Draw Begin, then restores the 2D matrices and disables depth testing before any actor renders. Three adjacent 64-unit copies cover the current camera path while a compact prebuilt vertex buffer avoids runtime OBJ parsing. The editable Blender source and triangulated OBJ remain beside the runtime buffer.
+The old violet tile layer is hidden. `obj_scene_manager` submits true-3D modular models and camera-facing texture billboards in Draw Begin, then restores the 2D matrices and disables depth testing before any actor renders. Three adjacent 64-unit copies cover both looping camera paths while compact prebuilt vertex buffers avoid runtime OBJ parsing. The editable Blender sources, packed 1024px texture atlases, layered Krita sources, and triangulated OBJ files remain beside the runtime buffers.
 
-Each chapter owns a slow looping camera path and a distinct light/fog/effect treatment: Shalmii uses orange forge key light with ember smoke; Aster uses cool coast light, pink rim light, and salt mist; Mira and Aisha split magenta and cyan around wishcourt dust; Caelia uses cold astral light, red rim emission, and deep orrery fog; Moon and Selkie use violet moonlight, horizon gold, pollen, petals, and a continuous field of modeled vines and violets. Quantized shader light and ordered fog stipple preserve the 640x360 pixel grid.
+Each chapter owns two compatible slow looping camera paths: the travel route and a second downward-moving boss route with the same loop seam. Shalmii descends through a blacksmith citadel of furnaces, anvils, chimneys, tools, and molten channels; Aster passes a moonrabbit forest of trees, burrows, mushrooms, logs, and rabbit topiary; Mira and Aisha divide a Vegas illusion stage between roulette/card machinery and curtains, hats, wands, and sorcery rings; Caelia crosses deep space among planets, asteroids, nebulae, galaxy cores, and observatory pylons; Moon and Selkie fly over an endless field of modeled violets, hero flowers, and vine walls. High-resolution billboards extend each location to its horizon, while quantized shader light and ordered fog stipple preserve the 640x360 pixel display grid.
 
-Background scroll never changes collision or spawn coordinates. Background atmosphere remains in Draw Begin. Broad sword, bomb, and death effects draw next; enemy bullets and the player's ship/hitbox always draw above them. Menu backgrounds use silhouettes of all seven girls as decorators.
+Background scroll never changes collision or spawn coordinates. The 2D gameplay camera still stops for a boss, but the separate 3D presentation clock continues through intro dialogue, combat, and outro while it blends between routes. Background atmosphere remains in Draw Begin. Broad sword, bomb, and death effects draw next; enemy bullets and the player's ship/hitbox always draw above them. Menu backgrounds use silhouettes of all seven girls as decorators.
