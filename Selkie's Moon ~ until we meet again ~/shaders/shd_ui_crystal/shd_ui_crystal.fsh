@@ -53,10 +53,18 @@ void main() {
         * (0.28 + (facing_light * 0.72)) * shimmer;
 
     // Dark stained crystal keeps text and meters legible over busy location
-    // art. The source remains recognizable, but no longer competes with UI.
-    vec3 dark_backdrop = refracted * 0.62;
-    vec3 dark_tint = v_vColour.rgb * 0.64;
+    // art. A slight diagonal falloff grades midnight blue into deep violet,
+    // while the caller's authored panel color still preserves selection cues.
+    float gradient_position = clamp(v_vTexcoord.y
+        + ((v_vTexcoord.x - 0.5) * 0.12), 0.0, 1.0);
+    vec3 midnight_blue = vec3(0.025, 0.060, 0.180);
+    vec3 deep_purple = vec3(0.155, 0.035, 0.255);
+    vec3 gradient_tint = mix(midnight_blue, deep_purple, gradient_position);
+    vec3 dark_backdrop = refracted * 0.50;
+    vec3 authored_tint = v_vColour.rgb * 0.52;
+    vec3 dark_tint = mix(authored_tint, gradient_tint, 0.58);
     vec3 crystal_color = mix(dark_backdrop, dark_tint, u_tint_amount);
+    crystal_color = mix(crystal_color, gradient_tint, 0.12);
     crystal_color += vec3(0.42, 0.68, 1.0) * seam_light * 0.28;
     crystal_color += vec3(0.24, 0.07, 0.30)
         * diagonal_seam * (1.0 - facing_light) * 0.10;
