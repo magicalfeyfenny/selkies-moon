@@ -16,6 +16,7 @@ Open `Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp` in GameMaker. Pres
 ├── docs/
 ├── tools/
 │   ├── build_gameplay_art.py
+│   ├── run_gmtl_tests_ci.ps1
 │   ├── run_gmtl_tests.zsh
 │   └── run_yyc_playtest.zsh
 └── Selkie's Moon ~ until we meet again ~/
@@ -51,7 +52,7 @@ The harness:
 6. retries transient compiler/runner crashes;
 7. fails if summary lines are missing, zero tests ran, or any test failed.
 
-The current expected result is `111 passed, 111 total`. GameMaker's asset compiler can intermittently throw `System.AccessViolationException` before compilation. A retry that later reaches the complete passing summary is valid; a GML compiler error or a completed failing test is not transient.
+The current expected result is `128 passed, 128 total`. GameMaker's asset compiler can intermittently throw `System.AccessViolationException` before compilation. A retry that later reaches the complete passing summary is valid; a GML compiler error or a completed failing test is not transient.
 
 Run these lightweight checks after editing:
 
@@ -59,6 +60,12 @@ Run these lightweight checks after editing:
 git diff --check
 git status --short
 ~~~
+
+## GitHub Actions unit tests
+
+`.github/workflows/gamemaker-tests.yml` independently runs the GMTL suite for pull requests targeting `dev`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
+
+The repository must have an Actions secret named `ACCESS_KEY`. Generate one on the [GameMaker account access-key page](https://gamemaker.io/account/access_keys), then add it under **Settings > Secrets and variables > Actions**. Never commit the key or paste it into a workflow file. Licensed CI is skipped for fork pull requests because GitHub does not provide repository secrets to untrusted fork code.
 
 ## Test organization
 
