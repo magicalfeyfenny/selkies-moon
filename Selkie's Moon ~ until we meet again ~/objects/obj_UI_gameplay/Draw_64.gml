@@ -4,17 +4,21 @@ var _layout = GameGameplayHudLayoutCreate();
 var _stage_info = GameStageInfoGet(GameCurrentStageGet());
 var _story_palette = GameUiStoryFramePaletteCreate(false);
 
+// Gameplay crystal samples the completed world, never the HUD itself.
+GameUiCrystalSourceUseApplicationSurface();
+
 // Tint the playfield lightly by stage without hiding bullets or enemies.
 draw_set_alpha(0.08);
 draw_set_color(_stage_info.accent);
 draw_rectangle(_layout.playfield_left, 0, _layout.playfield_right, GAME_VIEW_HEIGHT, false);
 draw_set_alpha(1);
 
-draw_set_alpha(_layout.sidebar_alpha);
-draw_set_color(_layout.sidebar_color);
-draw_rectangle(_layout.left_panel_left, 0, _layout.left_panel_right, GAME_VIEW_HEIGHT, false);
-draw_rectangle(_layout.right_panel_left, 0, _layout.right_panel_right, GAME_VIEW_HEIGHT, false);
-draw_set_alpha(1);
+GameUiDrawCrystalPane(_layout.left_panel_left, 0,
+    _layout.left_panel_right, GAME_VIEW_HEIGHT,
+    _layout.sidebar_color, _layout.sidebar_alpha, 1.32);
+GameUiDrawCrystalPane(_layout.right_panel_left, 0,
+    _layout.right_panel_right, GAME_VIEW_HEIGHT,
+    _layout.sidebar_color, _layout.sidebar_alpha, 1.32);
 
 // Pearl-and-rose frames give each information block the same visual grammar as dialogue.
 GameUiDrawOrnateFrame(_layout.left_panel_left + 6, 6,

@@ -1342,7 +1342,9 @@ function GameTitleDraw(_state) {
     draw_set_color(c_white);
     draw_set_halign(fa_left);
     draw_set_valign(fa_top);
+    var _crystal_capture = GameUiCrystalBackdropBegin();
     GameTitleDrawBackground(_state);
+    GameUiCrystalBackdropEnd(_crystal_capture);
 
     if (_state.phase != "press_start") {
         var _palette = GameUiStoryFramePaletteCreate(false);

@@ -1,4 +1,5 @@
 // Draw the scrolling credits over a dimmed story-art backdrop.
+var _crystal_capture = GameUiCrystalBackdropBegin();
 draw_clear_alpha(make_color_rgb(8, 12, 28), 1);
 
 var _core_asset = asset_get_index("spr_dialogue_bg_core");
@@ -12,6 +13,7 @@ draw_set_alpha(0.68);
 draw_set_color(c_black);
 draw_rectangle(0, 0, GAME_VIEW_WIDTH, GAME_VIEW_HEIGHT, false);
 draw_set_alpha(1);
+GameUiCrystalBackdropEnd(_crystal_capture);
 
 var _story_palette = GameUiStoryFramePaletteCreate(false);
 GameUiDrawOrnateFrame(24, 10, GAME_VIEW_WIDTH - 48, GAME_VIEW_HEIGHT - 20,

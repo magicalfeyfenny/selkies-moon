@@ -45,7 +45,8 @@ Five global structs are the shared contracts between objects:
 | `scr_story_helpers` | Story JSON loading, dialogue state, text layout, portrait/background rendering, and ornate UI primitives |
 | `scr_stage_3d` | Native vertex-buffer loading, modular camera paths, stage lighting/fog shader parameters, and background atmosphere |
 | `scr_title_helpers` | Title page state, character metadata, practice configuration UI, Music Room controls, and title drawing |
-| `scr_test_helpers` | Test-launch isolation and the 25-frame visual QA tour |
+| `scr_ui_crystal` | Clean-backdrop capture, GUI-to-surface mapping, and reusable crystal-pane shader orchestration |
+| `scr_test_helpers` | Test-launch isolation and the 26-frame visual QA tour |
 | `test_bootstrap` | GMTL regression suite |
 | `GMTL_*` | Vendored GameMaker Testing Library; do not refactor as project-owned code |
 
@@ -65,7 +66,7 @@ Every project-owned top-level function has a `/// @func` signature and a one-lin
 
 ### Application and UI
 
-- `obj_app_init`: persistent application lifecycle.
+- `obj_app_init`: persistent application lifecycle and ownership of the 640x360 GUI and clean crystal-backdrop surfaces.
 - `obj_input_manager`: persistent input polling in Begin Step.
 - `obj_UI_title`: delegates title state and drawing to `scr_title_helpers`.
 - `obj_UI_story`: owns a local story queue and requests room transitions after dialogue.
