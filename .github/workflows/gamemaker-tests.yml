@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
 
       - name: Require GameMaker CI access key
         shell: pwsh
@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload test and compiler logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: gamemaker-unit-test-logs
           path: |
@@ -76,5 +76,5 @@ jobs:
             test-results/github-actions-gmtl-stderr.log
             test-results/github-actions-game/debug.log
             ${{ steps.build.outputs.log-dir }}
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 14
