@@ -1,6 +1,7 @@
 {
   "stage": 1,
   "slug": "shalmii_forge_procession",
+  "location": "Shalmii's Blacksmith Citadel",
   "blend_source": "art/3d_stage_sources/stage_01_shalmii_forge_procession/shalmii_forge_procession.blend",
   "runtime_obj": "stage3d_01_shalmii_forge_procession.obj",
   "loop_length": 64.0,
@@ -24,6 +25,33 @@
       0.8,
       48.0,
       8.8
+    ],
+    [
+      -1.0,
+      64.0,
+      10.0
+    ]
+  ],
+  "boss_camera_path": [
+    [
+      -1.0,
+      0.0,
+      10.0
+    ],
+    [
+      3.2,
+      16.0,
+      7.8
+    ],
+    [
+      -3.0,
+      32.0,
+      8.7
+    ],
+    [
+      2.4,
+      48.0,
+      7.4
     ],
     [
       -1.0,
@@ -57,5 +85,6 @@
     "density": 0.42,
     "effect": "embers"
   },
-  "triangles": 2356
+  "triangles": 6228,
+  "billboard_proxy_count": 12
 }

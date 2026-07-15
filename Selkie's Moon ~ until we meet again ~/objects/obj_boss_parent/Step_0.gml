@@ -7,6 +7,17 @@ if (GameGameplayIsFrozen()) {
     exit;
 }
 
+// An individually defeated sister remains as a dimmed, harmless participant
+// until the other sister falls and their one shared finale can begin.
+if (variable_instance_exists(id, "dual_boss") && dual_boss
+    && variable_instance_exists(id, "dual_individual_defeated")
+    && dual_individual_defeated
+    && (!variable_instance_exists(id, "dual_finale_active") || !dual_finale_active)) {
+    combat_step_blocked = true;
+    GameBossDualFinaleTryBegin();
+    exit;
+}
+
 // Resolve the final destruction countdown and signal the scene manager when the boss is gone.
 if (destruction_active) {
     combat_step_blocked = true;
@@ -55,6 +66,7 @@ if (hp > 0) {
 
 if (phase_index < (phase_count - 1)) {
     combat_step_blocked = true;
+    GameBossPhaseMedalsDrop(id);
     phase_index += 1;
     hp = 0;
     phase_timer = 0;
@@ -70,6 +82,14 @@ if (phase_index < (phase_count - 1)) {
     exit;
 }
 
+if (variable_instance_exists(id, "dual_boss") && dual_boss
+    && (!variable_instance_exists(id, "dual_finale_active") || !dual_finale_active)) {
+    combat_step_blocked = true;
+    GameBossDualIndividualDefeatBegin(id);
+    exit;
+}
+
+GameBossPhaseMedalsDrop(id);
 destruction_active = true;
 destruction_timer = BOSS_DESTRUCTION_FRAMES;
 hit_radius = 0;

@@ -1,7 +1,7 @@
 [
   {
     "name": "Mira",
-    "text": "Selkie, Wildheart and Wishbound hold this court together.",
+    "text": "Selkie, my sister Aisha and I hold this Grand Illusion together.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -16,7 +16,7 @@
   },
   {
     "name": "Aisha",
-    "text": "You chase Sunset with hope in one hand and fear in the other.",
+    "text": "My sister reads your odds. I read the magic inside your hope and fear.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -44,7 +44,7 @@
   },
   {
     "name": "Mira",
-    "text": "Good answer. It still has to survive the deal.",
+    "text": "Good answer. It still has to survive my deal and my sister's spellwork.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -59,7 +59,7 @@
   },
   {
     "name": "Aisha",
-    "text": "And the blade. Love is not made kinder by refusing to name its cost.",
+    "text": "Mira means the trick; I mean the sorcery. Sisters can disagree and still fight as one.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],

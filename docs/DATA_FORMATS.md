@@ -49,7 +49,7 @@ Character-boss story files use `<story_id>_<seam>_story_<route>_v2.json`. The se
 
 All four stat tables use ten-entry descending/parallel arrays. The score array is sorted; the continues row is inserted at the matching score index. Ship tables may gain new keys, and migration preserves any recognized per-ship arrays.
 
-`config.sav` contains `version`, `view_width`, `view_height`, `target_fps`, `display_scale`, `fullscreen`, `input_device`, `input_bindings`, `master_volume`, `music_volume`, and `sfx_volume`. Configuration schema version 5 adds independent `keyboard` and `gamepad` maps beneath `input_bindings`. Every map owns the eight verbs `up`, `down`, `left`, `right`, `fire`, `autofire`, `bomb`, and `pause`; keyboard values are non-empty key-code arrays and gamepad values are digital button codes. Older configurations migrate to the default bindings. The three audio values remain integer percentages from 0 through 100; missing gains default to 100 and present values are rounded and clamped.
+`config.sav` contains `version`, `view_width`, `view_height`, `target_fps`, `display_scale`, `fullscreen`, `input_device`, `input_bindings`, `master_volume`, `music_volume`, and `sfx_volume`. Configuration schema version 6 keeps independent `keyboard` and `gamepad` maps beneath `input_bindings` and adds the held `focus` action. Every map owns the nine verbs `up`, `down`, `left`, `right`, `fire`, `autofire`, `focus`, `bomb`, and `pause`; keyboard values are non-empty key-code arrays and gamepad values are digital button codes. Older configurations migrate while preserving existing bindings and filling `focus` with Shift or LB/L1. The three audio values remain integer percentages from 0 through 100; missing gains default to 100 and present values are rounded and clamped.
 
 Never change a persisted shape without updating its version, default factory, validator, migration, and tests.
 
@@ -74,12 +74,14 @@ Boss plans are arrays of structs created by `GameMemoryCorePhaseCreate()`:
 
 Every `shot_kind` must have one explicit runtime interpreter case. Unknown values log a warning and fire nothing. Phase signatures include all behavior fields and are used by regression tests to enforce unique plans.
 
-Boss themes are `poker`, `rune`, `desire`, `ribbon`, and `astral` for character bosses, and `rose` or `chakram` for the route finale. Tideglass, Saltwind, Kelp, and Bloodtide survive as pattern material on stage-themed basic enemies rather than boss identity. Plan construction preserves seed order when fitting a motif to its encounter's phase count:
+Boss themes are `casino`, `sorcery`, `rune`, `ribbon`, and `astral` for character bosses, `sisters` for Mira and Aisha's post-defeat shared finale, and `rose` or `chakram` for the route finale. Tideglass, Saltwind, Kelp, and Bloodtide survive as pattern material on stage-themed basic enemies rather than boss identity. Plan construction preserves seed order when fitting a motif to its encounter's phase count:
 
 1. every base seed in declaration order;
 2. every `_v1` phase in the same order;
 3. every `_v2` phase when used by a route-final boss;
 4. one non-repeated `_finale` phase.
+
+Mira and Aisha each complete that four-step construction independently. Once both sisters are individually defeated, their encounter replaces both active plans with the single `sisters_grand_illusion_finale` descriptor and synchronizes its HP across the two boss objects.
 
 ## Practice configuration
 

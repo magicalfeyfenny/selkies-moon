@@ -1,6 +1,7 @@
 {
   "stage": 5,
   "slug": "moon_selkie_infinite_violet_garden",
+  "location": "The Infinite Violet and Vine Field",
   "blend_source": "art/3d_stage_sources/stage_05_moon_selkie_infinite_violet_garden/moon_selkie_infinite_violet_garden.blend",
   "runtime_obj": "stage3d_05_moon_selkie_infinite_violet_garden.obj",
   "loop_length": 64.0,
@@ -31,6 +32,33 @@
       8.8
     ]
   ],
+  "boss_camera_path": [
+    [
+      0.0,
+      0.0,
+      8.8
+    ],
+    [
+      2.6,
+      16.0,
+      6.8
+    ],
+    [
+      -2.6,
+      32.0,
+      7.6
+    ],
+    [
+      1.2,
+      48.0,
+      6.5
+    ],
+    [
+      0.0,
+      64.0,
+      8.8
+    ]
+  ],
   "camera_target_z": 0.8,
   "scroll_speed": 0.019,
   "lighting": {
@@ -44,18 +72,19 @@
       0.32,
       1.0
     ],
-    "sun_energy": 1.65
+    "sun_energy": 2.1
   },
   "fog": {
     "color": [
-      0.15,
-      0.045,
-      0.18
+      0.14,
+      0.055,
+      0.19
     ],
-    "start": 16.0,
-    "end": 68.0,
-    "density": 0.46,
+    "start": 22.0,
+    "end": 84.0,
+    "density": 0.38,
     "effect": "violet_pollen_petals"
   },
-  "triangles": 63492
+  "triangles": 31956,
+  "billboard_proxy_count": 32
 }

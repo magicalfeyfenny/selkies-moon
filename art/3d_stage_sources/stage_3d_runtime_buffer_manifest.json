@@ -9,9 +9,9 @@
       "texcoord"
     ],
     "stride_bytes": 32,
-    "vertices": 7068,
-    "triangles": 2356,
-    "bytes": 226176
+    "vertices": 18684,
+    "triangles": 6228,
+    "bytes": 597888
   },
   {
     "stage": 2,
@@ -23,9 +23,9 @@
       "texcoord"
     ],
     "stride_bytes": 32,
-    "vertices": 3324,
-    "triangles": 1108,
-    "bytes": 106368
+    "vertices": 37812,
+    "triangles": 12604,
+    "bytes": 1209984
   },
   {
     "stage": 3,
@@ -37,9 +37,9 @@
       "texcoord"
     ],
     "stride_bytes": 32,
-    "vertices": 8784,
-    "triangles": 2928,
-    "bytes": 281088
+    "vertices": 25080,
+    "triangles": 8360,
+    "bytes": 802560
   },
   {
     "stage": 4,
@@ -51,9 +51,9 @@
       "texcoord"
     ],
     "stride_bytes": 32,
-    "vertices": 9516,
-    "triangles": 3172,
-    "bytes": 304512
+    "vertices": 19476,
+    "triangles": 6492,
+    "bytes": 623232
   },
   {
     "stage": 5,
@@ -65,8 +65,8 @@
       "texcoord"
     ],
     "stride_bytes": 32,
-    "vertices": 190476,
-    "triangles": 63492,
-    "bytes": 6095232
+    "vertices": 95868,
+    "triangles": 31956,
+    "bytes": 3067776
   }
 ]

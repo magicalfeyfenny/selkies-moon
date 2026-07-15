@@ -9,6 +9,7 @@ depth = 10000;
 // The background model is loaded lazily for the current stage and replaced as
 // chapters change. Keeping it here guarantees it draws before every 2D actor.
 stage3d_vertex_format = GameStage3DVertexFormatCreate();
+stage3d_billboard_buffers = GameStage3DBillboardBuffersCreate(stage3d_vertex_format);
 stage3d_uniforms = GameStage3DUniformsCreate();
 stage3d_stage = -1;
 stage3d_buffer = -1;

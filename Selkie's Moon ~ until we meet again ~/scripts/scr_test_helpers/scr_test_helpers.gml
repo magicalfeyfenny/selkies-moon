@@ -107,7 +107,7 @@ function GameVisualTourStateEnsure() {
             pending_capture_name: "",
             pending_capture_path: "",
             capture_count: 0,
-            expected_capture_count: 25,
+            expected_capture_count: 26,
             completion_wait_logged: false,
         };
 
@@ -321,6 +321,9 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
     global.game_runtime.meter = (_stage * 70) mod METER_MAX;
 
     _scene.scene_state.frame = 360;
+    _scene.scene_state.background_frame = 360;
+    _scene.scene_state.background_route = "travel";
+    _scene.scene_state.background_route_blend = 0;
     _scene.scene_state.mode = "scroll";
     _scene.scene_state.target_x = CAMERA_HOME_X;
     _scene.scene_state.camera_x = CAMERA_HOME_X;
@@ -366,6 +369,8 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
         global.game_runtime.current_stage = _stage;
         _scene.scene_state.mode = "boss_fight";
         _scene.scene_state.boss_spawned = true;
+        _scene.scene_state.background_route = "boss";
+        _scene.scene_state.background_route_blend = 1;
         if (GameStageIsDualBoss()) {
             var _mira_tour_boss = instance_create_layer(
                 CAMERA_HOME_X - 52, CAMERA_HOME_Y - 98, "Instances", obj_boss_sunset);
@@ -373,8 +378,14 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
                 CAMERA_HOME_X + 52, CAMERA_HOME_Y - 78, "Instances", obj_boss_sunset);
             GameBossDualConfigure(_mira_tour_boss, "mira");
             GameBossDualConfigure(_aisha_tour_boss, "aisha");
-            _mira_tour_boss.attack_timer = 90;
-            _aisha_tour_boss.attack_timer = 90;
+            GameBossDualIndividualDefeatBegin(_mira_tour_boss);
+            GameBossDualIndividualDefeatBegin(_aisha_tour_boss);
+            _mira_tour_boss.phase_transition_timer = 0;
+            _aisha_tour_boss.phase_transition_timer = 0;
+            _mira_tour_boss.hp = _mira_tour_boss.phase_max_hp;
+            _aisha_tour_boss.hp = _aisha_tour_boss.phase_max_hp;
+            _mira_tour_boss.phase_timer = 36;
+            _aisha_tour_boss.phase_timer = 36;
         } else {
             var _boss = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y - 92, "Instances", obj_boss_sunset);
             _boss.attack_timer = 90;
@@ -383,6 +394,16 @@ function GameVisualTourGameplayPrepare(_stage, _mode) {
         _scene.scene_state.mode = "stage_clear";
         _scene.scene_state.stage_clear_timer = STAGE_CLEAR_DELAY_FRAMES;
         global.game_runtime.stage_complete = true;
+    } else if (_mode == "continue") {
+        global.game_runtime.signals.paused = false;
+        global.game_runtime.signals.continue_request = true;
+        global.game_runtime.continue_screen = GameContinueStateCreate();
+        global.game_runtime.continue_screen.selected_index = CONTINUE_OPTION_NO;
+
+        var _pause = instance_find(obj_UI_menu, 0);
+        if (_pause != noone) {
+            _pause.pause_state.active = false;
+        }
     }
 
     return true;
@@ -492,6 +513,9 @@ function GameVisualTourStep() {
         case 24:
             return GameVisualTourPrepareAndCapture("24_pause_quit_confirm",
                 GameVisualTourPausePrepare("quit_confirm"));
+        case 25:
+            return GameVisualTourPrepareAndCapture("25_continue_prompt",
+                GameVisualTourGameplayPrepare(3, "continue"));
     }
 
     if (_tour.pending_capture_name != "" || _tour.capture_count < _tour.expected_capture_count) {

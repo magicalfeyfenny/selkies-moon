@@ -1,7 +1,7 @@
 [
   {
     "name": "Mira",
-    "text": "Moon, the Velvet Wishcourt does not permit solitary wagers.",
+    "text": "Moon, my sister Aisha and I built this Grand Illusion together. No solitary wagers.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -16,7 +16,7 @@
   },
   {
     "name": "Aisha",
-    "text": "Mira tests chance. I test desire. You will answer us together.",
+    "text": "My sister rigs chance. I work sorcery. Defeat us apart, and we still finish together.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -44,7 +44,7 @@
   },
   {
     "name": "Mira",
-    "text": "Still calling pursuit devotion? Wildheart will expose that bluff.",
+    "text": "Still calling pursuit devotion? I will expose that bluff before my sister casts the finale.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
@@ -59,7 +59,7 @@
   },
   {
     "name": "Aisha",
-    "text": "Wishbound will show whether your love can survive being understood.",
+    "text": "And I will trust my sister's read. Wishbound will test what remains after the trick.",
     "backgrounds": [
       "spr_story_bg_wishcourt"
     ],
