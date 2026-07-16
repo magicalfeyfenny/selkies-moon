@@ -272,6 +272,29 @@ class PullRequestGovernanceTests(unittest.TestCase):
         errors = _validate(event, comments)
         self.assertTrue(any("acceptance_sha256" in error for error in errors), errors)
 
+    def test_comment_shaped_text_in_markdown_code_is_hashed(self) -> None:
+        inline_before = "Scope: `<!-- do not release -->`"
+        inline_after = "Scope: `<!-- publish release -->`"
+        self.assertNotEqual(
+            governance.canonical_acceptance_sha256(inline_before),
+            governance.canonical_acceptance_sha256(inline_after),
+        )
+
+        fenced_before = "```html\n<!-- do not release -->\n```"
+        fenced_after = "```html\n<!-- publish release -->\n```"
+        self.assertNotEqual(
+            governance.canonical_acceptance_sha256(fenced_before),
+            governance.canonical_acceptance_sha256(fenced_after),
+        )
+
+        event, _contract_value, comments = _fixture()
+        event["pull_request"]["body"] = event["pull_request"]["body"].replace(  # type: ignore[index]
+            "Do not publish a release.",
+            "Keep this binding text: `<!-- do not publish a release -->`.",
+        )
+        errors = _validate(event, comments)
+        self.assertTrue(any("acceptance_sha256" in error for error in errors), errors)
+
     def test_copied_repository_or_pr_number_is_rejected(self) -> None:
         event, contract, comments = _fixture()
         contract["repository"] = "someone/copied-repo"

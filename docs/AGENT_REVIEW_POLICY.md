@@ -84,8 +84,9 @@ The PR body keeps the human-readable sections from the repository template and
 exactly one hidden `pr-contract:v1` JSON object. The contract uses full Git
 identifiers and names the implementation run. Its canonical SHA-256 is computed
 from UTF-8 JSON with sorted keys and compact separators. The contract also
-contains `acceptance_sha256`, a canonical digest of the entire visible PR body
-after HTML comments and non-semantic trailing whitespace are removed. Editing a
+contains `acceptance_sha256`, a canonical digest of the entire PR body except
+for the unique `pr-contract:v1` machine comment, after line-ending and
+non-semantic trailing-whitespace normalization. Editing a
 required section or adding visible scope elsewhere therefore changes the
 contract hash and invalidates its reviews.
 

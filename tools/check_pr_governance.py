@@ -315,9 +315,29 @@ def canonical_contract_sha256(contract: dict[str, object]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _normalize_visible_section(content: str) -> str:
-    visible = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
-    normalized = visible.replace("\r\n", "\n").replace("\r", "\n")
+def _body_without_machine_contract(body: str) -> str:
+    contract_comments = [
+        match
+        for match in HTML_COMMENT_PATTERN.finditer(body)
+        if re.match(
+            r"^pr-contract:v1\b",
+            match.group("content").strip(),
+            re.IGNORECASE,
+        )
+    ]
+    if len(contract_comments) != 1:
+        # Contract parsing reports missing, malformed, or duplicate markers.
+        # Preserve the entire body here so ambiguous input cannot be excluded
+        # from the acceptance digest.
+        return body
+    contract_comment = contract_comments[0]
+    return body[: contract_comment.start()] + body[contract_comment.end() :]
+
+
+def _normalize_acceptance_body(body: str) -> str:
+    normalized = _body_without_machine_contract(body).replace("\r\n", "\n").replace(
+        "\r", "\n"
+    )
     lines = [line.rstrip() for line in normalized.split("\n")]
     while lines and not lines[0]:
         lines.pop(0)
@@ -327,10 +347,10 @@ def _normalize_visible_section(content: str) -> str:
 
 
 def canonical_acceptance_sha256(body: str) -> str:
-    # The machine contract lives inside an HTML comment and therefore does not
-    # recurse into its own digest. Hash every visible line so an added ad-hoc
-    # section cannot smuggle new scope past otherwise unchanged reviews.
-    payload = _normalize_visible_section(body).encode("utf-8")
+    # Exclude only the unique machine contract to avoid digest recursion. Hash
+    # every other body byte, including comment-shaped text rendered inside
+    # Markdown code, so no visible scope can bypass review invalidation.
+    payload = _normalize_acceptance_body(body).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -565,9 +585,7 @@ def _validate_contract(
     ):
         errors.append("contract: acceptance_sha256 must be a full lowercase SHA-256")
     elif acceptance_sha256 != canonical_acceptance_sha256(str(context["body"])):
-        errors.append(
-            "contract: acceptance_sha256 does not match the visible PR body"
-        )
+        errors.append("contract: acceptance_sha256 does not match the canonical PR body")
     if _contains_placeholder(contract):
         errors.append("contract: placeholder or empty string detected")
 
