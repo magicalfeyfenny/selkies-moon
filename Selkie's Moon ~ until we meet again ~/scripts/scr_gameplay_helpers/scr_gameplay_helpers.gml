@@ -3601,6 +3601,7 @@ function GameGameplayHudLinesCreate() {
         "Score: " + string(global.game_runtime.score),
         _rank_label,
         _meter_label,
+        "FPS: " + string(fps),
     ];
 }
 
