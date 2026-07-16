@@ -1,5 +1,6 @@
 {
   "sprite": "spr_text_arrow",
+  "source_mode": "migrated-krita-master",
   "provenance": "Exact import from thpj3/sprites/spr_text_arrow; source sequence and 3 fps timing preserved.",
   "source_size": [
     64,
@@ -10,53 +11,49 @@
     {
       "frame": 0,
       "source_name": "c67da8c3-ab67-4516-b154-f87a1f147963",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/c67da8c3-ab67-4516-b154-f87a1f147963.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_00.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/c67da8c3-ab67-4516-b154-f87a1f147963.png"
     },
     {
       "frame": 1,
       "source_name": "19f0cda6-5273-4f75-bcfe-4dfd1dc61abe",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/19f0cda6-5273-4f75-bcfe-4dfd1dc61abe.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_01.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/19f0cda6-5273-4f75-bcfe-4dfd1dc61abe.png"
     },
     {
       "frame": 2,
       "source_name": "b6a073cc-9746-4d92-827d-2b3696a01f8b",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/b6a073cc-9746-4d92-827d-2b3696a01f8b.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_02.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/b6a073cc-9746-4d92-827d-2b3696a01f8b.png"
     },
     {
       "frame": 3,
       "source_name": "bcd5a379-c0fb-4e14-96f4-c2b0a0bb0c87",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/bcd5a379-c0fb-4e14-96f4-c2b0a0bb0c87.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_03.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/bcd5a379-c0fb-4e14-96f4-c2b0a0bb0c87.png"
     },
     {
       "frame": 4,
       "source_name": "31178065-8104-4227-bf61-a5fe3f6d63ea",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/31178065-8104-4227-bf61-a5fe3f6d63ea.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_04.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/31178065-8104-4227-bf61-a5fe3f6d63ea.png"
     },
     {
       "frame": 5,
       "source_name": "6d7b8f33-60e5-485e-9be7-d0351344784a",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/6d7b8f33-60e5-485e-9be7-d0351344784a.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_05.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/6d7b8f33-60e5-485e-9be7-d0351344784a.png"
     },
     {
       "frame": 6,
       "source_name": "bae2d041-e589-49e3-84d3-83768ada8bc0",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/bae2d041-e589-49e3-84d3-83768ada8bc0.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_06.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/bae2d041-e589-49e3-84d3-83768ada8bc0.png"
     },
     {
       "frame": 7,
       "source_name": "f97a54a2-6122-4805-9a82-15ee0fbe0f95",
-      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/f97a54a2-6122-4805-9a82-15ee0fbe0f95.png",
-      "editable_png": "art/imported_runtime_sources/sprites/spr_text_arrow/frame_07.png"
+      "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_text_arrow/f97a54a2-6122-4805-9a82-15ee0fbe0f95.png"
     }
   ],
-  "openraster_source": "art/imported_runtime_sources/sprites/spr_text_arrow/spr_text_arrow_frames.ora",
+  "krita_source": "art/imported_runtime_sources/sprites/spr_text_arrow/spr_text_arrow_frames.kra",
+  "frame_selector": {
+    "type": "named-paint-layer",
+    "pattern": "Frame {frame:02d} - 3 fps"
+  },
   "layers": [
     "Frame 00 - 3 fps",
     "Frame 01 - 3 fps",

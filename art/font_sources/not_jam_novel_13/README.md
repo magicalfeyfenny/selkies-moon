@@ -1,23 +1,27 @@
-# Not Jam Novel 13 source
+# Not Jam Novel 13 licensed source
 
-The plain serif UI and dialogue text use **Not Jam Novel 13 Regular** at its
-native 13-pixel size with anti-aliasing disabled. The title, subtitle, and
-dialogue-name calligraphy remain separate display faces.
+Not Jam Novel 13 is retained as licensed source material and an editable glyph
+study. It is not the current runtime serif face; menu and dialogue text use the
+Not Jam Old Style family documented in `../not_jam_old_style/README.md`.
 
 Source: <https://not-jam.itch.io/not-jam-novel-13>
 
 Not Jam released the font under CC0. `Licence.txt` is the bundled licence copy.
-The source pack is kept intact here:
+The licensed source pack and its editable study are kept here:
 
-- `Not Jam Novel 13.ttf` is the runtime face.
-- `NotJamNovel13.png` is the editable pixel glyph sheet.
-- `NotJamNovel13.ora` imports that sheet as an exposed `Editable Pixel Glyphs`
-  layer and opens directly in Krita.
+- `Not Jam Novel 13.ttf` is the licensed 13-pixel font input.
+- `NotJamNovel13.kra` is the sole canonical editable pixel glyph-sheet master
+  and is registered as source-only art.
 - `Not Jam Novel 13.json` imports the sheet into YellowAfterlife's Pixel Font
-  Converter for editing and TTF re-export.
+  Converter for inspecting the licensed source metrics and TTF conversion.
 - The matching 16-pixel TTF and JSON are retained as an alternate working size.
 
-The runtime TTF is copied into both GameMaker font resource folders so the
-project remains buildable without relying on a user-installed font. After
-editing or replacing it, regenerate `fn_menu` and `fn_dialogue_speech` in
-GameMaker with anti-aliasing disabled.
+No ORA, flattened source PNG, or preview mirror is maintained beside the KRA.
+Shipped font atlas pixels have separate KRA masters under
+`../runtime_atlases/`; their GameMaker `.yy` files retain the glyph metrics and
+packing contract. Validate this source-only registration and all declared
+standalone font outputs with:
+
+```sh
+python3 tools/export_krita_runtime.py --family standalone --check
+```
