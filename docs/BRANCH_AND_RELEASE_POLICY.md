@@ -67,3 +67,6 @@ tell every collaborator to re-clone or deliberately reset/rebase their work.
 If storage migration changes a published tag's object identifier, record the
 old and new identifiers and prove that the checked-out source content is
 unchanged. A version tag must never be reused for different source content.
+
+The coordinated 2026 asset-history rewrite and its unchanged immutable release
+anchor are recorded in [Git LFS Migration](LFS_MIGRATION.md).

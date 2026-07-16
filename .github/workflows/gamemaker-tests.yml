@@ -28,6 +28,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7.0.0
 
+      - name: Hydrate GameMaker runtime LFS assets
+        shell: pwsh
+        run: |
+          git lfs install --local
+          git lfs pull --include="Selkie's Moon ~ until we meet again ~/**" --exclude=""
+
       - name: Require GameMaker CI access key
         shell: pwsh
         env:

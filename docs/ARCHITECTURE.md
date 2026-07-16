@@ -50,15 +50,16 @@ Five global structs are the shared contracts between objects:
 | `test_bootstrap` | GMTL regression suite |
 | `GMTL_*` | Vendored GameMaker Testing Library; do not refactor as project-owned code |
 
-`tools/build_logic_score_midi.py` owns the editable production-score notes,
-arrangement, primary theme, and secondary leitmotifs. `tools/validate_logic_score.py`
-verifies that catalog before the MIDI sources enter Logic Pro; native Logic
-projects own instrumentation and mixing, lossless WAVs are validated masters,
-and `tools/install_logic_masters.py` alone derives the fifteen streamed runtime
-OGGs. The parallel SFX chain is `tools/build_logic_sfx_suite.py`, one native
-Logic suite, its declared 24-bit bounce, and `tools/install_logic_sfx.py` for
-the fifteen runtime WAVs. `tools/build_audio_assets.py` is retired and owns no
-production output. The complete contract is documented in `AUDIO_DIRECTION.md`.
+Native Logic projects are the sole canonical score and SFX masters.
+`tools/build_logic_score_midi.py`, `tools/build_logic_sfx_suite.py`, and their
+manifests provide bootstrap and validation metadata; they do not compete with
+Logic as source authority. `tools/validate_logic_score.py` verifies the score
+catalog, lossless WAVs carry validated bounces, and
+`tools/install_logic_masters.py` derives the fifteen streamed runtime OGGs.
+The SFX installer slices the declared 24-bit suite bounce into fifteen runtime
+WAVs. `tools/build_audio_assets.py` is retired and owns no production output.
+The complete contracts are documented in [Asset Pipeline](ASSET_PIPELINE.md)
+and [Audio Direction](AUDIO_DIRECTION.md).
 
 ## Asset authority
 
@@ -69,13 +70,20 @@ tree has no parallel ORA, named layer-export, imported-runtime PNG, or preview
 source mirrors. GameMaker-required root-frame and editor-layer PNGs are both
 runtime derivatives of the same KRA.
 
-Native `.blend` scenes are the editable 3D sources. The normal Blender exporter
-opens them without saving; procedural scene construction is isolated behind an
-explicit destructive bootstrap flag. OBJ is a portable build intermediate used
-to compile each stage's VBUFF; only VBUFF is registered as a GameMaker Included
-File and loaded by `scr_stage_3d`. Keeping the interchange mesh outside the
-package prevents an authoring derivative from becoming accidental runtime
-content.
+Native `.blend` scenes are the sole canonical 3D masters. The normal Blender
+exporter opens them without saving; procedural scene construction is isolated
+behind an explicit destructive bootstrap flag. OBJ plus MTL is the portable
+interchange contract. The current exporter is geometry-only and emits OBJ
+without MTL; any future material-bearing export must provide MTL. OBJ is
+compiled into each stage's VBUFF runtime cache, and `scr_stage_3d` loads only
+VBUFF. The current YYP still registers the five OBJ exports as Included Files;
+that redundant packaging metadata is a known follow-up outside the LFS rewrite.
+Interchange files should remain outside the package so authoring derivatives do
+not become accidental runtime content.
+
+These canonical masters and required binary derivatives are stored through Git
+LFS. Storage representation does not change source authority. See
+[Asset Pipeline](ASSET_PIPELINE.md) and [Git LFS Migration](LFS_MIGRATION.md).
 
 Project-owned public helpers should carry a `/// @func` signature and a one-line contract. Keep object events orchestration-focused and move reusable rules into the owning script.
 

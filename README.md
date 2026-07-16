@@ -66,6 +66,8 @@ The title menu also includes a CG Gallery and Music Room for browsing existing a
 Generally the best scoring strategy is to use bombs when a lot of bullets are on screen, focus when you need precise movement, and use your sword to break down the bullets in front of you.
 
 ## Build
+Install Git LFS before cloning, or run `git lfs install` followed by
+`git lfs pull` in an existing checkout so asset pointers are hydrated.
 Download GameMaker from https://gamemaker.io/en/download and install it.  
 Open the .yyp file and run by pressing F5 or clicking the play button in the top toolbar.
 
@@ -73,6 +75,8 @@ Open the .yyp file and run by pressing F5 or clicking the play button in the top
 
 - [Architecture](docs/ARCHITECTURE.md): runtime ownership, modules, object inheritance, and extension rules.
 - [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and timeline generation.
+- [Asset pipeline](docs/ASSET_PIPELINE.md): canonical BLEND, KRA, and Logic sources plus runtime and interchange derivatives.
+- [Git LFS migration](docs/LFS_MIGRATION.md): rewritten asset-history scope, preserved jam release, and collaborator recovery.
 - [Branch and release policy](docs/BRANCH_AND_RELEASE_POLICY.md): `main`/`dev` roles, pull-request flow, release promotion, hotfixes, and exceptional history rewrites.
 - [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md): input, stage flow, rank, weapons, enemies, bosses, pickups, pause, and story flow.
 - [Data formats](docs/DATA_FORMATS.md): story JSON, persistence schemas, boss phase descriptors, and practice requests.
@@ -105,4 +109,4 @@ Libraries:
 Additional asset sourcing:
   - Not Jam pixel fonts by Not Jam, released under CC0; licence copies are preserved under `art/font_sources/`.
   - `spr_text_arrow` is an exact eight-frame migration from `thpj3`, with source attribution in its KRA manifest.
-  - Shipped raster art is mastered in Krita and exported from the canonical `.kra` files.
+  - The formal [asset pipeline](docs/ASSET_PIPELINE.md) makes `.blend`, `.kra`, and Logic `.logicx` projects the sole 3D, raster, and audio masters respectively; derived OBJ/MTL, PNG, WAV, OGG, and VBUFF files never become competing masters.

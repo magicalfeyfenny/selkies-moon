@@ -35,6 +35,10 @@ The audit cannot establish player enjoyment, long-session balance, accessibility
 
 During review of this post-mortem, the editable-raster finding prompted an immediate correction and then a more important source-authority clarification. Seventy-six missing native files were migrated, thirteen additional shipped-raster masters were added, and the normal pipeline was inverted: KRA is now the read-only build input and runtime PNG is the output. The former Python drawing and reverse-import entry points are compatibility wrappers around one staged exporter and cannot regenerate a master. After validation, parallel ORA, named layer-export, imported-runtime PNG, and preview mirrors were removed from the production source tree. The same cleanup retired the placeholder-audio builder, stopped packaging portable OBJ intermediates alongside runtime VBUFF files, and made routine Blender export read existing `.blend` masters without saving over them. The snapshot below reflects that corrected working branch; the original inconsistencies remain documented as development lessons.
 
+The later coordinated storage follow-up is now addressed by [Asset Pipeline](ASSET_PIPELINE.md) and the [Git LFS Migration](LFS_MIGRATION.md): BLEND, KRA, and Logic projects are the sole 3D, raster, and audio masters, while the audited master, runtime, interchange, and reference binary families are stored through LFS. The historical measurements and findings below intentionally remain as the pre-migration audit record.
+
+One repository-state correction remains explicit: although the audit narrative reports that OBJ Included Files were removed, the current YYP still registers all five OBJ exports beside the VBUFF files. Runtime code loads only VBUFF. The LFS migration does not modify GameMaker metadata, so removing those redundant registrations remains a separate packaging follow-up.
+
 Before mirror cleanup, the corrected raster pipeline was validated twice. The normal export covered 80 sprites, 87 active frames, 15 standalone assets, and 251 then-declared PNG targets; it repaired or created 76 derivatives while 175 were already current. A fresh `--check` render then reported 0 changes and 251 matches. Before/after SHA-256 inventories were identical for all 95 KRA masters and all 201 GameMaker `.yy` files, proving that the normal build changed neither source art nor engine metadata. The subsequent catalog cleanup removed only redundant art-side targets, not KRA masters or required GameMaker outputs. The cleaned static gate registers all 95 KRAs, covers 80 sprites and 87 frames, distinguishes six standalone runtime assets from nine source-only masters, and proves exact ownership of all 180 required runtime PNG targets with no unowned outputs.
 
 ### Current repository snapshot
@@ -46,8 +50,8 @@ Before mirror cleanup, the corrected raster pipeline was validated twice. The no
 | Largest project module | `scr_gameplay_helpers.gml`, 4,006 lines | Shared ownership succeeded, then became too broad |
 | Editable raster sources | 95 `.kra` masters; no parallel production mirrors | KRA is the sole source for shipped raster art |
 | Runtime sprite source mapping | 80/80 resources, 87/87 active frames | Every active root frame and GameMaker editor-layer copy is exported from KRA |
-| Native 3D sources | 5 `.blend`, OBJ build intermediates, 5 packaged VBUFF files | Only the optimized buffers enter the runtime package |
-| Audio production | 16 MIDI, 16 Logic projects, 30 lossless WAV masters, 15 runtime OGG and 15 runtime WAV | Complete source-to-runtime production chains |
+| Native 3D sources | 5 `.blend`, OBJ build intermediates, 5 packaged VBUFF files, and 5 still-registered OBJ Included Files | Runtime code loads only VBUFF; redundant OBJ packaging remains a follow-up |
+| Audio production | 16 MIDI metadata files, 16 canonical Logic projects, 30 lossless WAV derivatives, 15 runtime OGG and 15 runtime WAV | Complete source-to-runtime production chains |
 | Tracked audio-production size | about 878 MB | Ordinary Git is being used as a large-binary store |
 | Loose Git object database | about 1.4 GiB | Clone, fetch, storage, and history-rewrite costs are already material |
 | Hosted test workflow | [current `dev` run passed](https://github.com/magicalfeyfenny/selkies-moon/actions/runs/29449774072) | Independent Windows signal now exists |
@@ -133,7 +137,7 @@ What did not:
 - PR #11 changed 120 files with 565,689 additions and 637,641 deletions. Most was generated geometry, but logic, story, assets, docs, and runtime buffers still traveled together.
 - Follow-up work immediately corrected 3D projection orientation, billboard UV selection, background movement at boss seams, combat balance, reward economy, and the missing sisters' finale. These were integration acceptance criteria that the first mega-pass did not hold simultaneously.
 - Hosted CI arrived only after the largest July changes had already merged. Bringing it up required six failed workflow runs before the first success.
-- At merge time the repository had no Git LFS configuration despite hundreds of megabytes of binary production data. The cleanup branch now routes KRA files through LFS, but the existing WAV and Logic history still needs a deliberate migration policy.
+- At merge time the repository had no Git LFS configuration despite hundreds of megabytes of binary production data. The cleanup branch initially routed only KRA files through LFS; the later coordinated migration recorded in [Git LFS Migration](LFS_MIGRATION.md) addresses the WAV, Logic, and other audited asset history while preserving the immutable release anchor.
 
 ## What went right
 
@@ -185,7 +189,7 @@ The current tree preserves several useful classes of source:
 - immutable original character and enemy references;
 - genuine KRA masters with manifest-declared runtime PNG targets;
 - Blender scenes with packed textures, camera curves, manifests, and OBJ-to-VBUFF build intermediates;
-- MIDI note sources, cue sheets, Logic projects, lossless masters, runtime OGGs, and loop-validation records;
+- MIDI note metadata, cue sheets, canonical Logic projects, lossless WAV derivatives, runtime OGGs, and loop-validation records;
 - licensed font source material and editable glyph sheets.
 
 During the one-time migration, 82 ORA/KRA baseline pairs passed archive integrity, dimensions, layer name/order/visibility/opacity/offset, and flattened-pixel equivalence checks before the KRAs were promoted. Thirteen additional KRA masters cover the seven full portraits, five shipped font atlas textures, and macOS icon. Once validated, the ORAs and art-side mirror exports were removed; they are historical migration inputs, not a second current catalog. The production gate now validates the KRA files themselves and renders every declared runtime target from them.
@@ -298,9 +302,11 @@ Python may crop, scale, pack, copy, and validate a KRA export. It may not draw r
 
 ### 7. Binary preservation was not paired with binary-storage design
 
-Preserving Logic projects and lossless masters was right. Committing them to ordinary Git without LFS was not scalable. The current audio-production files alone account for about 878 MB of tracked content; the loose object database is about 1.4 GiB. Before cleanup, WAVs, Logic packages, runtime OGGs, packaged OBJ text, vertex buffers, previews, and layer exports duplicated information at several pipeline stages. Removing disposable raster mirrors, superseded audio resources, and OBJ Included Files reduced that duplication, but the valuable binary history still needs an intentional storage policy.
+Preserving canonical Logic projects and lossless WAV deliveries was right. Committing them to ordinary Git without LFS was not scalable. The current audio-production files alone account for about 878 MB of tracked content; the loose object database is about 1.4 GiB. Before cleanup, WAVs, Logic packages, runtime OGGs, packaged OBJ text, vertex buffers, previews, and layer exports duplicated information at several pipeline stages. Removing disposable raster mirrors and superseded audio resources reduced that duplication; as corrected above, the current YYP still retains the OBJ Included File registrations. The valuable binary history still needed an intentional storage policy.
 
 **Better rule:** preserve valuable masters in Git LFS or a versioned asset store. Keep small manifests and hashes in normal Git. Decide deliberately which generated derivatives must be versioned for engine usability and which belong in CI/release artifacts.
+
+**Follow-up status:** Addressed by the coordinated rewrite recorded in [Git LFS Migration](LFS_MIGRATION.md). The migration covers the audited binary families across every old remote head while preserving the immutable `jam` tag and release; [Asset Pipeline](ASSET_PIPELINE.md) separately defines which LFS-tracked files are canonical and which remain derivatives.
 
 ### 8. Asset tooling lacks one reproducible environment and one gate
 
@@ -764,7 +770,7 @@ These remain after the KRA-authority and repository-hygiene corrections made dur
 ### Priority 0: prevent further ambiguity and repository growth
 
 1. Document `main`/`dev`/release promotion and decide which branch should be the remote default.
-2. Expand the KRA-only Git LFS rule or adopt an external versioned asset store for WAV, Logic, Blender, VBUFF, and future large binary history before adding more revisions.
+2. **Addressed:** expand the KRA-only Git LFS rule and rewrite the audited WAV, Logic, Blender, runtime, interchange, and other binary history in one coordinated migration while preserving the immutable jam release. See [Git LFS Migration](LFS_MIGRATION.md).
 3. Add automated large-file/tracked-junk and package-reachability gates so the removed debris cannot return.
 4. Extend the machine-readable KRA registry with per-asset design authority, provenance, license, tool version, and content hashes.
 5. Keep the exact raster target-set check as a required local and hosted gate so unowned GameMaker PNGs cannot return.

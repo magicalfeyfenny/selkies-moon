@@ -1,5 +1,10 @@
 # Audio Direction
 
+The native Logic `.logicx` project is the sole canonical master for every music
+cue and SFX production project. WAV and OGG files are derivatives; MIDI, cue
+sheets, and manifests are bootstrap and validation metadata. See
+[Asset Pipeline](ASSET_PIPELINE.md) for the cross-media source-authority policy.
+
 ## Primary leitmotif: Horizon Theme
 
 Every cue carries the four-measure **Horizon Theme**. In D minor its contour is:
@@ -77,9 +82,9 @@ outro, and boss-cleared states, so a stage loop never restarts over the victory
 transition.
 
 The Music Room exposes the fifteen installed production cues. Every stage,
-boss, ending, and credits slot resolves to a streamed OGG derived from its
-validated Logic master; superseded audition-loop resources are not part of the
-runtime catalog.
+boss, ending, and credits slot resolves to a streamed OGG derived from a
+validated bounce of its canonical Logic project; superseded audition-loop
+resources are not part of the runtime catalog.
 
 ## Sound-effect language
 
@@ -105,19 +110,21 @@ be placed into exactly one of them.
 
 ## Production workflow
 
-Generate and validate the authoritative note and arrangement sources:
+Generate and validate the bootstrap note and arrangement metadata:
 
 ```sh
 python3 tools/build_logic_score_midi.py
 python3 tools/validate_logic_score.py
 ```
 
-The MIDI catalog and `score_manifest.json` are the note-level, arrangement, and
-routing authority. Open each format-1 MIDI file in Logic Pro, retain all nine
-software-instrument tracks and arrangement markers, and save the native project
-to the manifest's `logic_project` path. Instrument patches, articulation,
-automation, mixing, and sound design are authoritative in that Logic project.
-Rendered WAV and OGG files are derivatives, never editing sources.
+The MIDI catalog and `score_manifest.json` capture intended notes, arrangement,
+routing, and validation expectations so a Logic project can be bootstrapped and
+checked reproducibly. They are metadata, not competing masters. Open each
+format-1 MIDI file in Logic Pro, retain all nine software-instrument tracks and
+arrangement markers, and save the native project to the manifest's
+`logic_project` path. Performance, instrument patches, articulation,
+automation, mixing, and sound design are authoritative only in that Logic
+project. Rendered WAV and OGG files are derivatives, never editing sources.
 
 For each cue, bounce exactly two uninterrupted cycles as stereo 24-bit PCM with
 normalization and audio-tail extension disabled. Then run:
@@ -127,11 +134,11 @@ python3 tools/finalize_logic_loops.py --require-all
 ```
 
 This extracts the second pass so reverb, delay, and synth state already match a
-real loop, applies a 5 ms seam correction, writes the lossless master, and emits
-machine-readable seam validation. `score_manifest.json` maps every cue to its
-GameMaker `runtime_sound_id`.
+real loop, applies a 5 ms seam correction, writes the lossless WAV derivative,
+and emits machine-readable seam validation. `score_manifest.json` maps every
+cue to its GameMaker `runtime_sound_id`.
 
-Encode all validated masters as high-quality stereo 48 kHz Oggs, install them
+Encode all validated WAV bounces as high-quality stereo 48 kHz Oggs, install them
 into the streamed GameMaker resources, and synchronize duration metadata with:
 
 ```sh
@@ -149,9 +156,10 @@ python3 tools/install_logic_sfx.py
 ```
 
 `tools/install_logic_sfx.py` slices the suite by its cue manifest, writes the
-fifteen lossless SFX masters, gain-stages them, and installs the sixteen-bit
-runtime WAVs. The Logic project and MIDI/cue map are authoritative; the suite
-bounce, per-cue masters, install report, and GameMaker WAVs are derivatives.
+fifteen lossless SFX WAV derivatives, gain-stages them, and installs the
+sixteen-bit runtime WAVs. Only the Logic project is the canonical master. The
+MIDI/cue map is bootstrap and validation metadata; the suite bounce, per-cue
+WAVs, install report, and GameMaker WAVs are derivatives.
 
 `tools/build_audio_assets.py` is retired. Do not use it to regenerate music or
 sound effects: it was a pre-production placeholder tool and can overwrite

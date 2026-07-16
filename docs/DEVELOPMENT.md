@@ -4,6 +4,8 @@
 
 - GameMaker IDE 2024.14.4.222 or a compatible newer version.
 - A matching installed GameMaker runtime.
+- Git LFS 3.x, installed before checkout or followed by `git lfs pull` in an
+  existing checkout.
 - Krita 5.3 or compatible, available through `KRITA_BIN`, `PATH`, or the normal macOS app location.
 - Python 3 with Pillow for KRA export validation and declared image transforms.
 - Blender for rebuilding 3D geometry exports and Logic Pro for production audio work.
@@ -43,7 +45,7 @@ exception used by coordinated repository migrations such as Git LFS.
     └── timelines/
 ~~~
 
-GameMaker `.yy` and `.yyp` files are resource metadata. A new script needs its `.gml`, matching `.yy`, and a resource entry in the `.yyp`. Edit production raster art only in its declared KRA master; do not hand-edit generated PNGs or audio binaries.
+GameMaker `.yy` and `.yyp` files are resource metadata. A new script needs its `.gml`, matching `.yy`, and a resource entry in the `.yyp`. Follow [Asset Pipeline](ASSET_PIPELINE.md): edit production 3D, raster, and audio only in their declared BLEND, KRA, or Logic master, never in generated runtime files.
 
 `output/`, `cache/`, and `test-results/` are local build products. The GMTL harness recreates its project copy under `output/gmtl-project`.
 
@@ -102,7 +104,7 @@ Launch with `--visual-tour` or create `.visual-tour.txt` in GameMaker's runtime 
 
 The capture is queued during Step and written in Draw GUI End so world and GUI layers are complete.
 
-## Krita-master gameplay art and YYC
+## Asset production and YYC
 
 Every shipped 2D raster asset has one canonical `.kra` master. Runtime PNGs flow one way from that master through `tools/export_krita_runtime.py`; a normal build cannot create or overwrite a KRA, rewrite a sprite `.yy`, or draw replacement production art in Pillow. The exporter renders with Krita into staging, applies only declared transforms such as the story backgrounds' 2x nearest-neighbor scale, validates dimensions and decoded pixels, and atomically promotes only the manifest-declared GameMaker/runtime targets. GameMaker root frames and required editor-layer copies may both be targets, but the production source tree does not maintain separate ORA, named layer-export, imported-runtime PNG, or preview mirrors.
 
@@ -119,26 +121,37 @@ Legacy material was migrated once and promoted to genuine KRA masters. Migration
 
 The former procedural/reverse-import entry points remain as compatibility wrappers around the central KRA exporter. They no longer generate art, copy runtime PNGs back into sources, or mutate story data. Font atlas artwork is mastered in `art/font_sources/runtime_atlases/`; the corresponding `.yy` remains the authoritative glyph-metrics and packing contract.
 
-The five native `.blend` scenes under `art/3d_stage_sources/` are the editable 3D sources. Their raster texture atlases are mastered in the five KRAs under `art/3d_stage_sources/textures/`. The normal Blender command opens those existing masters without saving them and creates triangulated OBJ build intermediates; the buffer compiler then creates GameMaker-ready VBUFF files:
+The five native `.blend` scenes under `art/3d_stage_sources/` are the sole canonical 3D masters. Their raster texture atlases are mastered in the five KRAs under `art/3d_stage_sources/textures/`. The normal Blender command opens those existing masters without saving them and currently creates geometry-only triangulated OBJ build intermediates; the buffer compiler then creates GameMaker-ready VBUFF runtime caches:
 
 ```sh
 blender --background --python tools/blender_build_stage_scenes.py
 python3 tools/build_stage3d_runtime_buffers.py
 ```
 
-Procedural scene construction is a destructive migration/bootstrap operation and requires the explicit Blender argument `-- --bootstrap-masters`; never use it for routine export. Only the five VBUFF files belong in GameMaker's Included Files and runtime loading path; OBJ is not packaged. All native 3D rendering stays in `obj_scene_manager` Draw Begin so no gameplay, effect, bullet, hitbox, or UI coordinate can inherit its matrices or depth state.
+Procedural scene construction is a destructive migration/bootstrap operation and requires the explicit Blender argument `-- --bootstrap-masters`; never use it for routine export. OBJ plus MTL is the portable 3D interchange contract, although the current atlas-driven exporter has no material-bearing export and emits no MTL. A future material-bearing export must emit and reference MTL. Runtime code loads only the five VBUFF files. The current YYP nevertheless still registers the five OBJ exports as Included Files; removing that redundant packaging metadata is a known follow-up outside the LFS rewrite. All native 3D rendering stays in `obj_scene_manager` Draw Begin so no gameplay, effect, bullet, hitbox, or UI coordinate can inherit its matrices or depth state.
 
-The authoritative score workflow is MIDI and Logic: `tools/build_logic_score_midi.py`
-maintains the fifteen note/arrangement sources and cue sheets,
-`tools/validate_logic_score.py` checks their musical and loop contracts, and
-Logic projects own instrumentation and mixing. Run `python3 tools/finalize_logic_loops.py --require-all` to create validated lossless masters from two-cycle bounces; `tools/install_logic_masters.py` then encodes the fifteen runtime OGG files.
+The sole canonical score masters are the fifteen native Logic projects.
+`tools/build_logic_score_midi.py` maintains bootstrap note/arrangement data and
+cue sheets, and `tools/validate_logic_score.py` checks those musical and loop
+contracts before and around Logic production. The MIDI, cue, and manifest files
+are reproducibility metadata rather than competing masters. Run
+`python3 tools/finalize_logic_loops.py --require-all` to create validated
+lossless WAV derivatives from two-cycle bounces; `tools/install_logic_masters.py`
+then encodes the fifteen runtime OGG files.
 
-The authoritative SFX workflow is `tools/build_logic_sfx_suite.py`, the native
-Logic suite project, its 24-bit bounce, and `tools/install_logic_sfx.py`, which
-slices and installs the fifteen runtime WAV files. `tools/build_audio_assets.py`
-is retired and must not be used to replace Logic-derived music or SFX. See
+The native Logic SFX suite project is likewise the sole SFX master.
+`tools/build_logic_sfx_suite.py` provides bootstrap MIDI/cue metadata; the
+24-bit bounce and per-cue runtime WAVs are derivatives installed by
+`tools/install_logic_sfx.py`. `tools/build_audio_assets.py` is retired and must
+not be used to replace Logic-derived music or SFX. See
 `docs/AUDIO_DIRECTION.md` for the cue, leitmotif, export, SFX, and mixer
 contracts.
+
+The audited asset families and existing history are stored through Git LFS as
+recorded in [Git LFS Migration](LFS_MIGRATION.md). CI hydrates only the
+GameMaker project subtree needed for its build. That necessarily hydrates the
+seven portrait KRAs stored inside the project; authoring masters outside that
+subtree remain pointers unless a production workflow explicitly fetches them.
 
 Use `./tools/run_yyc_playtest.zsh` for native macOS validation. It isolates the checkout, retries GameMaker's unstable YYC emission, builds the generated Xcode project with `/Applications/Xcode.app`, and opens the resulting app unless `YYC_NO_RUN=1` is set. Local builds are ad-hoc signed by default so they retain a valid bundle seal without needing login-keychain approval behind the screen lock. Release automation can set `YYC_CODE_SIGN_IDENTITY` and `YYC_DEVELOPMENT_TEAM` for Developer ID signing before the normal notarization workflow. The legacy `tml_stage` resource stays idle; all live waves are code-driven.
 

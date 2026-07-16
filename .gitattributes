@@ -1,15 +1,20 @@
-*.kra filter=lfs diff=lfs merge=lfs -text
+# Canonical editable masters (one authority per asset family).
 *.blend filter=lfs diff=lfs merge=lfs -text
-*.jpeg filter=lfs diff=lfs merge=lfs -text
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.logicx filter=lfs diff=lfs merge=lfs -text
+*.kra filter=lfs diff=lfs merge=lfs -text
+# Logic projects are currently packages; also cover future monolithic projects.
 **/*.logicx/** filter=lfs diff=lfs merge=lfs -text
-*.mid filter=lfs diff=lfs merge=lfs -text
+*.logicx filter=lfs diff=lfs merge=lfs -text
+
+# Runtime and portable interchange derivatives.
 *.mtl filter=lfs diff=lfs merge=lfs -text
 *.obj filter=lfs diff=lfs merge=lfs -text
 *.ogg filter=lfs diff=lfs merge=lfs -text
-*.ora filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
-*.ttf filter=lfs diff=lfs merge=lfs -text
 *.vbuff filter=lfs diff=lfs merge=lfs -text
 *.wav filter=lfs diff=lfs merge=lfs -text
+# Legacy, bootstrap/reference, and other binary asset formats.
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.mid filter=lfs diff=lfs merge=lfs -text
+*.ora filter=lfs diff=lfs merge=lfs -text
+*.ttf filter=lfs diff=lfs merge=lfs -text
