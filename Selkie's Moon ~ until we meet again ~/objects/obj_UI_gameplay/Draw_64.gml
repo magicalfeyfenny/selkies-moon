@@ -46,6 +46,7 @@ GameUiDrawOutlinedText(_lines[4], _layout.left_panel_left + _layout.panel_paddin
 GameUiDrawOutlinedText(_lines[5], _layout.right_panel_left + _layout.panel_padding, _layout.panel_padding, c_white);
 GameUiDrawOutlinedText(_lines[6], _layout.right_panel_left + _layout.panel_padding, _layout.panel_padding + _layout.line_height, c_white);
 GameUiDrawOutlinedText(_lines[7], _layout.right_panel_left + _layout.panel_padding, _layout.panel_padding + (_layout.line_height * 2), c_white);
+GameUiDrawOutlinedText(_lines[8], _layout.left_panel_right + _layout.panel_padding, _layout.panel_padding, + (_layout.line_height * 20), c_white);
 
 // Keep the sword state in the gutter so its activation is unmistakable without
 // placing another opaque meter over the bullet field.
