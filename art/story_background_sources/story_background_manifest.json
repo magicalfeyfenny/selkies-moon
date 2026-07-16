@@ -156,10 +156,6 @@
     }
   ],
   "story_assignments": {
-    "aisha_defeat_story_moon_route_v2.json": "spr_story_bg_wishcourt",
-    "aisha_defeat_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
-    "aisha_intro_story_moon_route_v2.json": "spr_story_bg_wishcourt",
-    "aisha_intro_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
     "aster_defeat_story_moon_route_v2.json": "spr_story_bg_saltwind_ribbon",
     "aster_defeat_story_selkie_route_v2.json": "spr_story_bg_saltwind_ribbon",
     "aster_intro_story_moon_route_v2.json": "spr_story_bg_saltwind_ribbon",
@@ -176,10 +172,6 @@
     "mira_aisha_defeat_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
     "mira_aisha_intro_story_moon_route_v2.json": "spr_story_bg_wishcourt",
     "mira_aisha_intro_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
-    "mira_defeat_story_moon_route_v2.json": "spr_story_bg_wishcourt",
-    "mira_defeat_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
-    "mira_intro_story_moon_route_v2.json": "spr_story_bg_wishcourt",
-    "mira_intro_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
     "opening_story_v2.json": "spr_story_bg_core_chapel",
     "shalmii_defeat_story_moon_route_v2.json": "spr_story_bg_forge_twilight",
     "shalmii_defeat_story_selkie_route_v2.json": "spr_story_bg_forge_twilight",

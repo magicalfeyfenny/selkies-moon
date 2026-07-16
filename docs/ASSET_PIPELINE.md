@@ -44,9 +44,10 @@ VBUFF files. `scr_stage_3d` loads those VBUFF files with `buffer_load()` and
 creates frozen GameMaker vertex buffers from them. VBUFF is therefore the
 current compiled runtime cache, not an editable 3D source. OBJ and MTL remain
 portable derivatives and should not be packaged merely to duplicate a VBUFF.
-The current GameMaker YYP still registers the five OBJ exports as Included
-Files even though runtime code loads only VBUFF. Removing those registrations
-is a known packaging follow-up and is outside the LFS history rewrite.
+The GameMaker YYP registers only the five VBUFF runtime files; the five OBJ
+exports remain repository-only inputs to the buffer compiler. The exact split
+is owned by `art/runtime_package_manifest.json` and enforced by
+`tools/check_repository_hygiene.py`.
 
 ## Raster: Krita to PNG
 
@@ -98,3 +99,8 @@ Before accepting an asset change:
 4. confirm that no normal build modified a canonical master;
 5. inspect changed visual or audio output; and
 6. run `git diff --check` and the relevant GameMaker tests before integration.
+
+The repository-hygiene gate additionally rejects tracked junk, ordinary Git
+blobs above 1 MiB, malformed or uncovered LFS pointers, undeclared datafiles,
+unregistered GameMaker metadata, and sound resources without an active
+score/SFX manifest owner.

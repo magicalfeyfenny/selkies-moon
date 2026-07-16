@@ -8,12 +8,12 @@ if (combat_step_blocked) {
 // Keep every boss camera-relative while applying its slow figure-eight drift.
 var _camera = instance_find(obj_camera, 0);
 if (_camera != noone) {
-    var _offset = GameMayflyInfinityOffsetCreate(float_phase);
+    var _offset = GameSunsetInfinityOffsetCreate(float_phase);
     x = _camera.x + anchor_offset_x + (_offset.x * 0.9);
     y = _camera.y + anchor_offset_y + (_offset.y * 0.9);
 }
 
-float_phase = (float_phase + MAYFLY_FLOAT_RATE) mod 360;
+float_phase = (float_phase + SUNSET_FLOAT_RATE) mod 360;
 phase_timer += 1;
 
 // Encounter creation guarantees a non-empty plan. Fail closed if future data

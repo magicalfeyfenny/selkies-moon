@@ -8,9 +8,6 @@ if (instance_exists(camera_id)) {
 // dialogue, phase transitions, and combat while the 2D playfield stays anchored.
 GameSceneBackgroundStep(scene_state);
 
-// The data-driven stage director owns wave spawning; the legacy timeline stays idle.
-timeline_running = false;
-
 // Freeze stage logic during dialogue and continue prompts.
 if (GameGameplayIsFrozen()) {
     exit;
@@ -70,7 +67,6 @@ GameStageDirectorStep(scene_state);
 // Advance the scrolling section, then queue the boss intro once the full stage has passed.
 var _scene_action = GameSceneStageAdvance(scene_state);
 if (_scene_action == "boss_intro") {
-    timeline_running = false;
     GameSceneCombatClear();
 
     if (GamePracticeWavesOnly()) {

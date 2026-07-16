@@ -43,10 +43,7 @@ Playable ships:
 - Sunset / Moon: balanced wide shots, a long sword sweep, and a tighter focused shot.
 - Sunrise / Selkie: wider crescent shots, stronger focused lances, and a shorter crescent sword sweep using the former boss ship art.
 
-Enemies are worth an amount of points based on the enemy type: 
-- Turrets (flower bushes): 750
-- Popcorn (bees): 500
-- Commanders (mayflies): 1200
+Enemies are worth an amount of points based on the enemy type:
 - Stage variants: value depends on type and stage
 - Boss: 30000
 
@@ -74,7 +71,7 @@ Open the .yyp file and run by pressing F5 or clicking the play button in the top
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): runtime ownership, modules, object inheritance, and extension rules.
-- [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and timeline generation.
+- [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and repository/asset validation.
 - [Asset pipeline](docs/ASSET_PIPELINE.md): canonical BLEND, KRA, and Logic sources plus runtime and interchange derivatives.
 - [Git LFS migration](docs/LFS_MIGRATION.md): rewritten asset-history scope, preserved jam release, and collaborator recovery.
 - [Branch and release policy](docs/BRANCH_AND_RELEASE_POLICY.md): `main`/`dev` roles, pull-request flow, release promotion, hotfixes, and exceptional history rewrites.

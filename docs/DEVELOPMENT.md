@@ -30,6 +30,7 @@ exception used by coordinated repository migrations such as Git LFS.
 ├── docs/
 ├── tools/
 │   ├── export_krita_runtime.py
+│   ├── check_repository_hygiene.py
 │   ├── migrate_legacy_raster_to_krita.py
 │   ├── run_gmtl_tests_ci.ps1
 │   ├── run_gmtl_tests.zsh
@@ -41,8 +42,7 @@ exception used by coordinated repository migrations such as Git LFS.
     ├── rooms/
     ├── scripts/
     ├── sounds/
-    ├── sprites/
-    └── timelines/
+    └── sprites/
 ~~~
 
 GameMaker `.yy` and `.yyp` files are resource metadata. A new script needs its `.gml`, matching `.yy`, and a resource entry in the `.yyp`. Follow [Asset Pipeline](ASSET_PIPELINE.md): edit production 3D, raster, and audio only in their declared BLEND, KRA, or Logic master, never in generated runtime files.
@@ -67,18 +67,24 @@ The harness:
 6. retries transient compiler/runner crashes;
 7. fails if summary lines are missing, zero tests ran, or any test failed.
 
-The current expected result is `128 passed, 128 total`. GameMaker's asset compiler can intermittently throw `System.AccessViolationException` before compilation. A retry that later reaches the complete passing summary is valid; a GML compiler error or a completed failing test is not transient.
+The current expected result is `126 passed, 126 total`. GameMaker's asset compiler can intermittently throw `System.AccessViolationException` before compilation. A retry that later reaches the complete passing summary is valid; a GML compiler error or a completed failing test is not transient.
 
-Run these lightweight checks after editing:
+After staging the intended snapshot, run these lightweight checks:
 
 ~~~zsh
-git diff --check
+python3 tools/check_repository_hygiene.py
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+git diff --cached --check
 git status --short
 ~~~
 
+The hygiene command deliberately checks the staged index and refuses unstaged
+or untracked non-ignored files so package metadata, Git attributes, and payload
+ownership can never be validated from a mixed snapshot.
+
 ## GitHub Actions unit tests
 
-`.github/workflows/gamemaker-tests.yml` independently runs the GMTL suite for pull requests targeting `dev`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
+`.github/workflows/gamemaker-tests.yml` first runs the fast repository-hygiene and package-ownership gate, including a full PR-range check for large ordinary Git blobs and tracked junk. Same-repository changes also fetch and hash every changed final-state LFS payload. Forks cannot upload LFS objects to the repository remote, so fork pull requests that change LFS paths fail with instructions to transfer the commit onto a maintainer-owned branch. The workflow then runs the GMTL suite for pull requests targeting `dev`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
 
 The repository must have an Actions secret named `ACCESS_KEY`. Generate one on the [GameMaker account access-key page](https://gamemaker.io/account/access_keys), then add it under **Settings > Secrets and variables > Actions**. Never commit the key or paste it into a workflow file. Licensed CI is skipped for fork pull requests because GitHub does not provide repository secrets to untrusted fork code.
 
@@ -115,7 +121,7 @@ python3 tools/export_krita_runtime.py
 python3 tools/export_krita_runtime.py --check
 ```
 
-Use repeatable `--family` arguments for `core`, `enemy`, `story`, `stage3d`, `imported`, `text`, or `standalone`. The all-family check proves coverage of all 80 sprite resources and 87 active frames, six standalone runtime assets, nine registered source-only masters, all 95 KRAs, and the exact 180-PNG GameMaker/runtime target set. Standalone and source-only assets are declared in `art/krita_runtime_export_manifest.json`. Set `KRITA_BIN` when Krita is not on `PATH` or installed in the normal macOS application location.
+Use repeatable `--family` arguments for `core`, `enemy`, `story`, `stage3d`, `imported`, `text`, or `standalone`. The all-family check proves coverage of all 77 sprite resources and 84 active frames, six standalone runtime assets, nine registered source-only masters, all 92 KRAs, and the exact 174-PNG GameMaker/runtime target set. Standalone and source-only assets are declared in `art/krita_runtime_export_manifest.json`. Set `KRITA_BIN` when Krita is not on `PATH` or installed in the normal macOS application location.
 
 Legacy material was migrated once and promoted to genuine KRA masters. Migration tooling is not part of the current build and must never replace an existing KRA. If a downstream interchange file is required for an external handoff, create it in staging or artifact storage rather than adding a parallel source authority. Immutable creator-selected references remain `reference-only` and are never rewritten by the exporter; transient candidate pools, contact sheets, and archived mirrors belong in review/artifact storage rather than the production source tree.
 
@@ -128,7 +134,7 @@ blender --background --python tools/blender_build_stage_scenes.py
 python3 tools/build_stage3d_runtime_buffers.py
 ```
 
-Procedural scene construction is a destructive migration/bootstrap operation and requires the explicit Blender argument `-- --bootstrap-masters`; never use it for routine export. OBJ plus MTL is the portable 3D interchange contract, although the current atlas-driven exporter has no material-bearing export and emits no MTL. A future material-bearing export must emit and reference MTL. Runtime code loads only the five VBUFF files. The current YYP nevertheless still registers the five OBJ exports as Included Files; removing that redundant packaging metadata is a known follow-up outside the LFS rewrite. All native 3D rendering stays in `obj_scene_manager` Draw Begin so no gameplay, effect, bullet, hitbox, or UI coordinate can inherit its matrices or depth state.
+Procedural scene construction is a destructive migration/bootstrap operation and requires the explicit Blender argument `-- --bootstrap-masters`; never use it for routine export. OBJ plus MTL is the portable 3D interchange contract, although the current atlas-driven exporter has no material-bearing export and emits no MTL. A future material-bearing export must emit and reference MTL. Runtime code and the YYP package load only the five VBUFF files. The five OBJ exports remain repository-only inputs to the buffer compiler, as declared in `art/runtime_package_manifest.json`. All native 3D rendering stays in `obj_scene_manager` Draw Begin so no gameplay, effect, bullet, hitbox, or UI coordinate can inherit its matrices or depth state.
 
 The sole canonical score masters are the fifteen native Logic projects.
 `tools/build_logic_score_midi.py` maintains bootstrap note/arrangement data and
@@ -148,12 +154,12 @@ not be used to replace Logic-derived music or SFX. See
 contracts.
 
 The audited asset families and existing history are stored through Git LFS as
-recorded in [Git LFS Migration](LFS_MIGRATION.md). CI hydrates only the
-GameMaker project subtree needed for its build. That necessarily hydrates the
-seven portrait KRAs stored inside the project; authoring masters outside that
-subtree remain pointers unless a production workflow explicitly fetches them.
+recorded in [Git LFS Migration](LFS_MIGRATION.md). CI hydrates only registered
+runtime VBUFF, font, option-icon, sound, and sprite payloads. Repository-only
+OBJ exports and authoring/reference files remain pointers unless a production
+workflow explicitly fetches them.
 
-Use `./tools/run_yyc_playtest.zsh` for native macOS validation. It isolates the checkout, retries GameMaker's unstable YYC emission, builds the generated Xcode project with `/Applications/Xcode.app`, and opens the resulting app unless `YYC_NO_RUN=1` is set. Local builds are ad-hoc signed by default so they retain a valid bundle seal without needing login-keychain approval behind the screen lock. Release automation can set `YYC_CODE_SIGN_IDENTITY` and `YYC_DEVELOPMENT_TEAM` for Developer ID signing before the normal notarization workflow. The legacy `tml_stage` resource stays idle; all live waves are code-driven.
+Use `./tools/run_yyc_playtest.zsh` for native macOS validation. It isolates the checkout, retries GameMaker's unstable YYC emission, builds the generated Xcode project with `/Applications/Xcode.app`, and opens the resulting app unless `YYC_NO_RUN=1` is set. Local builds are ad-hoc signed by default so they retain a valid bundle seal without needing login-keychain approval behind the screen lock. Release automation can set `YYC_CODE_SIGN_IDENTITY` and `YYC_DEVELOPMENT_TEAM` for Developer ID signing before the normal notarization workflow. All live waves are code-driven; the superseded `tml_stage` resource no longer ships.
 
 ## Coding conventions
 
@@ -176,5 +182,6 @@ Use `./tools/run_yyc_playtest.zsh` for native macOS validation. It isolates the 
 3. Keep room/object event ordering intact.
 4. Update inline docs and the relevant document in `docs/`.
 5. Run GMTL with retries.
-6. Run `git diff --check`.
-7. Review `.yyp`/`.yy` changes for accidental GameMaker metadata churn.
+6. Run `python3 tools/check_repository_hygiene.py`.
+7. Run `git diff --check`.
+8. Review `.yyp`/`.yy` changes for accidental GameMaker metadata churn.

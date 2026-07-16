@@ -72,24 +72,6 @@
     ]
   },
   {
-    "sprite": "spr_bee",
-    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
-    "frames": [
-      {
-        "frame": 0,
-        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_bee/0300a0d1-afa3-42de-82ee-ec8565cd7b69.png",
-        "krita_source": "art/imported_runtime_sources/sprites/spr_bee/frame_00.kra",
-        "size": [
-          64,
-          64
-        ],
-        "layers": [
-          "Imported Runtime Pixels"
-        ]
-      }
-    ]
-  },
-  {
     "sprite": "spr_bullet_bead",
     "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
     "frames": [
@@ -244,24 +226,6 @@
         "size": [
           256,
           256
-        ],
-        "layers": [
-          "Imported Runtime Pixels"
-        ]
-      }
-    ]
-  },
-  {
-    "sprite": "spr_mayfly",
-    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
-    "frames": [
-      {
-        "frame": 0,
-        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_mayfly/0ac34ff0-c610-4d46-9853-44e41c840c2c.png",
-        "krita_source": "art/imported_runtime_sources/sprites/spr_mayfly/frame_00.kra",
-        "size": [
-          64,
-          64
         ],
         "layers": [
           "Imported Runtime Pixels"
@@ -496,24 +460,6 @@
         "size": [
           384,
           512
-        ],
-        "layers": [
-          "Imported Runtime Pixels"
-        ]
-      }
-    ]
-  },
-  {
-    "sprite": "spr_turret",
-    "provenance": "Exact import of prior runtime pixels; no redesign or generated render authority.",
-    "frames": [
-      {
-        "frame": 0,
-        "runtime_png": "Selkie's Moon ~ until we meet again ~/sprites/spr_turret/161fe750-f510-4ea4-9fe9-3150042fd22c.png",
-        "krita_source": "art/imported_runtime_sources/sprites/spr_turret/frame_00.kra",
-        "size": [
-          32,
-          32
         ],
         "layers": [
           "Imported Runtime Pixels"

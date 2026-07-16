@@ -20,11 +20,6 @@ GameRunStartInitialize();
 scene_state = GameSceneStateCreate();
 GamePracticeSceneStateApply(scene_state);
 
-timeline_index = tml_stage;
-timeline_running = false;
-timeline_position = 0;
-timeline_speed = 0;
-
 // Spawn the camera, player, and gameplay UI from one central bootstrap point.
 var _camera = instance_find(obj_camera, 0);
 if (_camera == noone) {

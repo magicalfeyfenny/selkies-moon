@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 import math
 import re
-import shutil
 import wave
 from pathlib import Path
 
@@ -19,7 +18,6 @@ PRODUCTION = ROOT / "art" / "audio_production"
 SUITE = PRODUCTION / "sfx_raw_bounces" / "Selkies Moon SFX Production.wav"
 MANIFEST = PRODUCTION / "sfx_cue_sheets" / "sfx_suite_manifest.json"
 MASTERS = PRODUCTION / "sfx_masters"
-BACKUP = PRODUCTION / "superseded" / "sfx_placeholder_wavs"
 
 RUNTIME = {
     "bomb": ("snd_bomb", "bomb_bloom.wav"),
@@ -122,16 +120,12 @@ def main() -> None:
     if rate != 48000:
         raise RuntimeError(f"Expected 48 kHz Logic bounce, got {rate}")
     MASTERS.mkdir(parents=True, exist_ok=True)
-    BACKUP.mkdir(parents=True, exist_ok=True)
     report = []
 
     for cue in manifest["cues"]:
         slug = cue["slug"]
         resource, filename = RUNTIME[slug]
         runtime = PROJECT / "sounds" / resource / filename
-        backup = BACKUP / f"{resource}__{filename}"
-        if runtime.exists() and not backup.exists():
-            shutil.copy2(runtime, backup)
 
         start = round(cue["start_seconds"] * rate)
         frames = round(cue["duration_seconds"] * rate)

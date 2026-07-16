@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "project": "Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp",
+  "included": [
+    {
+      "owner": "story_runtime",
+      "reason": "Story JSON selected by the live opening, stage encounter, ending, and route registries.",
+      "paths": [
+        "datafiles/aster_defeat_story_moon_route_v2.json",
+        "datafiles/aster_defeat_story_selkie_route_v2.json",
+        "datafiles/aster_intro_story_moon_route_v2.json",
+        "datafiles/aster_intro_story_selkie_route_v2.json",
+        "datafiles/boss_intro_story_selkie_route_v2.json",
+        "datafiles/boss_intro_story_v2.json",
+        "datafiles/caelia_defeat_story_moon_route_v2.json",
+        "datafiles/caelia_defeat_story_selkie_route_v2.json",
+        "datafiles/caelia_intro_story_moon_route_v2.json",
+        "datafiles/caelia_intro_story_selkie_route_v2.json",
+        "datafiles/ending_story_selkie_route_v2.json",
+        "datafiles/ending_story_v2.json",
+        "datafiles/mira_aisha_defeat_story_moon_route_v2.json",
+        "datafiles/mira_aisha_defeat_story_selkie_route_v2.json",
+        "datafiles/mira_aisha_intro_story_moon_route_v2.json",
+        "datafiles/mira_aisha_intro_story_selkie_route_v2.json",
+        "datafiles/opening_story_v2.json",
+        "datafiles/shalmii_defeat_story_moon_route_v2.json",
+        "datafiles/shalmii_defeat_story_selkie_route_v2.json",
+        "datafiles/shalmii_intro_story_moon_route_v2.json",
+        "datafiles/shalmii_intro_story_selkie_route_v2.json"
+      ]
+    },
+    {
+      "owner": "stage_3d_runtime",
+      "reason": "Compiled GameMaker vertex buffers loaded by scr_stage_3d.",
+      "paths": [
+        "datafiles/stage3d_01_shalmii_forge_procession.vbuff",
+        "datafiles/stage3d_02_aster_saltwind_ribbon_coast.vbuff",
+        "datafiles/stage3d_03_mira_aisha_velvet_wishcourt.vbuff",
+        "datafiles/stage3d_04_caelia_bloodstar_orrery.vbuff",
+        "datafiles/stage3d_05_moon_selkie_infinite_violet_garden.vbuff"
+      ]
+    }
+  ],
+  "repository_only": [
+    {
+      "owner": "stage_3d_interchange",
+      "reason": "Portable Blender exports consumed by the VBUFF compiler; retained in LFS but excluded from the game package.",
+      "paths": [
+        "datafiles/stage3d_01_shalmii_forge_procession.obj",
+        "datafiles/stage3d_02_aster_saltwind_ribbon_coast.obj",
+        "datafiles/stage3d_03_mira_aisha_velvet_wishcourt.obj",
+        "datafiles/stage3d_04_caelia_bloodstar_orrery.obj",
+        "datafiles/stage3d_05_moon_selkie_infinite_violet_garden.obj"
+      ]
+    }
+  ]
+}
