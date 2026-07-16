@@ -93,7 +93,7 @@ Practice requests contain:
 - `power` from 0-5;
 - `rank` from 0-50;
 - `dynamic_rank` boolean;
-- `lives` and `bombs` from 0-6;
+- `lives` from 1-6 and `bombs` from 0-6;
 - `meter` from 0-1,000.
 
 Always pass external or UI-edited practice data through `GamePracticeConfigNormalize()` before storing or applying it.
