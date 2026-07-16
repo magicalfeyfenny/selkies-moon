@@ -90,8 +90,9 @@ ownership can never be validated from a mixed snapshot.
 Every pull request also needs one exact `pr-contract:v1` block in its body and
 fresh-agent `agent-review:v1` comments for the roles computed from its risk.
 The governance checker binds those reviews to the repository, pull request,
-base/head commits, target branch, and canonical contract hash. A new commit,
-base advance, retarget, or semantic contract edit invalidates old reviews.
+base/head commits, target branch, canonical contract hash, and digest of the
+visible acceptance sections. A new commit, base advance, retarget, or semantic
+contract edit invalidates old reviews.
 After reviewers post their comments, the orchestrator reruns the governance
 workflow so GitHub evaluates the live attestations without a manual approval
 step.

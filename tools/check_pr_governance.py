@@ -45,6 +45,7 @@ CONTRACT_FIELDS = {
     "base_ref",
     "head_ref",
     "implementation_agent",
+    "acceptance_sha256",
     "risk",
     "controls",
 }
@@ -89,6 +90,7 @@ MARKER_OPEN_PATTERNS = {
 HIGH_RISK_EXACT_PATHS = {
     ".gitattributes",
     ".gitignore",
+    ".gitmodules",
     ".lfsconfig",
     "AGENTS.md",
     "art/runtime_package_manifest.json",
@@ -124,6 +126,10 @@ SOURCE_AUTHORITY_SUFFIXES = {".blend", ".kra", ".logicx"}
 PACKAGE_SUFFIXES = {".yyp", ".yymps"}
 DOC_SUFFIXES = {".md", ".txt"}
 TRUSTED_REVIEW_COMMENT_AUTHORS = {"magicalfeyfenny"}
+BROAD_CHANGE_PATH_THRESHOLD = 25
+CROSS_SYSTEM_PATH_THRESHOLD = 8
+CROSS_SYSTEM_DOMAIN_THRESHOLD = 4
+PROJECT_DIRECTORY = "selkie's moon ~ until we meet again ~"
 
 
 class DuplicateKeyError(ValueError):
@@ -212,11 +218,22 @@ def _is_high_risk_path(path: str) -> bool:
     suffix = PurePosixPath(path).suffix.lower()
     lowered = path.lower()
     lowered_parts = tuple(part.lower() for part in parts)
+    lowered_basename = basename.lower()
     if path in HIGH_RISK_EXACT_PATHS:
         return True
     if path == "AGENTS.md" or path.endswith("/AGENTS.md"):
         return True
     if path.startswith(".github/"):
+        return True
+    if re.fullmatch(r"(?:licen[cs]e|copying|notice)(?:\..+)?", lowered_basename):
+        return True
+    if lowered_basename in {"security.md", "privacy.md", ".env", "id_rsa", "id_dsa"}:
+        return True
+    if lowered_basename.startswith(".env.") or suffix in {".key", ".pem", ".p12", ".pfx"}:
+        return True
+    if "secrets" in lowered_parts or "credentials" in lowered_parts:
+        return True
+    if "options" in lowered_parts and suffix in {".yy", ".json", ".plist", ".xml"}:
         return True
     if basename in DEPENDENCY_BASENAMES or re.fullmatch(r"requirements(?:-[^/]+)?\.txt", basename):
         return True
@@ -260,11 +277,28 @@ def _is_documentation_path(path: str) -> bool:
     return PurePosixPath(path).suffix.lower() in DOC_SUFFIXES
 
 
+def _change_domain(path: str) -> str:
+    parts = tuple(part.lower() for part in PurePosixPath(path).parts)
+    if not parts:
+        return path.lower()
+    if parts[0] == PROJECT_DIRECTORY and len(parts) > 1:
+        return "/".join(parts[:2])
+    return parts[0]
+
+
 def minimum_risk(base_branch: str, changed_paths: Iterable[str]) -> str:
-    paths = list(changed_paths)
+    paths = sorted(set(changed_paths))
     if base_branch == "main":
         return "main-promotion"
     if any(_is_high_risk_path(path) for path in paths):
+        return "high"
+    domains = {_change_domain(path) for path in paths}
+    if len(paths) >= BROAD_CHANGE_PATH_THRESHOLD:
+        return "high"
+    if (
+        len(paths) >= CROSS_SYSTEM_PATH_THRESHOLD
+        and len(domains) >= CROSS_SYSTEM_DOMAIN_THRESHOLD
+    ):
         return "high"
     if paths and all(_is_documentation_path(path) for path in paths):
         return "low"
@@ -281,6 +315,25 @@ def canonical_contract_sha256(contract: dict[str, object]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _normalize_visible_section(content: str) -> str:
+    visible = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
+    normalized = visible.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [line.rstrip() for line in normalized.split("\n")]
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines)
+
+
+def canonical_acceptance_sha256(body: str) -> str:
+    # The machine contract lives inside an HTML comment and therefore does not
+    # recurse into its own digest. Hash every visible line so an added ad-hoc
+    # section cannot smuggle new scope past otherwise unchanged reviews.
+    payload = _normalize_visible_section(body).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _section_content(body: str, section: str) -> str | None:
     pattern = re.compile(
         rf"^##\s+{re.escape(section)}\s*$\n(?P<content>.*?)(?=^##\s+|\Z)",
@@ -288,6 +341,14 @@ def _section_content(body: str, section: str) -> str | None:
     )
     match = pattern.search(body)
     return match.group("content").strip() if match else None
+
+
+def _section_heading_count(body: str, section: str) -> int:
+    pattern = re.compile(
+        rf"^##\s+{re.escape(section)}\s*$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    return len(pattern.findall(body))
 
 
 def _marker_payloads(
@@ -498,6 +559,15 @@ def _validate_contract(
         errors.append("contract: pr_number does not match the current PR event")
     if not _valid_agent_id(contract.get("implementation_agent")):
         errors.append("contract: implementation_agent must be a non-placeholder agent ID")
+    acceptance_sha256 = contract.get("acceptance_sha256")
+    if not isinstance(acceptance_sha256, str) or not SHA256_PATTERN.fullmatch(
+        acceptance_sha256
+    ):
+        errors.append("contract: acceptance_sha256 must be a full lowercase SHA-256")
+    elif acceptance_sha256 != canonical_acceptance_sha256(str(context["body"])):
+        errors.append(
+            "contract: acceptance_sha256 does not match the visible PR body"
+        )
     if _contains_placeholder(contract):
         errors.append("contract: placeholder or empty string detected")
 
@@ -521,7 +591,8 @@ def _validate_contract(
         if controls.get("target_branch") != base_ref:
             errors.append("contract: controls.target_branch must equal base_ref")
         for name, allowed in CONTROL_VALUES.items():
-            if controls.get(name) not in allowed:
+            control_value = controls.get(name)
+            if not isinstance(control_value, str) or control_value not in allowed:
                 errors.append(f"contract: controls.{name} must be one of {sorted(allowed)}")
 
     if base_ref == "main":
@@ -560,9 +631,28 @@ def _validate_attestations(
     for index, attestation in enumerate(attestations):
         label = f"review: attestation[{index}]"
         role = attestation.get("role")
-        if isinstance(role, str) and role not in required_roles:
-            # Extra specialist reviews are permitted, but only the roles
-            # required for this risk tier participate in the status decision.
+        binding_fields = (
+            "repository",
+            "pr_number",
+            "head_sha",
+            "base_sha",
+            "base_ref",
+            "head_ref",
+        )
+        binding_is_current = all(
+            attestation.get(field) == context[field] for field in binding_fields
+        ) and all(
+            (
+                attestation.get("contract_sha256") == contract_hash,
+                attestation.get("implementation_agent") == implementation_agent,
+                attestation.get("risk") == risk,
+            )
+        )
+        role_is_required = isinstance(role, str) and role in required_roles
+        if not role_is_required and not binding_is_current:
+            # Stale optional specialist reviews remain historical evidence but
+            # do not deadlock a newer contract. Every current trusted review is
+            # validated below, including non-required request-changes verdicts.
             continue
         _check_exact_keys(attestation, ATTESTATION_FIELDS, label, errors)
         if attestation.get("version") != 1 or type(attestation.get("version")) is not int:
@@ -635,15 +725,22 @@ def validate_pull_request(
         return errors
     body = str(context["body"])
     for section in REQUIRED_SECTIONS:
-        content = _section_content(body, section)
-        if content is None:
+        heading_count = _section_heading_count(body, section)
+        if heading_count == 0:
             errors.append(f"body: missing required section '## {section}'")
-        else:
+            continue
+        if heading_count != 1:
+            errors.append(
+                f"body: expected exactly one '## {section}' section, found {heading_count}"
+            )
+        content = _section_content(body, section)
+        if content is not None:
             visible = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL).strip()
             if not visible:
                 errors.append(f"body: section '## {section}' has no reviewable content")
 
     paths = list(changed_paths)
+    valid_paths: list[str] = []
     if not paths:
         errors.append("diff: PR has no changed paths")
     for path in paths:
@@ -655,12 +752,14 @@ def validate_pull_request(
             or ".." in PurePosixPath(path).parts
         ):
             errors.append(f"diff: invalid repository-relative path {path!r}")
+        else:
+            valid_paths.append(path)
 
     contract = _parse_contract(body, errors)
     attestations = _parse_attestations(comments, errors)
     if contract is None:
         return errors
-    risk = _validate_contract(contract, context, paths, actual_candidate_tree, errors)
+    risk = _validate_contract(contract, context, valid_paths, actual_candidate_tree, errors)
     _validate_attestations(attestations, contract, context, risk, errors)
     return errors
 

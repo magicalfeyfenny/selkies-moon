@@ -83,7 +83,11 @@ tree so the promotion cannot quietly change the tested source.
 The PR body keeps the human-readable sections from the repository template and
 exactly one hidden `pr-contract:v1` JSON object. The contract uses full Git
 identifiers and names the implementation run. Its canonical SHA-256 is computed
-from UTF-8 JSON with sorted keys and compact separators.
+from UTF-8 JSON with sorted keys and compact separators. The contract also
+contains `acceptance_sha256`, a canonical digest of the entire visible PR body
+after HTML comments and non-semantic trailing whitespace are removed. Editing a
+required section or adding visible scope elsewhere therefore changes the
+contract hash and invalidates its reviews.
 
 ```text
 <!-- pr-contract:v1
@@ -96,6 +100,7 @@ from UTF-8 JSON with sorted keys and compact separators.
   "base_ref": "dev",
   "head_ref": "codex/example",
   "implementation_agent": "codex-thread:<thread-id>/root",
+  "acceptance_sha256": "<64-character visible acceptance SHA-256>",
   "risk": "standard",
   "controls": {
     "target_branch": "dev",
@@ -110,7 +115,8 @@ from UTF-8 JSON with sorted keys and compact separators.
 For `main-promotion`, the contract additionally requires `candidate_sha` equal
 to the PR head and `candidate_tree` equal to that commit's full Git tree ID.
 Those fields are forbidden for other risk classes. Unknown fields, duplicate
-JSON keys, short SHAs, and placeholders are invalid.
+JSON keys, duplicate required headings, short SHAs, stale visible-acceptance
+digests, and placeholders are invalid.
 
 ## Reviewer attestations
 
@@ -151,7 +157,9 @@ Only comments from the repository's configured trusted review identity are
 eligible; untrusted commenters can neither approve nor block the check by
 copying a marker. The newest trusted attestation for each role supersedes older
 historical comments, so a corrected commit can be reviewed again without
-erasing the earlier report.
+erasing the earlier report. A current trusted request-changes or blocking
+finding fails governance even when that review role was optional for the
+computed tier.
 
 GitHub does not start a pull-request workflow merely because an issue comment
 was added. After posting the required review comments, the orchestrator reruns

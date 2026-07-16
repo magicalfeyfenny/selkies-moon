@@ -70,14 +70,9 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Check out complete validation history
-        uses: actions/checkout@v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
       # Pull-request event payloads are snapshots. Refresh the mutable body and
-      # review comments immediately before validating this workflow run.
+      # review comments before checkout, while no PR-controlled module can be
+      # imported by the token-bearing context collector.
       - name: Fetch live pull request review context
         shell: bash
         env:
@@ -97,7 +92,7 @@ jobs:
             "repos/$REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
             > "$comment_pages"
 
-          python3 - \
+          python3 -I - \
             "$GITHUB_EVENT_PATH" \
             "$live_pr" \
             "$comment_pages" \
@@ -144,6 +139,12 @@ jobs:
 
           echo "PR_GOVERNANCE_EVENT=$review_event" >> "$GITHUB_ENV"
           echo "PR_GOVERNANCE_COMMENTS=$review_comments" >> "$GITHUB_ENV"
+
+      - name: Check out complete validation history
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Validate current agent review attestations
         shell: bash
