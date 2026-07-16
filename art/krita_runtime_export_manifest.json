@@ -1,0 +1,131 @@
+{
+  "schema_version": 2,
+  "policy": {
+    "production_raster_master": "krita",
+    "runtime_direction": "kra-to-png",
+    "normal_build_may_write_kra": false,
+    "runtime_pngs_require_exactly_one_owner": true
+  },
+  "runtime_png_roots": [
+    "Selkie's Moon ~ until we meet again ~/sprites",
+    "Selkie's Moon ~ until we meet again ~/fonts",
+    "Selkie's Moon ~ until we meet again ~/options"
+  ],
+  "sprite_families": [
+    {
+      "family": "core",
+      "manifest": "art/core_pixel_sources/core_pixel_source_manifest.json",
+      "source_mode": "migrated-krita-master"
+    },
+    {
+      "family": "enemy",
+      "manifest": "art/enemy_sources/enemy_source_manifest.json",
+      "source_mode": "migrated-krita-master"
+    },
+    {
+      "family": "story",
+      "manifest": "art/story_background_sources/story_background_manifest.json",
+      "source_mode": "migrated-krita-master"
+    },
+    {
+      "family": "stage3d",
+      "manifest": "art/3d_stage_sources/textures/stage_3d_texture_manifest.json",
+      "source_mode": "migrated-krita-master"
+    },
+    {
+      "family": "imported",
+      "manifest": "art/imported_runtime_sources/sprite_source_manifest.json",
+      "source_mode": "migrated-krita-master"
+    },
+    {
+      "family": "text",
+      "manifest": "art/imported_runtime_sources/sprites/spr_text_arrow/manifest.json",
+      "source_mode": "migrated-krita-master"
+    }
+  ],
+  "standalone": [
+    {
+      "asset_id": "font.fn_dialogue_name.atlas",
+      "master_kra": "art/font_sources/runtime_atlases/fn_dialogue_name.kra",
+      "export_png": "Selkie's Moon ~ until we meet again ~/fonts/fn_dialogue_name/fn_dialogue_name.png",
+      "size": [256, 256],
+      "metrics": "Selkie's Moon ~ until we meet again ~/fonts/fn_dialogue_name/fn_dialogue_name.yy"
+    },
+    {
+      "asset_id": "font.fn_dialogue_speech.atlas",
+      "master_kra": "art/font_sources/runtime_atlases/fn_dialogue_speech.kra",
+      "export_png": "Selkie's Moon ~ until we meet again ~/fonts/fn_dialogue_speech/fn_dialogue_speech.png",
+      "size": [256, 128],
+      "metrics": "Selkie's Moon ~ until we meet again ~/fonts/fn_dialogue_speech/fn_dialogue_speech.yy"
+    },
+    {
+      "asset_id": "font.fn_menu.atlas",
+      "master_kra": "art/font_sources/runtime_atlases/fn_menu.kra",
+      "export_png": "Selkie's Moon ~ until we meet again ~/fonts/fn_menu/fn_menu.png",
+      "size": [256, 128],
+      "metrics": "Selkie's Moon ~ until we meet again ~/fonts/fn_menu/fn_menu.yy"
+    },
+    {
+      "asset_id": "font.fn_subtitle.atlas",
+      "master_kra": "art/font_sources/runtime_atlases/fn_subtitle.kra",
+      "export_png": "Selkie's Moon ~ until we meet again ~/fonts/fn_subtitle/fn_subtitle.png",
+      "size": [256, 256],
+      "metrics": "Selkie's Moon ~ until we meet again ~/fonts/fn_subtitle/fn_subtitle.yy"
+    },
+    {
+      "asset_id": "font.fn_title.atlas",
+      "master_kra": "art/font_sources/runtime_atlases/fn_title.kra",
+      "export_png": "Selkie's Moon ~ until we meet again ~/fonts/fn_title/fn_title.png",
+      "size": [512, 256],
+      "metrics": "Selkie's Moon ~ until we meet again ~/fonts/fn_title/fn_title.yy"
+    },
+    {
+      "asset_id": "platform.macos.app_icon",
+      "master_kra": "art/platform_sources/mac_app_icon.kra",
+      "export_png": "Selkie's Moon ~ until we meet again ~/options/mac/icons/1024.png",
+      "size": [1024, 1024]
+    }
+  ],
+  "source_only_masters": [
+    {
+      "asset_id": "portrait.aisha.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/aisha_full.kra"
+    },
+    {
+      "asset_id": "portrait.aster.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/aster_full.kra"
+    },
+    {
+      "asset_id": "portrait.caelia.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/caelia_full.kra"
+    },
+    {
+      "asset_id": "portrait.mira.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/mira_full.kra"
+    },
+    {
+      "asset_id": "portrait.moon.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/moon_full.kra"
+    },
+    {
+      "asset_id": "portrait.selkie.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/selkie_full.kra"
+    },
+    {
+      "asset_id": "portrait.shalmii.full",
+      "master_kra": "Selkie's Moon ~ until we meet again ~/art/character_portraits/shalmii_full.kra"
+    },
+    {
+      "asset_id": "font.not_jam_novel_13.sheet",
+      "master_kra": "art/font_sources/not_jam_novel_13/NotJamNovel13.kra"
+    },
+    {
+      "asset_id": "font.not_jam_old_style.sheet",
+      "master_kra": "art/font_sources/not_jam_old_style/NotJamOldStyleGlyphs.kra"
+    }
+  ],
+  "reference_only_globs": [
+    "Selkie's Moon ~ until we meet again ~/art/original_character_references/*",
+    "art/original_enemy_references/*"
+  ]
+}

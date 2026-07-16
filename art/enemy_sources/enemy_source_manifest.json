@@ -3,7 +3,6 @@
     "stage": 1,
     "slug": "forge_spark",
     "sprite": "spr_enemy_forge_spark",
-    "openraster_source": "art/enemy_sources/stage_01/forge_spark.ora",
     "krita_source": "art/enemy_sources/stage_01/forge_spark.kra",
     "layers": [
       "Core Glow",
@@ -18,7 +17,6 @@
     "stage": 1,
     "slug": "anvil_familiar",
     "sprite": "spr_enemy_anvil_familiar",
-    "openraster_source": "art/enemy_sources/stage_01/anvil_familiar.ora",
     "krita_source": "art/enemy_sources/stage_01/anvil_familiar.kra",
     "layers": [
       "Core Glow",
@@ -33,7 +31,6 @@
     "stage": 1,
     "slug": "bellows_imp",
     "sprite": "spr_enemy_bellows_imp",
-    "openraster_source": "art/enemy_sources/stage_01/bellows_imp.ora",
     "krita_source": "art/enemy_sources/stage_01/bellows_imp.kra",
     "layers": [
       "Core Glow",
@@ -48,7 +45,6 @@
     "stage": 1,
     "slug": "hammer_cherub",
     "sprite": "spr_enemy_hammer_cherub",
-    "openraster_source": "art/enemy_sources/stage_01/hammer_cherub.ora",
     "krita_source": "art/enemy_sources/stage_01/hammer_cherub.kra",
     "layers": [
       "Core Glow",
@@ -63,7 +59,6 @@
     "stage": 2,
     "slug": "ribbon_hare",
     "sprite": "spr_enemy_ribbon_hare",
-    "openraster_source": "art/enemy_sources/stage_02/ribbon_hare.ora",
     "krita_source": "art/enemy_sources/stage_02/ribbon_hare.kra",
     "layers": [
       "Core Glow",
@@ -78,7 +73,6 @@
     "stage": 2,
     "slug": "winged_staff",
     "sprite": "spr_enemy_winged_staff",
-    "openraster_source": "art/enemy_sources/stage_02/winged_staff.ora",
     "krita_source": "art/enemy_sources/stage_02/winged_staff.kra",
     "layers": [
       "Core Glow",
@@ -93,7 +87,6 @@
     "stage": 2,
     "slug": "lavender_knot",
     "sprite": "spr_enemy_lavender_knot",
-    "openraster_source": "art/enemy_sources/stage_02/lavender_knot.ora",
     "krita_source": "art/enemy_sources/stage_02/lavender_knot.kra",
     "layers": [
       "Core Glow",
@@ -108,7 +101,6 @@
     "stage": 2,
     "slug": "saltwind_pinwheel",
     "sprite": "spr_enemy_saltwind_pinwheel",
-    "openraster_source": "art/enemy_sources/stage_02/saltwind_pinwheel.ora",
     "krita_source": "art/enemy_sources/stage_02/saltwind_pinwheel.kra",
     "layers": [
       "Core Glow",
@@ -123,7 +115,6 @@
     "stage": 3,
     "slug": "spade_familiar",
     "sprite": "spr_enemy_spade_familiar",
-    "openraster_source": "art/enemy_sources/stage_03/spade_familiar.ora",
     "krita_source": "art/enemy_sources/stage_03/spade_familiar.kra",
     "layers": [
       "Core Glow",
@@ -138,7 +129,6 @@
     "stage": 3,
     "slug": "dealer_mask",
     "sprite": "spr_enemy_dealer_mask",
-    "openraster_source": "art/enemy_sources/stage_03/dealer_mask.ora",
     "krita_source": "art/enemy_sources/stage_03/dealer_mask.kra",
     "layers": [
       "Core Glow",
@@ -153,7 +143,6 @@
     "stage": 3,
     "slug": "order_talisman",
     "sprite": "spr_enemy_order_talisman",
-    "openraster_source": "art/enemy_sources/stage_03/order_talisman.ora",
     "krita_source": "art/enemy_sources/stage_03/order_talisman.kra",
     "layers": [
       "Core Glow",
@@ -168,7 +157,6 @@
     "stage": 3,
     "slug": "chaos_shard",
     "sprite": "spr_enemy_chaos_shard",
-    "openraster_source": "art/enemy_sources/stage_03/chaos_shard.ora",
     "krita_source": "art/enemy_sources/stage_03/chaos_shard.kra",
     "layers": [
       "Core Glow",
@@ -183,7 +171,6 @@
     "stage": 4,
     "slug": "clockwork_planet",
     "sprite": "spr_enemy_clockwork_planet",
-    "openraster_source": "art/enemy_sources/stage_04/clockwork_planet.ora",
     "krita_source": "art/enemy_sources/stage_04/clockwork_planet.kra",
     "layers": [
       "Core Glow",
@@ -198,7 +185,6 @@
     "stage": 4,
     "slug": "astrolabe_eye",
     "sprite": "spr_enemy_astrolabe_eye",
-    "openraster_source": "art/enemy_sources/stage_04/astrolabe_eye.ora",
     "krita_source": "art/enemy_sources/stage_04/astrolabe_eye.kra",
     "layers": [
       "Core Glow",
@@ -213,7 +199,6 @@
     "stage": 4,
     "slug": "constellation_lance",
     "sprite": "spr_enemy_constellation_lance",
-    "openraster_source": "art/enemy_sources/stage_04/constellation_lance.ora",
     "krita_source": "art/enemy_sources/stage_04/constellation_lance.kra",
     "layers": [
       "Core Glow",
@@ -228,7 +213,6 @@
     "stage": 4,
     "slug": "bloodstar_heart",
     "sprite": "spr_enemy_bloodstar_heart",
-    "openraster_source": "art/enemy_sources/stage_04/bloodstar_heart.ora",
     "krita_source": "art/enemy_sources/stage_04/bloodstar_heart.kra",
     "layers": [
       "Core Glow",
@@ -243,7 +227,6 @@
     "stage": 5,
     "slug": "violet_bee",
     "sprite": "spr_violet_bee",
-    "openraster_source": "art/enemy_sources/stage_05/violet_bee.ora",
     "krita_source": "art/enemy_sources/stage_05/violet_bee.kra",
     "layers": [
       "Core Glow",
@@ -258,7 +241,6 @@
     "stage": 5,
     "slug": "twilight_mayfly",
     "sprite": "spr_twilight_mayfly",
-    "openraster_source": "art/enemy_sources/stage_05/twilight_mayfly.ora",
     "krita_source": "art/enemy_sources/stage_05/twilight_mayfly.kra",
     "layers": [
       "Core Glow",
@@ -273,7 +255,6 @@
     "stage": 5,
     "slug": "thorn_reliquary",
     "sprite": "spr_enemy_thorn_reliquary",
-    "openraster_source": "art/enemy_sources/stage_05/thorn_reliquary.ora",
     "krita_source": "art/enemy_sources/stage_05/thorn_reliquary.kra",
     "layers": [
       "Core Glow",
@@ -288,7 +269,6 @@
     "stage": 5,
     "slug": "chakram_seraph",
     "sprite": "spr_enemy_chakram_seraph",
-    "openraster_source": "art/enemy_sources/stage_05/chakram_seraph.ora",
     "krita_source": "art/enemy_sources/stage_05/chakram_seraph.kra",
     "layers": [
       "Core Glow",
