@@ -16,8 +16,7 @@ function GameAudioStateEnsure() {
 
     // Keep compatibility with audio state created by an older persistent bootstrap.
     GameStructFieldEnsure(global.game_audio, "stage_music_playing", false);
-    GameStructFieldEnsure(global.game_audio, "current_music_id",
-        global.game_audio.stage_music_playing ? snd_stage_music : -1);
+    GameStructFieldEnsure(global.game_audio, "current_music_id", -1);
     GameStructFieldEnsure(global.game_audio, "music_owner", "room");
     GameStructFieldEnsure(global.game_audio, "music_preview_instance_id", -1);
     GameStructFieldEnsure(global.game_audio, "music_preview_sound_id", -1);
@@ -38,12 +37,6 @@ function GameAudioMusicAssetsCreate() {
         snd_music_stage_moon, snd_music_boss_moon,
         snd_music_stage_selkie, snd_music_boss_selkie,
         snd_music_ending, snd_music_credits,
-        // Retain category gain for the superseded short score placeholders
-        // while their resources remain in the project for comparison.
-        snd_music_stage_01, snd_music_stage_02, snd_music_stage_03,
-        snd_music_stage_04, snd_music_stage_05, snd_music_stage_06,
-        snd_music_stage_07, snd_music_stage_08, snd_music_stage_09,
-        snd_music_stage_10, snd_stage_music,
     ];
 }
 

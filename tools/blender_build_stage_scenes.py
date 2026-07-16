@@ -1,18 +1,25 @@
-"""Run inside Blender to author and export Selkie's Moon's five 3D stage loops."""
+"""Export Selkie's Moon's authoritative Blender scenes to OBJ intermediates.
+
+Normal use opens the existing ``.blend`` masters read-only and exports their
+geometry. Pass ``--bootstrap-masters`` after Blender's ``--`` separator only
+for the destructive, one-time procedural scene bootstrap.
+"""
 
 from __future__ import annotations
 
 import json
 import math
+import sys
 from pathlib import Path
 
 import bpy
 from mathutils import Vector
 
 
-ROOT = Path("/Users/magicalfeyfenny/GameMakerProjects/selkies-moon")
+ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "art" / "3d_stage_sources"
-DATAFILES = ROOT / "Selkie's Moon ~ until we meet again ~" / "datafiles"
+GAME_PROJECT = ROOT / "Selkie's Moon ~ until we meet again ~"
+DATAFILES = GAME_PROJECT / "datafiles"
 LOOP_LENGTH = 64.0
 TEXTURE_SLUGS = {
     1: "forge",
@@ -663,7 +670,51 @@ def export_obj(path: Path) -> int:
     return triangle_count
 
 
-def build_stage(stage: int, config: dict) -> dict:
+def stage_paths(stage: int, config: dict) -> tuple[Path, Path, Path, str]:
+    stage_dir = SOURCE / f"stage_{stage:02d}_{config['slug']}"
+    blend_path = stage_dir / f"{config['slug']}.blend"
+    obj_name = f"stage3d_{stage:02d}_{config['slug']}.obj"
+    obj_path = DATAFILES / obj_name
+    return stage_dir, blend_path, obj_path, obj_name
+
+
+def write_stage_metadata(
+    stage: int,
+    config: dict,
+    stage_dir: Path,
+    blend_path: Path,
+    obj_name: str,
+    triangles: int,
+) -> dict:
+    metadata = {
+        "stage": stage,
+        "slug": config["slug"],
+        "location": config["location"],
+        "blend_source": str(blend_path.relative_to(ROOT)),
+        "runtime_obj": obj_name,
+        "loop_length": LOOP_LENGTH,
+        "camera_path": config["camera"],
+        "boss_camera_path": config["boss_camera"],
+        "camera_target_z": config["target_z"],
+        "scroll_speed": config["speed"],
+        "lighting": {
+            "world": config["world"],
+            "sun_color": config["sun_color"],
+            "sun_energy": config["sun_energy"],
+        },
+        "fog": config["fog"],
+        "triangles": triangles,
+        "billboard_proxy_count": sum(
+            1 for obj in bpy.context.scene.objects if obj.get("billboard_proxy", False)
+        ),
+    }
+    metadata_path = stage_dir / "stage_scene_manifest.json"
+    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    return metadata
+
+
+def bootstrap_stage(stage: int, config: dict) -> dict:
+    stage_dir, blend_path, obj_path, obj_name = stage_paths(stage, config)
     clear_scene()
     bpy.context.scene.name = f"SelkiesMoon_Stage_{stage:02d}_{config['slug']}"
     bpy.context.scene.render.engine = "BLENDER_EEVEE"
@@ -697,8 +748,11 @@ def build_stage(stage: int, config: dict) -> dict:
     # Pack the high-resolution runtime atlas into the native Blender source so
     # the editable scene remains self-contained even if the repo is relocated.
     texture_slug = TEXTURE_SLUGS[stage]
-    texture_path = (SOURCE / "textures" / f"stage_{stage:02d}_{texture_slug}"
-                    / f"{texture_slug}_runtime_texture.png")
+    texture_sprite = f"tex_stage3d_{stage:02d}"
+    texture_dir = GAME_PROJECT / "sprites" / texture_sprite
+    with (texture_dir / f"{texture_sprite}.yy").open("r", encoding="utf-8") as stream:
+        texture_frame = json.load(stream)["frames"][0]["name"]
+    texture_path = texture_dir / f"{texture_frame}.png"
     if texture_path.exists():
         atlas = bpy.data.images.load(str(texture_path), check_existing=False)
         atlas.name = f"Stage_{stage:02d}_Runtime_Atlas_1024"
@@ -708,46 +762,35 @@ def build_stage(stage: int, config: dict) -> dict:
         atlas.use_fake_user = True
         atlas.pack()
 
-    stage_dir = SOURCE / f"stage_{stage:02d}_{config['slug']}"
     stage_dir.mkdir(parents=True, exist_ok=True)
-    blend_path = stage_dir / f"{config['slug']}.blend"
-    obj_name = f"stage3d_{stage:02d}_{config['slug']}.obj"
-    obj_path = DATAFILES / obj_name
     bpy.ops.wm.save_as_mainfile(filepath=str(blend_path))
     triangles = export_obj(obj_path)
+    return write_stage_metadata(
+        stage, config, stage_dir, blend_path, obj_name, triangles
+    )
 
-    metadata = {
-        "stage": stage,
-        "slug": config["slug"],
-        "location": config["location"],
-        "blend_source": str(blend_path.relative_to(ROOT)),
-        "runtime_obj": obj_name,
-        "loop_length": LOOP_LENGTH,
-        "camera_path": config["camera"],
-        "boss_camera_path": config["boss_camera"],
-        "camera_target_z": config["target_z"],
-        "scroll_speed": config["speed"],
-        "lighting": {
-            "world": config["world"],
-            "sun_color": config["sun_color"],
-            "sun_energy": config["sun_energy"],
-        },
-        "fog": config["fog"],
-        "triangles": triangles,
-        "billboard_proxy_count": sum(1 for obj in bpy.context.scene.objects
-                                      if obj.get("billboard_proxy", False)),
-    }
-    metadata_path = stage_dir / "stage_scene_manifest.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-    return metadata
+
+def export_stage(stage: int, config: dict) -> dict:
+    stage_dir, blend_path, obj_path, obj_name = stage_paths(stage, config)
+    if not blend_path.is_file():
+        raise FileNotFoundError(f"Missing authoritative Blender master: {blend_path}")
+
+    bpy.ops.wm.open_mainfile(filepath=str(blend_path))
+    triangles = export_obj(obj_path)
+    return write_stage_metadata(
+        stage, config, stage_dir, blend_path, obj_name, triangles
+    )
 
 
 def main() -> None:
     SOURCE.mkdir(parents=True, exist_ok=True)
     DATAFILES.mkdir(parents=True, exist_ok=True)
-    manifest = [build_stage(stage, config) for stage, config in STAGES.items()]
+    bootstrap = "--bootstrap-masters" in sys.argv
+    stage_action = bootstrap_stage if bootstrap else export_stage
+    manifest = [stage_action(stage, config) for stage, config in STAGES.items()]
     (SOURCE / "stage_3d_scene_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(f"SELKIES_MOON_STAGE_BUILD_COMPLETE:{len(manifest)}")
+    mode = "BOOTSTRAP" if bootstrap else "EXPORT"
+    print(f"SELKIES_MOON_STAGE_{mode}_COMPLETE:{len(manifest)}")
 
 
 main()

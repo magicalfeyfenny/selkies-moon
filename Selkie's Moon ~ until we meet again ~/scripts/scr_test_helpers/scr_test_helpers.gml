@@ -199,10 +199,10 @@ function GameVisualTourTitlePrepare(_page, _main_index) {
         _title.title_state.practice_config = GamePracticeConfigNormalize({
             ship_id: SHIP_SELKIE,
             ship_index: 1,
-            stage: 8,
+            stage: STAGE_COUNT,
             segment: PRACTICE_SEGMENT_BOSS,
             power: PLAYER_POWER_MAX,
-            rank: 80,
+            rank: RANK_MAX,
             dynamic_rank: false,
             lives: 5,
             bombs: 4,
@@ -221,10 +221,10 @@ function GameVisualTourPausePrepare(_page) {
         var _practice = GamePracticeConfigCreateDefault();
         _practice.ship_id = SHIP_SELKIE;
         _practice.ship_index = 1;
-        _practice.stage = 8;
+        _practice.stage = STAGE_COUNT;
         _practice.segment = PRACTICE_SEGMENT_BOSS;
         _practice.power = PLAYER_POWER_MAX;
-        _practice.rank = 80;
+        _practice.rank = RANK_MAX;
         _practice.dynamic_rank = false;
         _practice.lives = 5;
         _practice.bombs = 4;
