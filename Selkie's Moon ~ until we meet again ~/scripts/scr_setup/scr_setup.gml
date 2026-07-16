@@ -10,7 +10,7 @@
 // This flag must be set to true for the test harness to automatically quit
 // GMTL unit tests still run even if this is set to false
 // TODO: add a system that allows this to just be a command line argument or config thing so that you can use it for yourself and i can just launch it from within the GameMaker IDE
-#macro TEST_HARNESS_AUTO_QUIT false
+#macro TEST_HARNESS_AUTO_QUIT true
 
 // This flag enables debug mode decorators and UI
 // TODO: actually add debug mode decorators for things like hitboxes-only mode, etc.
