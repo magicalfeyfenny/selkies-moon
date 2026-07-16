@@ -75,6 +75,7 @@ Open the .yyp file and run by pressing F5 or clicking the play button in the top
 - [Asset pipeline](docs/ASSET_PIPELINE.md): canonical BLEND, KRA, and Logic sources plus runtime and interchange derivatives.
 - [Git LFS migration](docs/LFS_MIGRATION.md): rewritten asset-history scope, preserved jam release, and collaborator recovery.
 - [Branch and release policy](docs/BRANCH_AND_RELEASE_POLICY.md): `main`/`dev` roles, pull-request flow, release promotion, hotfixes, and exceptional history rewrites.
+- [Agent review policy](docs/AGENT_REVIEW_POLICY.md): risk-scaled fresh-context review, machine-readable attestations, and merge/release authority boundaries.
 - [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md): input, stage flow, rank, weapons, enemies, bosses, pickups, pause, and story flow.
 - [Data formats](docs/DATA_FORMATS.md): story JSON, persistence schemas, boss phase descriptors, and practice requests.
 - [AI-assisted development post-mortem](docs/AI_ASSISTED_DEVELOPMENT_POSTMORTEM.md): project lessons, large-game best practices, and reusable prompt templates.

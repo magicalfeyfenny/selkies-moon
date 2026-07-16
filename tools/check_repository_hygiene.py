@@ -76,12 +76,18 @@ RETIRED_PATHS = {
     "tools/regenerate_stage_timeline.zsh",
 }
 CONTROL_PATHS = {
+    ".github/pull_request_template.md",
+    ".github/workflows/gamemaker-tests.yml",
+    "AGENTS.md",
     "art/3d_stage_sources/stage_3d_runtime_buffer_manifest.json",
     "art/audio_production/score_manifest.json",
     "art/audio_production/sfx_cue_sheets/sfx_install_report.json",
     "art/runtime_package_manifest.json",
+    "docs/AGENT_REVIEW_POLICY.md",
     f"{PROJECT_NAME}/Selkies Moon.yyp",
+    "tools/check_pr_governance.py",
     "tools/check_repository_hygiene.py",
+    "tools/tests/test_check_pr_governance.py",
     "tools/tests/test_check_repository_hygiene.py",
 }
 

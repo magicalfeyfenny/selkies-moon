@@ -20,16 +20,21 @@ push that branch to the remote, and merge it into `dev` through a pull request.
 `main` is reserved for the exact source tree corresponding to the currently
 published binary release. See [Branch and Release Policy](BRANCH_AND_RELEASE_POLICY.md)
 for release promotion, tagging, hotfixes, and the narrowly scoped history-rewrite
-exception used by coordinated repository migrations such as Git LFS.
+exception used by coordinated repository migrations such as Git LFS. Follow
+[Agent Review Policy](AGENT_REVIEW_POLICY.md) for risk-scaled fresh-context
+review. Passing delegated review can replace Fenny's manual approval click, but
+does not independently authorize a merge, tag, or release.
 
 ## Repository layout
 
 ~~~text
 .
+├── AGENTS.md
 ├── README.md
 ├── docs/
 ├── tools/
 │   ├── export_krita_runtime.py
+│   ├── check_pr_governance.py
 │   ├── check_repository_hygiene.py
 │   ├── migrate_legacy_raster_to_krita.py
 │   ├── run_gmtl_tests_ci.ps1
@@ -82,9 +87,18 @@ The hygiene command deliberately checks the staged index and refuses unstaged
 or untracked non-ignored files so package metadata, Git attributes, and payload
 ownership can never be validated from a mixed snapshot.
 
+Every pull request also needs one exact `pr-contract:v1` block in its body and
+fresh-agent `agent-review:v1` comments for the roles computed from its risk.
+The governance checker binds those reviews to the repository, pull request,
+base/head commits, target branch, and canonical contract hash. A new commit,
+base advance, retarget, or semantic contract edit invalidates old reviews.
+After reviewers post their comments, the orchestrator reruns the governance
+workflow so GitHub evaluates the live attestations without a manual approval
+step.
+
 ## GitHub Actions unit tests
 
-`.github/workflows/gamemaker-tests.yml` first runs the fast repository-hygiene and package-ownership gate, including a full PR-range check for large ordinary Git blobs and tracked junk. Same-repository changes also fetch and hash every changed final-state LFS payload. Forks cannot upload LFS objects to the repository remote, so fork pull requests that change LFS paths fail with instructions to transfer the commit onto a maintainer-owned branch. The workflow then runs the GMTL suite for pull requests targeting `dev`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
+`.github/workflows/gamemaker-tests.yml` first runs the fast repository-hygiene and package-ownership gate, including a full PR-range check for large ordinary Git blobs and tracked junk. Same-repository changes also fetch and hash every changed final-state LFS payload. Forks cannot upload LFS objects to the repository remote, so fork pull requests that change LFS paths fail with instructions to transfer the commit onto a maintainer-owned branch. Pull requests into `dev` or `main` also receive a `PR governance` check using live PR metadata and review comments. A stable aggregate check fails unless every applicable gate actually succeeds, preventing a skipped job from becoming a false green. The workflow runs the GMTL suite for pull requests targeting `dev` or `main`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
 
 The repository must have an Actions secret named `ACCESS_KEY`. Generate one on the [GameMaker account access-key page](https://gamemaker.io/account/access_keys), then add it under **Settings > Secrets and variables > Actions**. Never commit the key or paste it into a workflow file. Licensed CI is skipped for fork pull requests because GitHub does not provide repository secrets to untrusted fork code.
 
@@ -185,3 +199,5 @@ Use `./tools/run_yyc_playtest.zsh` for native macOS validation. It isolates the 
 6. Run `python3 tools/check_repository_hygiene.py`.
 7. Run `git diff --check`.
 8. Review `.yyp`/`.yy` changes for accidental GameMaker metadata churn.
+9. Record the exact PR contract and complete the required fresh-agent reviews;
+   repeat them after any change to the reviewed diff or contract.
