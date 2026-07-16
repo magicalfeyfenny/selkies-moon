@@ -176,6 +176,12 @@ pre-rewrite SHA-256 exactly. The command therefore did not produce a parity
 result, while the independent 513-file content comparison established that
 the migration itself introduced no asset-byte drift.
 
+The subsequent repository-hygiene follow-up removed those unowned backup
+pairs and three exact-import masters whose legacy enemy fixtures had no runtime
+callers. After hydrating only the remaining 92 KRA masters, the full exporter
+check rendered all 90 jobs and verified 77 sprites, 84 frames, six standalone
+assets, and all 174 declared PNG targets with zero changes and 174 matches.
+
 After the branch update, `refs/tags/jam` still resolved to
 `7e6de657ec998e1065858f4f8a38879ad1dc75c6`. `gh release verify jam` passed
 and reproduced the three release-asset SHA-256 values recorded above. The tag,

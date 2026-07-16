@@ -17,8 +17,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repository_hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out complete validation history
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Reject repository and package debris
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          VERIFY_LFS_REMOTE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          python3 -m unittest discover -s tools/tests -p 'test_*.py'
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            args=(--base "$BASE_SHA")
+            if [[ "$VERIFY_LFS_REMOTE" == "true" ]]; then
+              args+=(--verify-lfs-remote origin)
+            else
+              # A fork cannot upload its new LFS objects to this repository's
+              # remote. Require a maintainer-owned transfer branch instead of
+              # accepting an unverifiable pointer.
+              args+=(--forbid-changed-lfs)
+            fi
+            python3 tools/check_repository_hygiene.py "${args[@]}"
+          else
+            python3 tools/check_repository_hygiene.py
+          fi
+
   gmtl:
     name: GMTL unit tests
+    needs: repository_hygiene
     runs-on: windows-2022
     timeout-minutes: 30
     # GitHub does not expose repository secrets to pull requests from forks.
@@ -28,11 +62,18 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7.0.0
 
-      - name: Hydrate GameMaker runtime LFS assets
+      - name: Hydrate registered GameMaker runtime LFS assets
         shell: pwsh
         run: |
           git lfs install --local
-          git lfs pull --include="Selkie's Moon ~ until we meet again ~/**" --exclude=""
+          $runtimeAssets = @(
+            "Selkie's Moon ~ until we meet again ~/datafiles/*.vbuff"
+            "Selkie's Moon ~ until we meet again ~/fonts/**"
+            "Selkie's Moon ~ until we meet again ~/options/**"
+            "Selkie's Moon ~ until we meet again ~/sounds/**"
+            "Selkie's Moon ~ until we meet again ~/sprites/**"
+          ) -join ','
+          git lfs pull --include="$runtimeAssets" --exclude=""
 
       - name: Require GameMaker CI access key
         shell: pwsh

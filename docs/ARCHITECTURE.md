@@ -76,10 +76,10 @@ behind an explicit destructive bootstrap flag. OBJ plus MTL is the portable
 interchange contract. The current exporter is geometry-only and emits OBJ
 without MTL; any future material-bearing export must provide MTL. OBJ is
 compiled into each stage's VBUFF runtime cache, and `scr_stage_3d` loads only
-VBUFF. The current YYP still registers the five OBJ exports as Included Files;
-that redundant packaging metadata is a known follow-up outside the LFS rewrite.
-Interchange files should remain outside the package so authoring derivatives do
-not become accidental runtime content.
+VBUFF. The YYP therefore registers only VBUFF; the five OBJ exports remain
+repository-only buffer-compiler inputs. `art/runtime_package_manifest.json`
+owns this exact classification so interchange files cannot become accidental
+runtime content.
 
 These canonical masters and required binary derivatives are stored through Git
 LFS. Storage representation does not change source authority. See
@@ -105,7 +105,7 @@ Project-owned public helpers should carry a `/// @func` signature and a one-line
 - `obj_player`: owns local action state; shared resources remain in `global.game_runtime`. Its normal Draw places the ship below enemy bullets, while Draw End isolates the visible hitbox above them.
 - `obj_player_shot`: carries a normalized shot specification into collision and rendering.
 - `obj_enemy_parent`: centralizes freeze, damage, defeat rewards, and movement.
-- `obj_enemy_variant`: resolves one of 20 stage-authored identities, then runs role movement and its redistributed attack family after the parent Step. Legacy turret/bee/mayfly objects are test fixtures, not live roster entries.
+- `obj_enemy_variant`: resolves one of 20 stage-authored identities, then runs role movement and its redistributed attack family after the parent Step.
 - `obj_bullet_parent`: centralizes freeze, bomb cancellation, medal conversion, linear motion, and culling.
 - `obj_bullet_bead`, `obj_bullet_diamond`, `obj_bullet_blade`: specialize visuals or motion while retaining parent cancellation rules.
 - `obj_boss_parent`: owns phase transitions, health refills, destruction, score, and scene completion.
@@ -116,7 +116,7 @@ Child Step events that call `event_inherited()` must immediately stop when the p
 
 ## Stage and encounter data flow
 
-`GameStageDirectorStep()` is the sole live wave source. It resolves one four-entry roster through `GameStageEnemyRosterCreate()`, spawns camera-relative waves above the visible field, and scales cadence with the legacy pattern-section mapping plus rank. The old GameMaker timeline is held permanently idle. `obj_scene_manager` stops the director when scrolling ends, but its 3D presentation clock continues and blends onto a second valid downward-looping camera route. The manager clears ordinary combat actors, queues boss dialogue, and creates either one boss or the stage-three dual encounter after the intro seam. A boss defeat may queue an outro; the frozen dialogue signal keeps the manager in `boss_outro` until it can enter the normal stage-clear seam without freezing the background route.
+`GameStageDirectorStep()` is the sole live wave source. It resolves one four-entry roster through `GameStageEnemyRosterCreate()`, spawns camera-relative waves above the visible field, and scales cadence with the legacy pattern-section mapping plus rank. The superseded GameMaker timeline and its generator have been removed. `obj_scene_manager` stops the director when scrolling ends, but its 3D presentation clock continues and blends onto a second valid downward-looping camera route. The manager clears ordinary combat actors, queues boss dialogue, and creates either one boss or the stage-three dual encounter after the intro seam. A boss defeat may queue an outro; the frozen dialogue signal keeps the manager in `boss_outro` until it can enter the normal stage-clear seam without freezing the background route.
 
 Bosses use a two-layer design:
 

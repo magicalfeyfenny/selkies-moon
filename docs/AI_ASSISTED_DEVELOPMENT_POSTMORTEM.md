@@ -33,29 +33,29 @@ The audit examined:
 
 The audit cannot establish player enjoyment, long-session balance, accessibility quality, frame-time behavior on low-end hardware, or whether every artistic result matches the creators' intent. Those require playtesting and human judgment.
 
-During review of this post-mortem, the editable-raster finding prompted an immediate correction and then a more important source-authority clarification. Seventy-six missing native files were migrated, thirteen additional shipped-raster masters were added, and the normal pipeline was inverted: KRA is now the read-only build input and runtime PNG is the output. The former Python drawing and reverse-import entry points are compatibility wrappers around one staged exporter and cannot regenerate a master. After validation, parallel ORA, named layer-export, imported-runtime PNG, and preview mirrors were removed from the production source tree. The same cleanup retired the placeholder-audio builder, stopped packaging portable OBJ intermediates alongside runtime VBUFF files, and made routine Blender export read existing `.blend` masters without saving over them. The snapshot below reflects that corrected working branch; the original inconsistencies remain documented as development lessons.
+During review of this post-mortem, the editable-raster finding prompted an immediate correction and then a more important source-authority clarification. Seventy-six missing native files were migrated, thirteen additional shipped-raster masters were added, and the normal pipeline was inverted: KRA is now the read-only build input and runtime PNG is the output. The former Python drawing and reverse-import entry points are compatibility wrappers around one staged exporter and cannot regenerate a master. After validation, parallel ORA, named layer-export, imported-runtime PNG, and preview mirrors were removed from the production source tree. The cleanup retired the placeholder-audio builder, made routine Blender export read existing `.blend` masters without saving over them, and a later repository-hygiene pass stopped packaging portable OBJ intermediates alongside runtime VBUFF files. The snapshot below reflects that corrected working branch; the original inconsistencies remain documented as development lessons.
 
 The later coordinated storage follow-up is now addressed by [Asset Pipeline](ASSET_PIPELINE.md) and the [Git LFS Migration](LFS_MIGRATION.md): BLEND, KRA, and Logic projects are the sole 3D, raster, and audio masters, while the audited master, runtime, interchange, and reference binary families are stored through LFS. The historical measurements and findings below intentionally remain as the pre-migration audit record.
 
-One repository-state correction remains explicit: although the audit narrative reports that OBJ Included Files were removed, the current YYP still registers all five OBJ exports beside the VBUFF files. Runtime code loads only VBUFF. The LFS migration does not modify GameMaker metadata, so removing those redundant registrations remains a separate packaging follow-up.
+The later repository-hygiene follow-up reconciled the remaining packaging correction: the YYP now registers only VBUFF, while OBJ remains a repository-only interchange/build derivative. The same pass removed unowned font backups, unreachable individual Mira/Aisha story files, the idle timeline and its generator, three fixture-only legacy enemies and their raster sources, and obsolete SFX backup behavior. A machine-readable package manifest and hosted gate now prevent those classes of debris from returning.
 
-Before mirror cleanup, the corrected raster pipeline was validated twice. The normal export covered 80 sprites, 87 active frames, 15 standalone assets, and 251 then-declared PNG targets; it repaired or created 76 derivatives while 175 were already current. A fresh `--check` render then reported 0 changes and 251 matches. Before/after SHA-256 inventories were identical for all 95 KRA masters and all 201 GameMaker `.yy` files, proving that the normal build changed neither source art nor engine metadata. The subsequent catalog cleanup removed only redundant art-side targets, not KRA masters or required GameMaker outputs. The cleaned static gate registers all 95 KRAs, covers 80 sprites and 87 frames, distinguishes six standalone runtime assets from nine source-only masters, and proves exact ownership of all 180 required runtime PNG targets with no unowned outputs.
+Before mirror cleanup, the corrected raster pipeline was validated twice. The normal export covered 80 sprites, 87 active frames, 15 standalone assets, and 251 then-declared PNG targets; it repaired or created 76 derivatives while 175 were already current. A fresh `--check` render then reported 0 changes and 251 matches. Before/after SHA-256 inventories were identical for all 95 KRA masters and all 201 GameMaker `.yy` files, proving that the normal build changed neither source art nor engine metadata. The subsequent catalog cleanup removed redundant art-side targets, and the later fixture purge removed three exact-import masters that no longer had runtime consumers. The current static gate registers all 92 KRAs, covers 77 sprites and 84 frames, distinguishes six standalone runtime assets from nine source-only masters, and proves exact ownership of all 174 required runtime PNG targets with no unowned outputs.
 
 ### Current repository snapshot
 
 | Signal | Observed state | Interpretation |
 | --- | ---: | --- |
-| GML | 19,033 lines | Substantial game code, no longer jam-sized |
-| GMTL tests | 128 tests in one 3,275-line suite | Broad regression intent, but centralized test maintenance |
-| Largest project module | `scr_gameplay_helpers.gml`, 4,006 lines | Shared ownership succeeded, then became too broad |
-| Editable raster sources | 95 `.kra` masters; no parallel production mirrors | KRA is the sole source for shipped raster art |
-| Runtime sprite source mapping | 80/80 resources, 87/87 active frames | Every active root frame and GameMaker editor-layer copy is exported from KRA |
-| Native 3D sources | 5 `.blend`, OBJ build intermediates, 5 packaged VBUFF files, and 5 still-registered OBJ Included Files | Runtime code loads only VBUFF; redundant OBJ packaging remains a follow-up |
+| GML | 18,276 lines | Substantial game code, no longer jam-sized |
+| GMTL tests | 126 tests in one centralized suite | Broad regression intent, but centralized test maintenance |
+| Largest project module | `scr_gameplay_helpers.gml`, 3,836 lines | Shared ownership succeeded, then became too broad |
+| Editable raster sources | 92 `.kra` masters; no parallel production mirrors | KRA is the sole source for shipped raster art |
+| Runtime sprite source mapping | 77/77 resources, 84/84 active frames | Every active root frame and GameMaker editor-layer copy is exported from KRA |
+| Native 3D sources | 5 `.blend`, 5 repository-only OBJ build intermediates, and 5 packaged VBUFF files | Runtime code and package load only VBUFF; the exact split is manifest-owned |
 | Audio production | 16 MIDI metadata files, 16 canonical Logic projects, 30 lossless WAV derivatives, 15 runtime OGG and 15 runtime WAV | Complete source-to-runtime production chains |
 | Tracked audio-production size | about 878 MB | Ordinary Git is being used as a large-binary store |
 | Loose Git object database | about 1.4 GiB | Clone, fetch, storage, and history-rewrite costs are already material |
 | Hosted test workflow | [current `dev` run passed](https://github.com/magicalfeyfenny/selkies-moon/actions/runs/29449774072) | Independent Windows signal now exists |
-| Local audit test run | 128/128 passed; latest run succeeded on attempt 4 after three compiler crashes | Retry isolates the known compiler fault without masking completed test failures |
+| Local audit test run | 126/126 passed; latest run succeeded on attempt 3 after two compiler crashes | Retry isolates the known compiler fault without masking completed test failures |
 
 ## Development chronology
 
@@ -264,7 +264,7 @@ The current Windows CI run also passed 128/128. The project therefore has valid 
 
 ### 5. Shared helper modules became new monoliths
 
-Moving logic out of events was correct. The next boundary problem is that `scr_gameplay_helpers.gml` is now 4,006 lines and the single test suite is 3,297 lines. Title, story, boss, and setup modules are also large.
+Moving logic out of events was correct. The next boundary problem is that `scr_gameplay_helpers.gml` is now 3,836 lines and the single test suite is 2,991 lines. Title, story, boss, and setup modules are also large.
 
 Large files are especially costly for AI because:
 
@@ -286,9 +286,9 @@ The initial tree contained concrete authority conflicts:
 
 - `spr_violet_bee` and `spr_twilight_mayfly` were outputs of both the layered-enemy builder and the older gameplay-art builder, and their runtime pixels differed materially. The correction chooses the layered KRA for each and retires both Python runtime writes.
 - Seventy-four manifest `krita_source` paths did not exist even though the corresponding ORAs did. Review created genuine native migrations rather than extension renames, then clarified that those KRAs are promoted masters—not generated companions.
-- Fifty-five declared GameMaker editor-layer PNGs were missing and eleven were stale, so opening a sprite in the IDE could recompose from pixels different from its active root frame. The KRA exporter now owns both copies for all 87 active frames while leaving `.yy` metadata untouched.
-- The audit found nine additional PNGs in GameMaker sprite directories under frame/layer UUIDs that no current `.yy` referenced. The cleanup removed those inactive files, and the cleaned static gate now proves that the 180 remaining GameMaker/runtime PNGs are exactly the manifest-owned target set with no unowned outputs.
-- The story-background manifest named 29 non-`_v2` runtime JSON files while all 29 current runtime story files used `_v2`; the cleanup repaired every assignment key and verifies that all 29 now resolve.
+- Fifty-five declared GameMaker editor-layer PNGs were missing and eleven were stale, so opening a sprite in the IDE could recompose from pixels different from its active root frame. The KRA exporter now owns both copies for all 84 active frames while leaving `.yy` metadata untouched.
+- The audit found nine additional PNGs in GameMaker sprite directories under frame/layer UUIDs that no current `.yy` referenced. The cleanup removed those inactive files, and the cleaned static gate now proves that the 174 remaining GameMaker/runtime PNGs are exactly the manifest-owned target set with no unowned outputs.
+- The story-background manifest named 29 non-`_v2` runtime JSON files while all 29 then-current runtime story files used `_v2`; the cleanup repaired every assignment key. The later reachability purge retained and verifies only the 21 live assignments.
 
 AI portrait provenance is also incomplete. At audit time, the production tree retained 70 candidates and seven contact sheets (about 129 MB) plus the selected full-size masters, but no tracked manifest recorded the model/version, prompt, seed, reference hashes, transformations, or selection rationale. Cleanup removed the transient candidate and contact-sheet pool from the production source tree, retained the seven selected KRA masters, and promoted the best surviving design-authority brief beside those masters. Exact model/version, seed, reference hashes, and selection history still cannot be reconstructed retroactively.
 
@@ -302,7 +302,7 @@ Python may crop, scale, pack, copy, and validate a KRA export. It may not draw r
 
 ### 7. Binary preservation was not paired with binary-storage design
 
-Preserving canonical Logic projects and lossless WAV deliveries was right. Committing them to ordinary Git without LFS was not scalable. The current audio-production files alone account for about 878 MB of tracked content; the loose object database is about 1.4 GiB. Before cleanup, WAVs, Logic packages, runtime OGGs, packaged OBJ text, vertex buffers, previews, and layer exports duplicated information at several pipeline stages. Removing disposable raster mirrors and superseded audio resources reduced that duplication; as corrected above, the current YYP still retains the OBJ Included File registrations. The valuable binary history still needed an intentional storage policy.
+Preserving canonical Logic projects and lossless WAV deliveries was right. Committing them to ordinary Git without LFS was not scalable. The current audio-production files alone account for about 878 MB of tracked content; the loose object database is about 1.4 GiB. Before cleanup, WAVs, Logic packages, runtime OGGs, packaged OBJ text, vertex buffers, previews, and layer exports duplicated information at several pipeline stages. Removing disposable raster mirrors and superseded audio resources reduced that duplication; the later repository-hygiene pass also stopped registering OBJ intermediates as Included Files. The valuable binary history still needed an intentional storage policy.
 
 **Better rule:** preserve valuable masters in Git LFS or a versioned asset store. Keep small manifests and hashes in normal Git. Decide deliberately which generated derivatives must be versioned for engine usability and which belong in CI/release artifacts.
 
@@ -336,7 +336,7 @@ The 128-test count should not be confused with complete coverage. The balance re
 
 ### 10. Replaced systems remain partly packaged and protected
 
-The live director deliberately leaves the old `tml_stage` timeline idle, yet the project still ships 72 timeline moment files and retains a tool that regenerates them. Individual Mira/Aisha story files remain registered even though the live stage-three route uses combined sister files. The audit also found portable OBJ meshes packaged beside compiled VBUFF files and eleven superseded score placeholders registered beside the complete Logic-derived score, even though runtime routing used neither legacy family. The immediate cleanup removed the placeholder resources and OBJ Included Files; only VBUFF remains in the 3D runtime path.
+The live director had deliberately left the old `tml_stage` timeline idle while the project still shipped 72 timeline moment files and a tool that regenerated them. Individual Mira/Aisha story files remained registered even though the live stage-three route used combined sister files. The audit also found portable OBJ meshes packaged beside compiled VBUFF files and eleven superseded score placeholders registered beside the complete Logic-derived score, even though runtime routing used neither legacy family. Follow-up cleanup removed the placeholder resources, timeline, generator, individual sister files, and OBJ Included Files; only manifest-owned live data and VBUFF remain in the package.
 
 Some legacy fixtures are valuable migration evidence, but others now consume package size, test attention, and cognitive space. Tests can accidentally make dead production content permanent when they assert that unused assets still exist.
 
@@ -765,13 +765,13 @@ failures.
 
 ## Recommended follow-up backlog for this repository
 
-These remain after the KRA-authority and repository-hygiene corrections made during this post-mortem. The cleanup already reconciled the README's major gameplay claims, removed the tracked `.DS_Store`, repaired all 29 story-assignment keys, added exact runtime-PNG ownership rejection, retained the portrait design brief in tracked source history, and removed superseded runtime derivatives.
+These remain after the KRA-authority and repository-hygiene corrections made during this post-mortem. The cleanup already reconciled the README's major gameplay claims, removed the tracked `.DS_Store`, repaired the 29 then-current story-assignment keys and retained the 21 reachable assignments, added exact runtime-PNG ownership rejection, retained the portrait design brief in tracked source history, and removed superseded runtime derivatives.
 
 ### Priority 0: prevent further ambiguity and repository growth
 
 1. Document `main`/`dev`/release promotion and decide which branch should be the remote default.
 2. **Addressed:** expand the KRA-only Git LFS rule and rewrite the audited WAV, Logic, Blender, runtime, interchange, and other binary history in one coordinated migration while preserving the immutable jam release. See [Git LFS Migration](LFS_MIGRATION.md).
-3. Add automated large-file/tracked-junk and package-reachability gates so the removed debris cannot return.
+3. **Addressed:** automated large-file/tracked-junk, LFS-pointer, exact datafile ownership, GameMaker resource, and sound-ownership checks now run locally and in hosted CI; the same follow-up purged the proven-dead package content.
 4. Extend the machine-readable KRA registry with per-asset design authority, provenance, license, tool version, and content hashes.
 5. Keep the exact raster target-set check as a required local and hosted gate so unowned GameMaker PNGs cannot return.
 6. Add a tracked portrait generation/selection manifest for the provenance that is still recoverable; reference external review artifacts without returning the heavy candidate pool to the production tree.
@@ -785,7 +785,7 @@ These remain after the KRA-authority and repository-hygiene corrections made dur
 3. Bring the remaining non-raster asset builds up to the raster exporter's staged, atomic, duplicate-owner-checked behavior, including manifest-owned stale cleanup.
 4. Split `scr_gameplay_helpers.gml` and `test_bootstrap.gml` into domain-owned modules/suites.
 5. Add consistency tests or generated documentation for stage count, rank bounds/default, route roster, and toolchain versions.
-6. Add a packaging reachability gate that rejects OBJ Included Files, superseded audio resources, and other non-runtime derivatives before they return.
+6. **Addressed with Priority 0 item 3:** the package manifest and repository-hygiene gate reject OBJ Included Files, unowned sound resources, superseded backups, undeclared datafiles, and unregistered GameMaker metadata.
 7. Isolate generated geometry/exports from code and authored-source diffs in commits and PR presentation.
 8. Require a fresh-context self-review or review-only agent report before merging broad AI changes.
 

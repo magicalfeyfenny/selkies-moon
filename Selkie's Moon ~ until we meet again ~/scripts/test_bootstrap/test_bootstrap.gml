@@ -768,32 +768,20 @@ suite(function() {
             expect(_final_report.fastest_phase_clear_frames).toBeGreaterThan(7 * 60);
         });
 
-        test("Stage timeline helpers spawn above the field and stop once scrolling ends", function() {
+        test("Stage director timing exposes an above-field spawn band only while scrolling", function() {
             var _state = GameSceneStateCreate();
-            var _turret = GameStageTurretSpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
-            var _bees = GameStageBeeSpawnPositionsCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
-            var _mayfly = GameStageMayflySpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
             var _band = GameStageSpawnBandRectGet(CAMERA_HOME_X, CAMERA_HOME_Y);
 
-            expect(GameStageTimelineShouldRun(_state)).toBeTruthy();
-            expect(_turret.y).toBe(_band.y);
-            expect(_mayfly.y).toBe(_band.y);
-            expect(_turret.x >= _band.left).toBeTruthy();
-            expect(_turret.x <= _band.right).toBeTruthy();
-            expect(array_length(_bees)).toBe(STAGE_BEE_WAVE_COUNT);
-
-            for (var i = 0; i < array_length(_bees); i++) {
-                expect(_bees[i].x >= _band.left).toBeTruthy();
-                expect(_bees[i].x <= _band.right).toBeTruthy();
-                expect(_bees[i].y).toBe(_band.y);
-            }
+            expect(GameStageDirectorShouldRun(_state)).toBeTruthy();
+            expect(_band.left).toBeLessThan(_band.right);
+            expect(_band.y).toBeLessThan(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT);
 
             _state.mode = "boss_intro";
-            expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
+            expect(GameStageDirectorShouldRun(_state)).toBeFalsy();
 
             _state.mode = "scroll";
             global.game_runtime.signals.dialogue = true;
-            expect(GameStageTimelineShouldRun(_state)).toBeFalsy();
+            expect(GameStageDirectorShouldRun(_state)).toBeFalsy();
             global.game_runtime.signals.dialogue = false;
         });
 
@@ -840,9 +828,6 @@ suite(function() {
             }
 
             expect(instance_number(obj_enemy_variant)).toBeGreaterThan(0);
-            expect(instance_number(obj_enemy_turret)).toBe(0);
-            expect(instance_number(obj_enemy_bee)).toBe(0);
-            expect(instance_number(obj_enemy_mayfly)).toBe(0);
 
             with (obj_enemy_parent) { instance_destroy(); }
         });
@@ -1190,7 +1175,7 @@ suite(function() {
 
         test("One sword sweep deals boosted damage only once per target", function() {
             var _state = GamePlayerStateCreate();
-            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_variant);
             var _first_sweep = 0;
             var _same_sweep = 0;
             var _second_sweep = 0;
@@ -1724,130 +1709,9 @@ suite(function() {
             expect(_sfx_assets[0]).toBe(snd_bomb);
         });
 
-        test("Turret bead shots aim at the player and use the centered 8 px hit circle", function() {
-            var _shot = GameTurretShotSpecCreate(100, 120, 100, 220);
-
-            expect(_shot.object_index).toBe(obj_bullet_bead);
-            expect(_shot.direction).toBe(270);
-            expect(_shot.speed).toBe(TURRET_BULLET_SPEED);
+        test("Enemy bullets use the centered 8 px hit circle", function() {
             expect(GamePlayerBulletHitCheck(100, 100, 105, 100, 4)).toBeTruthy();
             expect(GamePlayerBulletHitCheck(100, 100, 106, 100, 4)).toBeFalsy();
-        });
-
-        test("Bee enemies make one pass toward a player below and fire three aligned diamond shots", function() {
-            var _player = instance_create_layer(0, 0, "Instances", obj_player);
-            var _bee = instance_create_layer(0, 0, "Instances", obj_enemy_bee);
-            var _slow_count = 0;
-            var _mid_count = 0;
-            var _fast_count = 0;
-
-            with (_player) {
-                event_perform(ev_create, 0);
-                x = 140;
-                y = 100;
-            }
-
-            with (_bee) {
-                event_perform(ev_create, 0);
-                x = 100;
-                y = 80;
-                move_direction = 0;
-                move_speed = BEE_MOVE_SPEED;
-                fire_interval = BEE_FIRE_INTERVAL;
-                fire_timer = BEE_FIRE_INTERVAL - 1;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _bee);
-
-            expect(variable_instance_get(_bee, "sprite_index")).toBe(spr_bee);
-            expect(variable_instance_get(_bee, "x")).toBe(101);
-            expect(variable_instance_get(_bee, "y")).toBe(80);
-            var _aim_direction = point_direction(101, 80, 140, 100);
-            expect(variable_instance_get(_bee, "move_direction")).toBe(_aim_direction);
-            expect(variable_instance_get(_bee, "image_angle")).toBe(_aim_direction);
-            expect(variable_instance_get(_bee, "flyaway_committed")).toBeFalsy();
-            expect(instance_number(obj_bullet_diamond)).toBe(3);
-
-            for (var i = 0; i < instance_number(obj_bullet_diamond); i++) {
-                var _bullet = instance_find(obj_bullet_diamond, i);
-                var _speed = variable_instance_get(_bullet, "move_speed");
-                var _direction = variable_instance_get(_bullet, "move_direction");
-
-                expect(_direction).toBe(_aim_direction);
-
-                if (_speed == BEE_BULLET_SPEED - BEE_BULLET_SPEED_DELTA) {
-                    _slow_count += 1;
-                }
-
-                if (_speed == BEE_BULLET_SPEED) {
-                    _mid_count += 1;
-                }
-
-                if (_speed == BEE_BULLET_SPEED + BEE_BULLET_SPEED_DELTA) {
-                    _fast_count += 1;
-                }
-            }
-
-            expect(_slow_count).toBe(1);
-            expect(_mid_count).toBe(1);
-            expect(_fast_count).toBe(1);
-
-            with (obj_bullet_diamond) {
-                instance_destroy();
-            }
-
-            with (_bee) {
-                instance_destroy();
-            }
-
-            with (_player) {
-                instance_destroy();
-            }
-        });
-
-        test("Bees commit downward after passing the player and also leave when no player exists", function() {
-            var _player = instance_create_layer(140, 100, "Instances", obj_player);
-            var _bee = instance_create_layer(100, 100, "Instances", obj_enemy_bee);
-
-            with (_player) {
-                event_perform(ev_create, 0);
-                x = 140;
-                y = 100;
-            }
-
-            with (_bee) {
-                event_perform(ev_create, 0);
-                x = 100;
-                y = 100;
-                move_direction = 0;
-                fire_timer = 0;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _bee);
-            expect(variable_instance_get(_bee, "flyaway_committed")).toBeTruthy();
-            expect(variable_instance_get(_bee, "move_direction")).toBe(270);
-
-            with (_player) {
-                y = 300;
-            }
-            simulateEvent(ev_step, ev_step_normal, _bee);
-            expect(variable_instance_get(_bee, "flyaway_committed")).toBeTruthy();
-            expect(variable_instance_get(_bee, "move_direction")).toBe(270);
-
-            with (_player) { instance_destroy(); }
-
-            var _orphan_bee = instance_create_layer(200, 120, "Instances", obj_enemy_bee);
-            with (_orphan_bee) {
-                event_perform(ev_create, 0);
-                move_direction = 45;
-                fire_timer = 0;
-            }
-            simulateEvent(ev_step, ev_step_normal, _orphan_bee);
-            expect(variable_instance_get(_orphan_bee, "flyaway_committed")).toBeTruthy();
-            expect(variable_instance_get(_orphan_bee, "move_direction")).toBe(270);
-
-            with (_bee) { instance_destroy(); }
-            with (_orphan_bee) { instance_destroy(); }
         });
 
         test("Enemy bullet artwork rotates to its movement direction", function() {
@@ -1864,108 +1728,14 @@ suite(function() {
             with (_bullet) { instance_destroy(); }
         });
 
-        test("Mayfly bursts alternate spiral direction while dropping into the y=100 camera lane", function() {
-            var _camera = instance_create_layer(CAMERA_HOME_X, CAMERA_HOME_Y, "Instances", obj_camera);
-            var _visible_lane_y = CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y;
-            var _mayfly = instance_create_layer(CAMERA_HOME_X, _visible_lane_y, "Instances", obj_enemy_mayfly);
-            var _clockwise_count = 0;
-            var _counter_count = 0;
-            var _offset = GameMayflyInfinityOffsetCreate(90);
-            var _primary = GameMayflyBurstStateCreate(0, true);
-            var _secondary = GameMayflyBurstStateCreate(MAYFLY_SECOND_BURST_DELAY, true);
-            var _ring = GameMayflyShotSpawnSpecsCreate(0, 0, true);
-            var _stage_spawn = GameStageMayflySpawnPositionCreate(CAMERA_HOME_X, CAMERA_HOME_Y);
-            var _dropping_mayfly = instance_create_layer(_stage_spawn.x, _stage_spawn.y, "Instances", obj_enemy_mayfly);
+        test("Sunset boss infinity motion follows the expected horizontal and vertical axes", function() {
+            var _origin = GameSunsetInfinityOffsetCreate(0);
+            var _quarter = GameSunsetInfinityOffsetCreate(90);
 
-            with (_mayfly) {
-                event_perform(ev_create, 0);
-                float_phase = 0;
-                fire_timer = 0;
-                clockwise_first = true;
-            }
-
-            with (_dropping_mayfly) {
-                event_perform(ev_create, 0);
-                float_phase = 0;
-                fire_timer = 1;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _mayfly);
-
-            expect(_primary.fire).toBeTruthy();
-            expect(_primary.clockwise).toBeTruthy();
-            expect(_secondary.fire).toBeTruthy();
-            expect(_secondary.clockwise).toBeFalsy();
-            expect(variable_instance_get(_mayfly, "x")).toBe(CAMERA_HOME_X);
-            expect(variable_instance_get(_mayfly, "y")).toBe(CAMERA_HOME_Y - PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y);
-            expect(variable_instance_get(_mayfly, "float_phase")).toBe(MAYFLY_FLOAT_RATE);
-            expect(instance_number(obj_bullet_blade)).toBe(12);
-            expect(_offset.x).toBe(MAYFLY_FLOAT_X_RADIUS);
-            expect(round(_offset.y)).toBe(0);
-            expect(_ring[0].spiral_angle).toBe(0);
-            expect(_ring[3].spiral_angle).toBe(90);
-            expect(_ring[11].spiral_angle).toBe(330);
-            expect(GameMayflyTargetAnchorOffsetYGet()).toBe(-PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y);
-
-            for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
-                var _bullet = instance_find(obj_bullet_blade, i);
-
-                if (variable_instance_get(_bullet, "spiral_direction") < 0) {
-                    _clockwise_count += 1;
-                } else {
-                    _counter_count += 1;
-                }
-            }
-
-            expect(_clockwise_count).toBe(12);
-            expect(_counter_count).toBe(0);
-
-            for (var step = 0; step < MAYFLY_SECOND_BURST_DELAY; step++) {
-                simulateEvent(ev_step, ev_step_normal, _mayfly);
-            }
-
-            _clockwise_count = 0;
-            _counter_count = 0;
-
-            for (var i = 0; i < instance_number(obj_bullet_blade); i++) {
-                var _bullet = instance_find(obj_bullet_blade, i);
-
-                if (variable_instance_get(_bullet, "spiral_direction") < 0) {
-                    _clockwise_count += 1;
-                } else {
-                    _counter_count += 1;
-                }
-            }
-
-            expect(instance_number(obj_bullet_blade)).toBe(24);
-            expect(_clockwise_count).toBe(12);
-            expect(_counter_count).toBe(12);
-
-            with (obj_bullet_blade) {
-                instance_destroy();
-            }
-
-            with (_mayfly) {
-                instance_destroy();
-            }
-
-            for (var drop_step = 0; drop_step < 80; drop_step++) {
-                simulateEvent(ev_step, ev_step_normal, _dropping_mayfly);
-            }
-
-            expect(variable_instance_get(_dropping_mayfly, "anchor_offset_y")).toBe(GameMayflyTargetAnchorOffsetYGet());
-
-            with (obj_bullet_blade) {
-                instance_destroy();
-            }
-
-            with (_dropping_mayfly) {
-                instance_destroy();
-            }
-
-            with (_camera) {
-                instance_destroy();
-            }
+            expect(_origin.x).toBe(0);
+            expect(_origin.y).toBe(0);
+            expect(_quarter.x).toBe(SUNSET_FLOAT_X_RADIUS);
+            expect(round(_quarter.y)).toBe(0);
         });
 
         test("Blade bullets spiral outward from their spawn point in either rotation direction", function() {
@@ -2089,7 +1859,7 @@ suite(function() {
         });
 
         test("Boss intro combat clear removes enemies and bullets but keeps bosses and score unchanged", function() {
-            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
+            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_variant);
             var _bullet = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
             var _boss = instance_create_layer(0, 0, "Instances", obj_boss_sunset);
 
@@ -2119,63 +1889,21 @@ suite(function() {
             }
         });
 
-        test("Inherited child bullets keep parent defaults and child turrets keep parent step behavior", function() {
-            with (obj_medal) { instance_destroy(); }
+        test("Inherited child bullets keep parent defaults", function() {
             var _bead = instance_create_layer(0, 0, "Instances", obj_bullet_bead);
-            var _enemy = instance_create_layer(0, 0, "Instances", obj_enemy_turret);
 
             with (_bead) {
-                event_perform(ev_create, 0);
-            }
-
-            with (_enemy) {
                 event_perform(ev_create, 0);
             }
 
             expect(variable_instance_get(_bead, "cancelled")).toBeFalsy();
             expect(variable_instance_get(_bead, "medal_score_value")).toBe(BULLET_CANCEL_SCORE_BONUS);
-            expect(variable_instance_get(_bead, "move_speed")).toBe(TURRET_BULLET_SPEED);
+            expect(variable_instance_get(_bead, "move_speed")).toBe(BEAD_BULLET_SPEED);
             expect(variable_instance_get(_bead, "collision_radius")).toBe(4);
-
-            global.game_runtime.score = 0;
-
-            with (_enemy) {
-                x = 10;
-                y = 12;
-                move_direction = 0;
-                move_speed = 3;
-                hp = 5;
-                points = 750;
-                fire_interval = 999;
-                fire_timer = 0;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _enemy);
-
-            expect(variable_instance_get(_enemy, "x")).toBe(13);
-            expect(variable_instance_get(_enemy, "y")).toBe(12);
-            expect(variable_instance_get(_enemy, "fire_timer")).toBe(1);
-
-            with (_enemy) {
-                hp = 0;
-            }
-
-            simulateEvent(ev_step, ev_step_normal, _enemy);
-
-            expect(global.game_runtime.score).toBe(750);
-            expect(instance_exists(_enemy)).toBeFalsy();
-            expect(instance_number(obj_medal)).toBe(2);
 
             with (_bead) {
                 instance_destroy();
             }
-
-            if (instance_exists(_enemy)) {
-                with (_enemy) {
-                    instance_destroy();
-                }
-            }
-            with (obj_medal) { instance_destroy(); }
         });
 
         test("Inherited combat children stop after parent freeze and destruction guards", function() {
@@ -2384,7 +2112,6 @@ suite(function() {
             var _mira_ship = asset_get_index("spr_mira_ship");
             var _shalmii_portrait = asset_get_index("spr_shalmii_portrait");
             var _shalmii_ship = asset_get_index("spr_shalmii_ship");
-            var _bee = asset_get_index("spr_bee");
             var _bullet_bead = asset_get_index("spr_bullet_bead");
             var _bullet_bead_mask = asset_get_index("spr_bullet_bead_mask");
             var _bullet_blade = asset_get_index("spr_bullet_blade");
@@ -2392,7 +2119,6 @@ suite(function() {
             var _dialogue_bg_core = asset_get_index("spr_dialogue_bg_core");
             var _dialogue_bg_flower = asset_get_index("spr_dialogue_bg_flower");
             var _logo = asset_get_index("spr_logo");
-            var _mayfly = asset_get_index("spr_mayfly");
             var _violet_bee = asset_get_index("spr_violet_bee");
             var _violet_bee_bullet = asset_get_index("spr_violet_bee_bullet");
             var _twilight_mayfly = asset_get_index("spr_twilight_mayfly");
@@ -2437,7 +2163,6 @@ suite(function() {
             var _sunset_bullet = asset_get_index("spr_sunset_bullet");
             var _text_arrow = asset_get_index("spr_text_arrow");
             var _textbox = asset_get_index("spr_textbox");
-            var _turret = asset_get_index("spr_turret");
             var _violet_tiles = asset_get_index("spr_violet_tiles");
             var _stage3d_textures = [
                 asset_get_index("tex_stage3d_01"),
@@ -2457,7 +2182,6 @@ suite(function() {
             expect(_mira_ship != -1 && sprite_exists(_mira_ship)).toBeTruthy();
             expect(_shalmii_portrait != -1 && sprite_exists(_shalmii_portrait)).toBeTruthy();
             expect(_shalmii_ship != -1 && sprite_exists(_shalmii_ship)).toBeTruthy();
-            expect(_bee != -1 && sprite_exists(_bee)).toBeTruthy();
             expect(_bullet_bead != -1 && sprite_exists(_bullet_bead)).toBeTruthy();
             expect(_bullet_bead_mask != -1 && sprite_exists(_bullet_bead_mask)).toBeTruthy();
             expect(_bullet_blade != -1 && sprite_exists(_bullet_blade)).toBeTruthy();
@@ -2465,7 +2189,6 @@ suite(function() {
             expect(_dialogue_bg_core != -1 && sprite_exists(_dialogue_bg_core)).toBeTruthy();
             expect(_dialogue_bg_flower != -1 && sprite_exists(_dialogue_bg_flower)).toBeTruthy();
             expect(_logo != -1 && sprite_exists(_logo)).toBeTruthy();
-            expect(_mayfly != -1 && sprite_exists(_mayfly)).toBeTruthy();
             expect(_violet_bee != -1 && sprite_exists(_violet_bee)).toBeTruthy();
             expect(_violet_bee_bullet != -1 && sprite_exists(_violet_bee_bullet)).toBeTruthy();
             expect(_twilight_mayfly != -1 && sprite_exists(_twilight_mayfly)).toBeTruthy();
@@ -2505,7 +2228,6 @@ suite(function() {
             expect(_sunset_bullet != -1 && sprite_exists(_sunset_bullet)).toBeTruthy();
             expect(_text_arrow != -1 && sprite_exists(_text_arrow)).toBeTruthy();
             expect(_textbox != -1 && sprite_exists(_textbox)).toBeTruthy();
-            expect(_turret != -1 && sprite_exists(_turret)).toBeTruthy();
             expect(_violet_tiles != -1 && sprite_exists(_violet_tiles)).toBeTruthy();
             for (var texture_index = 0; texture_index < array_length(_stage3d_textures); texture_index++) {
                 expect(_stage3d_textures[texture_index] != -1 && sprite_exists(_stage3d_textures[texture_index])).toBeTruthy();
@@ -2516,9 +2238,6 @@ suite(function() {
             expect(object_exists(obj_bullet_bead)).toBeTruthy();
             expect(object_exists(obj_bullet_blade)).toBeTruthy();
             expect(object_exists(obj_bullet_diamond)).toBeTruthy();
-            expect(object_exists(obj_enemy_bee)).toBeTruthy();
-            expect(object_exists(obj_enemy_mayfly)).toBeTruthy();
-            expect(object_exists(obj_enemy_turret)).toBeTruthy();
             expect(object_exists(obj_enemy_variant)).toBeTruthy();
             expect(object_exists(obj_powerup)).toBeTruthy();
             expect(object_exists(obj_UI_credits)).toBeTruthy();
@@ -2543,14 +2262,12 @@ suite(function() {
             expect(sprite_get_height(_shalmii_portrait)).toBe(360);
             expect(sprite_get_width(_shalmii_ship)).toBe(64);
             expect(sprite_get_height(_shalmii_ship)).toBe(64);
-            expect(sprite_get_width(_bee)).toBe(64);
             expect(sprite_get_width(_bullet_bead)).toBe(16);
             expect(sprite_get_width(_bullet_bead_mask)).toBe(16);
             expect(sprite_get_width(_bullet_blade)).toBe(16);
             expect(sprite_get_width(_bullet_diamond)).toBe(16);
             expect(sprite_get_width(_dialogue_bg_core)).toBe(640);
             expect(sprite_get_height(_dialogue_bg_flower)).toBe(360);
-            expect(sprite_get_width(_mayfly)).toBe(64);
             expect(sprite_get_width(_medal)).toBe(32);
             expect(sprite_get_width(_sunrise)).toBe(64);
             expect(sprite_get_width(_sunrise_bullet)).toBe(16);
@@ -2561,7 +2278,6 @@ suite(function() {
             expect(sprite_get_number(_text_arrow)).toBe(8);
             expect(sprite_get_width(_textbox)).toBe(640);
             expect(sprite_get_height(_textbox)).toBe(130);
-            expect(sprite_get_width(_turret)).toBe(32);
             expect(sprite_get_width(_violet_tiles)).toBe(128);
             expect(sprite_get_height(_violet_tiles)).toBe(128);
         });

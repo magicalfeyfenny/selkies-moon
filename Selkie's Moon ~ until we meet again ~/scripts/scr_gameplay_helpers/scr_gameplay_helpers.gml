@@ -19,7 +19,6 @@
 #macro CAMERA_SCROLL_SPEED 1
 #macro STAGE_SPAWN_ABOVE_VIEW 100
 #macro STAGE_SPAWN_SIDE_MARGIN 16
-#macro STAGE_BEE_WAVE_COUNT 3
 #macro STAGE_COUNT 5
 #macro LEGACY_STAGE_COUNT 10
 #macro SHALMII_BOSS_STAGE 1
@@ -62,28 +61,19 @@
 #macro FIRE_HOLD_FRAMES 60
 #macro SHOT_SPRITE_FRONT spr_sunrise_bullet
 #macro SHOT_SPRITE_SIDE spr_sunset_bullet
-#macro TURRET_FIRE_INTERVAL 60
-#macro TURRET_BULLET_SPEED 3.5
-#macro BEE_MOVE_SPEED 1
-#macro BEE_FIRE_INTERVAL 6
-#macro BEE_BULLET_SPEED 4
-#macro BEE_BULLET_SPEED_DELTA 0.5
+#macro BEAD_BULLET_SPEED 3.5
+#macro DIAMOND_BULLET_SPEED 4
 
 // Standard enemy behavior.
-#macro MAYFLY_PATTERN_PERIOD 20
-#macro MAYFLY_SECOND_BURST_DELAY 3
-#macro MAYFLY_BURST_COUNT 12
-#macro MAYFLY_BLADE_TURN_SPEED 12
-#macro MAYFLY_BLADE_RADIAL_SPEED 1.5
+#macro BLADE_TURN_SPEED 12
+#macro BLADE_RADIAL_SPEED 1.5
 #macro BLADE_TURN_RATE_SCALE 0.10
 #macro BLADE_MAX_SCREEN_SPEED 3.0
 #macro BLADE_MAX_RADIAL_SPEED 2.55
 #macro BLADE_REDIRECT_MAX_SCREEN_SPEED 2.75
-#macro MAYFLY_FLOAT_X_RADIUS 42
-#macro MAYFLY_FLOAT_Y_RADIUS 14
-#macro MAYFLY_FLOAT_RATE 3
-#macro MAYFLY_VISIBLE_Y 100
-#macro MAYFLY_DROP_SPEED 3
+#macro SUNSET_FLOAT_X_RADIUS 42
+#macro SUNSET_FLOAT_Y_RADIUS 14
+#macro SUNSET_FLOAT_RATE 3
 
 // Sword geometry and timing.
 #macro SWEEP_PERIOD_FRAMES 48
@@ -1316,80 +1306,9 @@ function GameStageSpawnBandRectGet(_camera_x, _camera_y) {
     };
 }
 
-/// @func GameStageRandomSpawnXGet(left, right)
-/// Returns one random horizontal position within the stage spawn band.
-function GameStageRandomSpawnXGet(_left, _right) {
-    return irandom_range(round(_left), round(_right));
-}
-
-/// @func GameStageTurretSpawnPositionCreate(camera_x, camera_y)
-/// Returns one turret spawn point above the visible play area.
-function GameStageTurretSpawnPositionCreate(_camera_x, _camera_y) {
-    var _band = GameStageSpawnBandRectGet(_camera_x, _camera_y);
-
-    return {
-        x: GameStageRandomSpawnXGet(_band.left, _band.right),
-        y: _band.y,
-    };
-}
-
-/// @func GameStageBeeSpawnPositionsCreate(camera_x, camera_y)
-/// Returns three horizontally scattered bee spawn points above the visible play area.
-function GameStageBeeSpawnPositionsCreate(_camera_x, _camera_y) {
-    var _band = GameStageSpawnBandRectGet(_camera_x, _camera_y);
-    var _positions = array_create(STAGE_BEE_WAVE_COUNT);
-    var _span = _band.right - _band.left;
-    var _slice_width = _span / max(1, STAGE_BEE_WAVE_COUNT);
-
-    for (var i = 0; i < STAGE_BEE_WAVE_COUNT; i++) {
-        var _slice_left = _band.left + (_slice_width * i);
-        var _slice_right = _slice_left + _slice_width;
-
-        _positions[i] = {
-            x: GameStageRandomSpawnXGet(_slice_left, _slice_right),
-            y: _band.y,
-        };
-    }
-
-    return _positions;
-}
-
-/// @func GameStageMayflySpawnPositionCreate(camera_x, camera_y)
-/// Returns one random mayfly spawn point above the visible play area.
-function GameStageMayflySpawnPositionCreate(_camera_x, _camera_y) {
-    return GameStageTurretSpawnPositionCreate(_camera_x, _camera_y);
-}
-
-/// @func GameStageTimelineTurretSpawn(camera_x, camera_y)
-/// Spawns one turret from the active stage timeline.
-function GameStageTimelineTurretSpawn(_camera_x, _camera_y) {
-    var _spawn = GameStageTurretSpawnPositionCreate(_camera_x, _camera_y);
-    return instance_create_layer(_spawn.x, _spawn.y, "Instances", obj_enemy_turret);
-}
-
-/// @func GameStageTimelineBeeWaveSpawn(camera_x, camera_y)
-/// Spawns one three-bee wave from the active stage timeline.
-function GameStageTimelineBeeWaveSpawn(_camera_x, _camera_y) {
-    var _positions = GameStageBeeSpawnPositionsCreate(_camera_x, _camera_y);
-    var _count = array_length(_positions);
-
-    for (var i = 0; i < _count; i++) {
-        instance_create_layer(_positions[i].x, _positions[i].y, "Instances", obj_enemy_bee);
-    }
-
-    return _count;
-}
-
-/// @func GameStageTimelineMayflySpawn(camera_x, camera_y)
-/// Spawns one mayfly from the active stage timeline.
-function GameStageTimelineMayflySpawn(_camera_x, _camera_y) {
-    var _spawn = GameStageMayflySpawnPositionCreate(_camera_x, _camera_y);
-    return instance_create_layer(_spawn.x, _spawn.y, "Instances", obj_enemy_mayfly);
-}
-
-/// @func GameStageTimelineShouldRun(state)
-/// Returns whether the stage timeline should currently advance.
-function GameStageTimelineShouldRun(_state) {
+/// @func GameStageDirectorShouldRun(state)
+/// Returns whether the code-driven stage director should currently advance.
+function GameStageDirectorShouldRun(_state) {
     return !GameGameplayIsFrozen() && _state.mode == "scroll";
 }
 
@@ -1575,9 +1494,9 @@ function GameStageEnemyBulletSpawn(_enemy_id, _x, _y, _direction, _speed, _objec
         _enemy_id);
 }
 
-/// @func GameStageTimelineVariantWaveSpawn(camera_x, camera_y, kind, count)
+/// @func GameStageDirectorVariantWaveSpawn(camera_x, camera_y, kind, count)
 /// Spawns a row of stage-variant enemies inside the current spawn band.
-function GameStageTimelineVariantWaveSpawn(_camera_x, _camera_y, _kind, _count = 1) {
+function GameStageDirectorVariantWaveSpawn(_camera_x, _camera_y, _kind, _count = 1) {
     var _band = GameStageSpawnBandRectGet(_camera_x, _camera_y);
     var _spawned = 0;
     var _stage = GameCurrentStageGet();
@@ -1604,7 +1523,7 @@ function GameStageBasicEnemyWaveSpawn(_camera_x, _camera_y, _stage, _roster_inde
     }
 
     _roster_index = clamp(round(_roster_index), 0, array_length(_roster) - 1);
-    return GameStageTimelineVariantWaveSpawn(
+    return GameStageDirectorVariantWaveSpawn(
         _camera_x, _camera_y, _roster[_roster_index].id, max(1, _count));
 }
 
@@ -1626,7 +1545,7 @@ function GameStageEliteVariantKindGet(_stage, _cycle = 0) {
 /// @func GameStageDirectorStep(state)
 /// Runs the per-stage wave director for the active scrolling section.
 function GameStageDirectorStep(_state) {
-    if (!GameStageTimelineShouldRun(_state)) {
+    if (!GameStageDirectorShouldRun(_state)) {
         return 0;
     }
 
@@ -2689,12 +2608,6 @@ function GameBossEncounterInfoCreate(_stage = undefined, _player_ship_id = undef
         phase_plan: _final_phase_plan,
         phase_signature: GameMemoryCorePhasePlanSignatureCreate(_final_phase_plan),
     };
-}
-
-/// @func GameMayflyTargetAnchorOffsetYGet()
-/// Returns the camera-relative anchor offset that keeps mayflies near y=100 in view.
-function GameMayflyTargetAnchorOffsetYGet() {
-    return -PLAYFIELD_HALF_HEIGHT + MAYFLY_VISIBLE_Y;
 }
 
 /// @func GameShotSpecCreate(x, y, direction, speed, sprite_id, damage, scale, color, accent_color, power, focused)
@@ -3799,97 +3712,13 @@ function GamePlayerBulletHitCheck(_player_x, _player_y, _bullet_x, _bullet_y, _b
     return point_distance(_player_x, _player_y, _bullet_x, _bullet_y) <= (_bullet_collision_radius + 1);
 }
 
-/// @func GameTurretShotSpecCreate(enemy_x, enemy_y, player_x, player_y)
-/// Returns the direct-fire bead shot spawned by the turret enemy.
-function GameTurretShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
+/// @func GameSunsetInfinityOffsetCreate(phase)
+/// Returns the current infinity-path offset for the Sunset boss.
+function GameSunsetInfinityOffsetCreate(_phase) {
     return {
-        x: _enemy_x,
-        y: _enemy_y,
-        direction: point_direction(_enemy_x, _enemy_y, _player_x, _player_y),
-        speed: TURRET_BULLET_SPEED,
-        object_index: obj_bullet_bead,
+        x: dsin(_phase) * SUNSET_FLOAT_X_RADIUS,
+        y: dsin(_phase * 2) * SUNSET_FLOAT_Y_RADIUS,
     };
-}
-
-/// @func GameBeeShotSpecCreate(enemy_x, enemy_y, player_x, player_y, speed)
-/// Returns one direct-fire diamond shot specification for the bee enemy.
-function GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, _speed) {
-    return {
-        x: _enemy_x,
-        y: _enemy_y,
-        direction: point_direction(_enemy_x, _enemy_y, _player_x, _player_y),
-        speed: _speed,
-        object_index: obj_bullet_diamond,
-    };
-}
-
-/// @func GameBeeShotSpawnSpecsCreate(enemy_x, enemy_y, player_x, player_y)
-/// Returns the three aligned diamond shots fired by the bee enemy.
-function GameBeeShotSpawnSpecsCreate(_enemy_x, _enemy_y, _player_x, _player_y) {
-    return [
-        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, 3.5),
-        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, 4.0),
-        GameBeeShotSpecCreate(_enemy_x, _enemy_y, _player_x, _player_y, 4.5),
-    ];
-}
-
-/// @func GameMayflyInfinityOffsetCreate(phase)
-/// Returns the current infinity-path offset for the mayfly enemy.
-function GameMayflyInfinityOffsetCreate(_phase) {
-    return {
-        x: dsin(_phase) * MAYFLY_FLOAT_X_RADIUS,
-        y: dsin(_phase * 2) * MAYFLY_FLOAT_Y_RADIUS,
-    };
-}
-
-/// @func GameMayflyBurstStateCreate(timer, clockwise_first)
-/// Returns whether the mayfly should fire this frame and which spiral direction leads.
-function GameMayflyBurstStateCreate(_timer, _clockwise_first) {
-    if (_timer == 0) {
-        return {
-            fire: true,
-            clockwise: _clockwise_first,
-        };
-    }
-
-    if (_timer == MAYFLY_SECOND_BURST_DELAY) {
-        return {
-            fire: true,
-            clockwise: !_clockwise_first,
-        };
-    }
-
-    return {
-        fire: false,
-        clockwise: _clockwise_first,
-    };
-}
-
-/// @func GameMayflyBladeShotSpecCreate(enemy_x, enemy_y, angle, clockwise, turn_speed, radial_speed)
-/// Returns one spiral blade shot specification for the mayfly enemy.
-function GameMayflyBladeShotSpecCreate(_enemy_x, _enemy_y, _angle, _clockwise, _turn_speed = MAYFLY_BLADE_TURN_SPEED, _radial_speed = MAYFLY_BLADE_RADIAL_SPEED) {
-    return {
-        x: _enemy_x,
-        y: _enemy_y,
-        object_index: obj_bullet_blade,
-        spiral_angle: _angle,
-        spiral_direction: _clockwise ? -1 : 1,
-        spiral_turn_speed: _turn_speed,
-        spiral_radial_speed: _radial_speed,
-    };
-}
-
-/// @func GameMayflyShotSpawnSpecsCreate(enemy_x, enemy_y, clockwise, turn_speed, radial_speed)
-/// Returns one twelve-shot mayfly spiral burst.
-function GameMayflyShotSpawnSpecsCreate(_enemy_x, _enemy_y, _clockwise, _turn_speed = MAYFLY_BLADE_TURN_SPEED, _radial_speed = MAYFLY_BLADE_RADIAL_SPEED) {
-    var _shots = array_create(MAYFLY_BURST_COUNT);
-    var _angle_step = 360 / MAYFLY_BURST_COUNT;
-
-    for (var i = 0; i < MAYFLY_BURST_COUNT; i++) {
-        _shots[i] = GameMayflyBladeShotSpecCreate(_enemy_x, _enemy_y, i * _angle_step, _clockwise, _turn_speed, _radial_speed);
-    }
-
-    return _shots;
 }
 
 /// @func GameBladeBulletRedirectMark(bullet_id, freeze_frames, redirect_speed, redirect_acceleration)
