@@ -3,7 +3,6 @@
     {
       "theme": "core_chapel",
       "sprite": "spr_story_bg_core_chapel",
-      "openraster_source": "art/story_background_sources/core_chapel/core_chapel.ora",
       "krita_source": "art/story_background_sources/core_chapel/core_chapel.kra",
       "author_size": [
         320,
@@ -26,7 +25,6 @@
     {
       "theme": "forge_twilight",
       "sprite": "spr_story_bg_forge_twilight",
-      "openraster_source": "art/story_background_sources/forge_twilight/forge_twilight.ora",
       "krita_source": "art/story_background_sources/forge_twilight/forge_twilight.kra",
       "author_size": [
         320,
@@ -49,7 +47,6 @@
     {
       "theme": "saltwind_ribbon",
       "sprite": "spr_story_bg_saltwind_ribbon",
-      "openraster_source": "art/story_background_sources/saltwind_ribbon/saltwind_ribbon.ora",
       "krita_source": "art/story_background_sources/saltwind_ribbon/saltwind_ribbon.kra",
       "author_size": [
         320,
@@ -72,7 +69,6 @@
     {
       "theme": "wishcourt",
       "sprite": "spr_story_bg_wishcourt",
-      "openraster_source": "art/story_background_sources/wishcourt/wishcourt.ora",
       "krita_source": "art/story_background_sources/wishcourt/wishcourt.kra",
       "author_size": [
         320,
@@ -95,7 +91,6 @@
     {
       "theme": "bloodstar_orrery",
       "sprite": "spr_story_bg_bloodstar_orrery",
-      "openraster_source": "art/story_background_sources/bloodstar_orrery/bloodstar_orrery.ora",
       "krita_source": "art/story_background_sources/bloodstar_orrery/bloodstar_orrery.kra",
       "author_size": [
         320,
@@ -118,7 +113,6 @@
     {
       "theme": "violet_horizon",
       "sprite": "spr_story_bg_violet_horizon",
-      "openraster_source": "art/story_background_sources/violet_horizon/violet_horizon.ora",
       "krita_source": "art/story_background_sources/violet_horizon/violet_horizon.kra",
       "author_size": [
         320,
@@ -141,7 +135,6 @@
     {
       "theme": "morning_reunion",
       "sprite": "spr_story_bg_morning_reunion",
-      "openraster_source": "art/story_background_sources/morning_reunion/morning_reunion.ora",
       "krita_source": "art/story_background_sources/morning_reunion/morning_reunion.kra",
       "author_size": [
         320,
@@ -163,34 +156,34 @@
     }
   ],
   "story_assignments": {
-    "aisha_defeat_story_moon_route.json": "spr_story_bg_wishcourt",
-    "aisha_defeat_story_selkie_route.json": "spr_story_bg_wishcourt",
-    "aisha_intro_story_moon_route.json": "spr_story_bg_wishcourt",
-    "aisha_intro_story_selkie_route.json": "spr_story_bg_wishcourt",
-    "aster_defeat_story_moon_route.json": "spr_story_bg_saltwind_ribbon",
-    "aster_defeat_story_selkie_route.json": "spr_story_bg_saltwind_ribbon",
-    "aster_intro_story_moon_route.json": "spr_story_bg_saltwind_ribbon",
-    "aster_intro_story_selkie_route.json": "spr_story_bg_saltwind_ribbon",
-    "boss_intro_story.json": "spr_story_bg_violet_horizon",
-    "boss_intro_story_selkie_route.json": "spr_story_bg_violet_horizon",
-    "caelia_defeat_story_moon_route.json": "spr_story_bg_bloodstar_orrery",
-    "caelia_defeat_story_selkie_route.json": "spr_story_bg_bloodstar_orrery",
-    "caelia_intro_story_moon_route.json": "spr_story_bg_bloodstar_orrery",
-    "caelia_intro_story_selkie_route.json": "spr_story_bg_bloodstar_orrery",
-    "ending_story.json": "spr_story_bg_morning_reunion",
-    "ending_story_selkie_route.json": "spr_story_bg_morning_reunion",
-    "mira_aisha_defeat_story_moon_route.json": "spr_story_bg_wishcourt",
-    "mira_aisha_defeat_story_selkie_route.json": "spr_story_bg_wishcourt",
-    "mira_aisha_intro_story_moon_route.json": "spr_story_bg_wishcourt",
-    "mira_aisha_intro_story_selkie_route.json": "spr_story_bg_wishcourt",
-    "mira_defeat_story_moon_route.json": "spr_story_bg_wishcourt",
-    "mira_defeat_story_selkie_route.json": "spr_story_bg_wishcourt",
-    "mira_intro_story_moon_route.json": "spr_story_bg_wishcourt",
-    "mira_intro_story_selkie_route.json": "spr_story_bg_wishcourt",
-    "opening_story.json": "spr_story_bg_core_chapel",
-    "shalmii_defeat_story_moon_route.json": "spr_story_bg_forge_twilight",
-    "shalmii_defeat_story_selkie_route.json": "spr_story_bg_forge_twilight",
-    "shalmii_intro_story_moon_route.json": "spr_story_bg_forge_twilight",
-    "shalmii_intro_story_selkie_route.json": "spr_story_bg_forge_twilight"
+    "aisha_defeat_story_moon_route_v2.json": "spr_story_bg_wishcourt",
+    "aisha_defeat_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
+    "aisha_intro_story_moon_route_v2.json": "spr_story_bg_wishcourt",
+    "aisha_intro_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
+    "aster_defeat_story_moon_route_v2.json": "spr_story_bg_saltwind_ribbon",
+    "aster_defeat_story_selkie_route_v2.json": "spr_story_bg_saltwind_ribbon",
+    "aster_intro_story_moon_route_v2.json": "spr_story_bg_saltwind_ribbon",
+    "aster_intro_story_selkie_route_v2.json": "spr_story_bg_saltwind_ribbon",
+    "boss_intro_story_v2.json": "spr_story_bg_violet_horizon",
+    "boss_intro_story_selkie_route_v2.json": "spr_story_bg_violet_horizon",
+    "caelia_defeat_story_moon_route_v2.json": "spr_story_bg_bloodstar_orrery",
+    "caelia_defeat_story_selkie_route_v2.json": "spr_story_bg_bloodstar_orrery",
+    "caelia_intro_story_moon_route_v2.json": "spr_story_bg_bloodstar_orrery",
+    "caelia_intro_story_selkie_route_v2.json": "spr_story_bg_bloodstar_orrery",
+    "ending_story_v2.json": "spr_story_bg_morning_reunion",
+    "ending_story_selkie_route_v2.json": "spr_story_bg_morning_reunion",
+    "mira_aisha_defeat_story_moon_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_aisha_defeat_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_aisha_intro_story_moon_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_aisha_intro_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_defeat_story_moon_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_defeat_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_intro_story_moon_route_v2.json": "spr_story_bg_wishcourt",
+    "mira_intro_story_selkie_route_v2.json": "spr_story_bg_wishcourt",
+    "opening_story_v2.json": "spr_story_bg_core_chapel",
+    "shalmii_defeat_story_moon_route_v2.json": "spr_story_bg_forge_twilight",
+    "shalmii_defeat_story_selkie_route_v2.json": "spr_story_bg_forge_twilight",
+    "shalmii_intro_story_moon_route_v2.json": "spr_story_bg_forge_twilight",
+    "shalmii_intro_story_selkie_route_v2.json": "spr_story_bg_forge_twilight"
   }
 }

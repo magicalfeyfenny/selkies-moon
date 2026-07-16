@@ -7,6 +7,20 @@
 #macro DEFAULT_LIVES 3
 #macro DEFAULT_BOMBS 3
 
+// This flag must be set to true for the test harness to automatically quit
+// GMTL unit tests still run even if this is set to false
+// TODO: add a system that allows this to just be a command line argument or config thing so that you can use it for yourself and i can just launch it from within the GameMaker IDE
+#macro TEST_HARNESS_AUTO_QUIT true
+
+// This flag enables debug mode decorators and UI
+// TODO: actually add debug mode decorators for things like hitboxes-only mode, etc.
+#macro DEBUG_UI false
+
+// This flag should be enabled for release builds to disable debug messages, UI, etc.
+// TODO: actually add a "release" disabler for debug related things
+#macro RELEASE false
+
+
 /// @func GameStructFieldEnsure(target, field_name, default_value)
 /// Adds a missing struct field and returns the stored value.
 function GameStructFieldEnsure(_target, _field_name, _default_value) {

@@ -21,10 +21,13 @@ if (!GameShouldQuitAfterTests()) {
 test_quit_frames++;
 
 // Close the runner once GMTL has fully finished when launched by the test harness.
-if (gmtl_has_finished || test_quit_frames >= test_quit_timeout_frames) {
-    if (test_quit_frames >= test_quit_timeout_frames) {
-        show_debug_message("GMTL test run timeout reached; closing runner.");
-    }
+// TODO: so this is mostly just to patch it so i can test it, we want a better way to do this
+if (TEST_HARNESS_AUTO_QUIT) {
+    if (gmtl_has_finished || test_quit_frames >= test_quit_timeout_frames) { 
+        if (test_quit_frames >= test_quit_timeout_frames) {
+            show_debug_message("GMTL test run timeout reached; closing runner.");
+        }
 
-    game_end();
+        game_end();
+    }
 }

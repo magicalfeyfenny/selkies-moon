@@ -52,15 +52,32 @@ Five global structs are the shared contracts between objects:
 
 `tools/build_logic_score_midi.py` owns the editable production-score notes,
 arrangement, primary theme, and secondary leitmotifs. `tools/validate_logic_score.py`
-verifies that catalog before the MIDI sources enter Logic Pro; the saved Logic
-projects and lossless masters are the production assets. `tools/build_audio_assets.py`
-owns SFX and short motif-correct runtime audition loops only. The complete
-contract is documented in `AUDIO_DIRECTION.md`. After Logic loop validation,
-`tools/install_logic_masters.py` is the only supported path for replacing the
-fifteen runtime audition loops with high-quality streamed encodes of their
-lossless production masters.
+verifies that catalog before the MIDI sources enter Logic Pro; native Logic
+projects own instrumentation and mixing, lossless WAVs are validated masters,
+and `tools/install_logic_masters.py` alone derives the fifteen streamed runtime
+OGGs. The parallel SFX chain is `tools/build_logic_sfx_suite.py`, one native
+Logic suite, its declared 24-bit bounce, and `tools/install_logic_sfx.py` for
+the fifteen runtime WAVs. `tools/build_audio_assets.py` is retired and owns no
+production output. The complete contract is documented in `AUDIO_DIRECTION.md`.
 
-Every project-owned top-level function has a `/// @func` signature and a one-line contract. Keep object events orchestration-focused and move reusable rules into the owning script.
+## Asset authority
+
+Shipped 2D raster art has one authority: its declared KRA. The KRA exporter may
+render, crop, scale, pack, validate, and atomically install manifest-owned PNG
+targets, but it cannot draw production pixels or modify a master. The normal
+tree has no parallel ORA, named layer-export, imported-runtime PNG, or preview
+source mirrors. GameMaker-required root-frame and editor-layer PNGs are both
+runtime derivatives of the same KRA.
+
+Native `.blend` scenes are the editable 3D sources. The normal Blender exporter
+opens them without saving; procedural scene construction is isolated behind an
+explicit destructive bootstrap flag. OBJ is a portable build intermediate used
+to compile each stage's VBUFF; only VBUFF is registered as a GameMaker Included
+File and loaded by `scr_stage_3d`. Keeping the interchange mesh outside the
+package prevents an authoring derivative from becoming accidental runtime
+content.
+
+Project-owned public helpers should carry a `/// @func` signature and a one-line contract. Keep object events orchestration-focused and move reusable rules into the owning script.
 
 ## Object ownership
 

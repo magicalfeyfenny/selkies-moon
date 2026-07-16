@@ -1717,7 +1717,7 @@ suite(function() {
 
             var _music_assets = GameAudioMusicAssetsCreate();
             var _sfx_assets = GameAudioSfxAssetsCreate();
-            expect(array_length(_music_assets)).toBe(26);
+            expect(array_length(_music_assets)).toBe(15);
             expect(array_length(_sfx_assets)).toBe(15);
             expect(_music_assets[0]).toBe(snd_music_title);
             expect(_music_assets[1]).toBe(snd_music_stage_shalmii);
@@ -2407,19 +2407,8 @@ suite(function() {
             var _medal = asset_get_index("spr_medal");
             var _enemy_destroy = asset_get_index("snd_enemy_destroy");
             var _ow = asset_get_index("snd_ow");
-            var _stage_music = asset_get_index("snd_stage_music");
             var _typewriter = asset_get_index("snd_typewriter");
             var _music_title = asset_get_index("snd_music_title");
-            var _music_stage_01 = asset_get_index("snd_music_stage_01");
-            var _music_stage_02 = asset_get_index("snd_music_stage_02");
-            var _music_stage_03 = asset_get_index("snd_music_stage_03");
-            var _music_stage_04 = asset_get_index("snd_music_stage_04");
-            var _music_stage_05 = asset_get_index("snd_music_stage_05");
-            var _music_stage_06 = asset_get_index("snd_music_stage_06");
-            var _music_stage_07 = asset_get_index("snd_music_stage_07");
-            var _music_stage_08 = asset_get_index("snd_music_stage_08");
-            var _music_stage_09 = asset_get_index("snd_music_stage_09");
-            var _music_stage_10 = asset_get_index("snd_music_stage_10");
             var _music_ending = asset_get_index("snd_music_ending");
             var _music_credits = asset_get_index("snd_music_credits");
             var _character_music_names = [
@@ -2491,19 +2480,8 @@ suite(function() {
             expect(_medal != -1 && sprite_exists(_medal)).toBeTruthy();
             expect(_enemy_destroy != -1).toBeTruthy();
             expect(_ow != -1).toBeTruthy();
-            expect(_stage_music != -1).toBeTruthy();
             expect(_typewriter != -1).toBeTruthy();
             expect(_music_title != -1).toBeTruthy();
-            expect(_music_stage_01 != -1).toBeTruthy();
-            expect(_music_stage_02 != -1).toBeTruthy();
-            expect(_music_stage_03 != -1).toBeTruthy();
-            expect(_music_stage_04 != -1).toBeTruthy();
-            expect(_music_stage_05 != -1).toBeTruthy();
-            expect(_music_stage_06 != -1).toBeTruthy();
-            expect(_music_stage_07 != -1).toBeTruthy();
-            expect(_music_stage_08 != -1).toBeTruthy();
-            expect(_music_stage_09 != -1).toBeTruthy();
-            expect(_music_stage_10 != -1).toBeTruthy();
             expect(_music_ending != -1).toBeTruthy();
             expect(_music_credits != -1).toBeTruthy();
             for (var music = 0; music < array_length(_character_music_names); music++) {

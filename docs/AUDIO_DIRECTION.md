@@ -76,9 +76,10 @@ heroine. `GameGameplayMusicTrackGet` switches to the boss cue for intro, fight,
 outro, and boss-cleared states, so a stage loop never restarts over the victory
 transition.
 
-The Music Room exposes all fifteen production cue slots. Until a production
-master is installed, each slot has a short motif-correct audition loop generated
-by `tools/build_audio_assets.py`.
+The Music Room exposes the fifteen installed production cues. Every stage,
+boss, ending, and credits slot resolves to a streamed OGG derived from its
+validated Logic master; superseded audition-loop resources are not part of the
+runtime catalog.
 
 ## Sound-effect language
 
@@ -104,18 +105,19 @@ be placed into exactly one of them.
 
 ## Production workflow
 
-Generate and validate the editable score sources:
+Generate and validate the authoritative note and arrangement sources:
 
 ```sh
 python3 tools/build_logic_score_midi.py
 python3 tools/validate_logic_score.py
 ```
 
-Open each format-1 MIDI file in Logic Pro, retain all nine software-instrument
-tracks and arrangement markers, and save the editable project to the manifest's
-`logic_project` path. Instrument patches, articulation, automation, mixing, and
-sound design are production decisions made in that project; the MIDI remains
-the note-level source of truth.
+The MIDI catalog and `score_manifest.json` are the note-level, arrangement, and
+routing authority. Open each format-1 MIDI file in Logic Pro, retain all nine
+software-instrument tracks and arrangement markers, and save the native project
+to the manifest's `logic_project` path. Instrument patches, articulation,
+automation, mixing, and sound design are authoritative in that Logic project.
+Rendered WAV and OGG files are derivatives, never editing sources.
 
 For each cue, bounce exactly two uninterrupted cycles as stereo 24-bit PCM with
 normalization and audio-tail extension disabled. Then run:
@@ -136,11 +138,21 @@ into the streamed GameMaker resources, and synchronize duration metadata with:
 python3 tools/install_logic_masters.py
 ```
 
-To regenerate the short in-engine audition loops and the SFX suite, use a Python
-environment with NumPy:
+The SFX suite follows the same source-to-runtime direction. Generate its
+multi-track MIDI and cue map, edit the native Logic project, and bounce the
+complete suite as stereo 24-bit/48 kHz PCM to the declared raw-bounce path:
 
 ```sh
-python3 tools/build_audio_assets.py
+python3 tools/build_logic_sfx_suite.py
+# Edit and bounce art/audio_production/sfx_logic_projects/
+python3 tools/install_logic_sfx.py
 ```
 
-That placeholder generator is not the production music source.
+`tools/install_logic_sfx.py` slices the suite by its cue manifest, writes the
+fifteen lossless SFX masters, gain-stages them, and installs the sixteen-bit
+runtime WAVs. The Logic project and MIDI/cue map are authoritative; the suite
+bounce, per-cue masters, install report, and GameMaker WAVs are derivatives.
+
+`tools/build_audio_assets.py` is retired. Do not use it to regenerate music or
+sound effects: it was a pre-production placeholder tool and can overwrite
+Logic-derived runtime audio.

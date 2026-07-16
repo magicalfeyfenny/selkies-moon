@@ -10,7 +10,7 @@
   "compression":3,
   "compressionQuality":4,
   "conversionMode":0,
-  "duration":235.789458,
+  "duration":0.0,
   "exportDir":"",
   "name":"snd_music_credits",
   "parent":{

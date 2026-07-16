@@ -30,14 +30,14 @@ The pause menu can resume play, change display settings, or quit the current att
 
 ### Practice and dynamic rank
 
-Practice Select on the main menu can launch any stage as a full stage, waves-only segment, or boss-only segment. Before starting, you can choose the ship and directly set shot power, rank, lives, bombs, cancel meter, and whether rank changes dynamically. Practice attempts are not written to score or clear records, and completed segments return to Practice Select with the setup retained.
+Practice Select on the main menu can launch any stage as a full stage, waves-only segment, or boss-only segment. Before starting, you can choose the ship and directly set shot power, rank, lives, bombs, Berserk meter, and whether rank changes dynamically. Practice attempts are not written to score or clear records, and completed segments return to Practice Select with the setup retained.
 
-Rank is the 0-100 dynamic-difficulty value shown in the gameplay HUD. A normal run starts at the neutral rank of 50 and changes with performance. Higher rank increases enemy-wave frequency, enemy firing frequency, and enemy-bullet speed; it does not alter enemy health, player damage, or boss phase count. Practice can either lock rank to a chosen value or leave dynamic rank enabled for testing.
+Rank is the 0-50 dynamic-difficulty value shown in the gameplay HUD. A normal run starts at 0 and rises with sustained combat, ordinary shootdowns, boss defeats, and Berserk activation; bombing, dying, and continuing lower it. Higher rank increases enemy-wave frequency, enemy firing frequency, and enemy-bullet speed; it does not alter enemy health, player damage, or boss phase count. Practice can either lock rank to a chosen value or leave dynamic rank enabled for testing.
 
 You get 3 bombs and 3 lives.  
 Bombs do not recover between lives.
 
-The run now contains 10 stages. Each stage has a scrolling wave section, a boss encounter, and a stage-clear transition. Clearing stage 10 moves into the ending and then a credits sequence.
+The run contains five themed stages. Each stage has a scrolling wave section, a character boss encounter, and a stage-clear transition. Stage 3 culminates in Mira and Aisha's coordinated finale; stage 5 selects the route-opposing heroine and then moves into the ending and credits.
 
 Playable ships:
 - Sunset / Moon: balanced wide shots, a long sword sweep, and a tighter focused shot.
@@ -51,19 +51,15 @@ Enemies are worth an amount of points based on the enemy type:
 - Boss: 30000
 
 Enemies can drop two distinct pickup classes:
-- $ score pickups appear on a steady defeat cadence and are always bonus points.
-- Point-blank defeats charge the PB Recharge gauge. Filling it creates one resource-only pickup, with a per-stage cap so resources remain valuable.
-- P: increases shot power up to 5
-- B: restores one bomb up to 6
-- L: restores one life up to 6
-- M: adds cancel meter
+- Score diamonds appear on a steady defeat cadence and add 5,000 points.
+- Ringed resource pickups are awarded sparsely within a per-stage cap.
+- P: raises shot power toward 5.
+- B: restores one bomb up to 6.
+- L: restores one life up to 6.
+- M: adds 240 Berserk meter.
 
 When you cancel a bullet, it turns into a medal that vacuums towards the player.  
-When the medal is collected, it increases your points by 100 and gives you 1 "cancel meter" point.  
-When the "cancel meter" fills up, it activates Berserk mode.  
-On Berserk activation and ending, all bullets are cancelled.  
-While in Berserk mode, your sword swings faster and wider, and you can only use the sword.  
-Berserk drains on its own over time.
+Collected medals add eight Berserk meter; close-range attacks and sustained fire also build it. At 1,000 meter, Berserk activates automatically, cancels every enemy bullet, and briefly protects the player. While active, every attack becomes a larger, faster route-specific sweep: Selkie uses chakrams and Moon uses a rose whip. Berserk drains over time without a second screen cancel when it ends.
 
 The title menu also includes a CG Gallery and Music Room for browsing existing art and previewing the stage music.
 
@@ -77,12 +73,14 @@ Open the .yyp file and run by pressing F5 or clicking the play button in the top
 
 - [Architecture](docs/ARCHITECTURE.md): runtime ownership, modules, object inheritance, and extension rules.
 - [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and timeline generation.
+- [Branch and release policy](docs/BRANCH_AND_RELEASE_POLICY.md): `main`/`dev` roles, pull-request flow, release promotion, hotfixes, and exceptional history rewrites.
 - [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md): input, stage flow, rank, weapons, enemies, bosses, pickups, pause, and story flow.
 - [Data formats](docs/DATA_FORMATS.md): story JSON, persistence schemas, boss phase descriptors, and practice requests.
+- [AI-assisted development post-mortem](docs/AI_ASSISTED_DEVELOPMENT_POSTMORTEM.md): project lessons, large-game best practices, and reusable prompt templates.
 
-All project-owned GML functions also carry `/// @func` API comments beside their implementation.
+Project-owned public GML helpers carry `/// @func` API comments beside their implementation where practical.
 
-Boss encounters demonstrate their complete seed set, then complete variant sets, and finish with a unique non-repeated signature attack. See [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md#bosses) for the 5/7/9/16-phase progression.
+Boss encounters demonstrate their motif-specific seeds and finish with a unique non-repeated signature attack. See [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md#bosses) for the 3/5/3+3+shared/7/15-phase progression.
 
 ### Tests
 
@@ -95,12 +93,16 @@ GMTL_TEST_ATTEMPTS=8 ./tools/run_gmtl_tests.zsh
 The retry count accounts for intermittent GameMaker asset-compiler crashes. A valid run must reach the complete GMTL summary with every test passing.
 
 ## Credits
-GameMaker, IDE v2024.14.4.222, runtime v2024.14.4.268  
-GPT 5.4 on Codex v26.406.31014  
-Aseprite v1.3.16.1  
+
+- GameMaker, IDE v2024.14.4.222 or compatible newer; current tests use LTS 2026
+- GPT 5.4 on Codex v26.406.31014
+- Krita v5.3.1.1
+- Aseprite v1.3.16.1 (legacy/reference work)
 
 Libraries:
   - unit testing: GameMaker Testing Library, https://github.com/DAndrewBox/GM-Testing-Library
 
 Additional asset sourcing:
-  - No additional third-party assets were imported in the 10-stage/Selkie update. New enemy and power-up visuals are drawn procedurally in code using the existing palette/style.
+  - Not Jam pixel fonts by Not Jam, released under CC0; licence copies are preserved under `art/font_sources/`.
+  - `spr_text_arrow` is an exact eight-frame migration from `thpj3`, with source attribution in its KRA manifest.
+  - Shipped raster art is mastered in Krita and exported from the canonical `.kra` files.
