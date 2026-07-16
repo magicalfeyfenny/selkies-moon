@@ -4,10 +4,10 @@ These files are byte-for-byte archival copies of the original sketches or
 sprites supplied for each character. They are the design authority for future
 portrait, ship, and character-art work.
 
-Do not edit these files in place. Create rendered candidates and runtime crops
-elsewhere under `art/`, then update the relevant GameMaker sprite asset. Nothing
-in this folder is loaded by the game at runtime, so replacing provisional game
-art cannot overwrite or depend on these originals.
+Do not edit these files in place. Create rendered candidates elsewhere, promote
+the accepted result to the relevant KRA master, and generate runtime PNGs only
+through the KRA export pipeline. Nothing in this folder is loaded by the game at
+runtime, so replacing production art cannot overwrite these originals.
 
 | Character | Authoritative source | Notes |
 | --- | --- | --- |
