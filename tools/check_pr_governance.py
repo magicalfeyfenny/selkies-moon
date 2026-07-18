@@ -106,6 +106,8 @@ HIGH_RISK_EXACT_PATHS = {
     "docs/BRANCH_AND_RELEASE_POLICY.md",
     "docs/DATA_FORMATS.md",
     "docs/LFS_MIGRATION.md",
+    "Selkie's Moon ~ until we meet again ~/art/character_portraits/PORTRAIT_BRIEFS.md",
+    "Selkie's Moon ~ until we meet again ~/art/character_portraits/README.md",
     "tools/check_pr_governance.py",
     "tools/check_repository_hygiene.py",
     "tools/tests/test_check_pr_governance.py",
@@ -131,7 +133,7 @@ DEPENDENCY_BASENAMES = {
 }
 SOURCE_AUTHORITY_SUFFIXES = {".blend", ".kra", ".logicx"}
 PACKAGE_SUFFIXES = {".yyp", ".yymps"}
-DOC_SUFFIXES = {".md", ".txt"}
+DOC_SUFFIXES = {".md"}
 TRUSTED_REVIEW_COMMENT_AUTHORS = {"magicalfeyfenny"}
 BROAD_CHANGE_PATH_THRESHOLD = 25
 CROSS_SYSTEM_PATH_THRESHOLD = 8
@@ -833,6 +835,13 @@ def _validate_contract(
             if not isinstance(control_value, str) or control_value not in allowed:
                 errors.append(f"contract: controls.{name} must be one of {sorted(allowed)}")
 
+    if actual_base_is_ancestor is None:
+        errors.append("branch: current base ancestry was not independently resolved")
+    elif not actual_base_is_ancestor:
+        errors.append(
+            f"branch: PR head must contain the exact current {base_ref} base"
+        )
+
     if base_ref == "main":
         head_ref = context["head_ref"]
         if not isinstance(head_ref, str) or not _main_source_allowed(head_ref):
@@ -848,12 +857,6 @@ def _validate_contract(
             errors.append("contract: main-promotion candidate tree was not independently resolved")
         elif candidate_tree != actual_candidate_tree:
             errors.append("contract: candidate_tree does not match the current PR head tree")
-        if actual_base_is_ancestor is None:
-            errors.append("branch: main-promotion base ancestry was not independently resolved")
-        elif not actual_base_is_ancestor:
-            errors.append(
-                "branch: main-promotion head must contain the exact current main base"
-            )
     return str(risk)
 
 
@@ -1068,9 +1071,7 @@ def main() -> int:
             )
         is_main_promotion = base["ref"] == "main"
         candidate_tree = _tree_sha(checkout_sha) if is_main_promotion else None
-        base_is_ancestor = (
-            _is_ancestor(base["sha"], checkout_sha) if is_main_promotion else None
-        )
+        base_is_ancestor = _is_ancestor(base["sha"], checkout_sha)
         errors = validate_pull_request(
             event,
             changed_paths,

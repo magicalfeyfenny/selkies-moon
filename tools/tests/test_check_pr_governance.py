@@ -8,6 +8,7 @@ import sys
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 TOOLS = Path(__file__).resolve().parents[1]
@@ -166,7 +167,7 @@ def _validate(
     paths: list[str] | None = None,
     *,
     candidate_tree: str | None = None,
-    base_is_ancestor: bool | None = None,
+    base_is_ancestor: bool | None = True,
 ) -> list[str]:
     return governance.validate_pull_request(
         event,
@@ -183,8 +184,10 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertEqual(_validate(event, comments), [])
 
     def test_low_documentation_change_requires_only_correctness(self) -> None:
-        event, _contract_value, comments = _fixture(risk="low")
-        self.assertEqual(_validate(event, comments, ["docs/GAMEPLAY.md"]), [])
+        for path in ("README.md", "docs/GAMEPLAY.md"):
+            with self.subTest(path=path):
+                event, _contract_value, comments = _fixture(risk="low")
+                self.assertEqual(_validate(event, comments, [path]), [])
 
     def test_high_risk_path_classes_are_not_underdeclared(self) -> None:
         high_risk_paths = [
@@ -195,6 +198,8 @@ class PullRequestGovernanceTests(unittest.TestCase):
             "audio/score.logicx/ProjectData",
             "Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp",
             "Selkie's Moon ~ until we meet again ~/art/original_character_references/moon.png",
+            "Selkie's Moon ~ until we meet again ~/art/character_portraits/PORTRAIT_BRIEFS.md",
+            "Selkie's Moon ~ until we meet again ~/art/character_portraits/README.md",
             "Selkie's Moon ~ until we meet again ~/scripts/scr_setup/scr_setup.gml",
             "tools/build_stage3d_runtime_buffers.py",
             "docs/ASSET_PIPELINE.md",
@@ -208,6 +213,13 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 event, _contract_value, comments = _fixture()
                 errors = _validate(event, comments, [path])
                 self.assertTrue(any("lower than computed risk" in error for error in errors), errors)
+
+    def test_non_document_text_defaults_to_standard_risk(self) -> None:
+        path = "Selkie's Moon ~ until we meet again ~/datafiles/shipping-dialogue.txt"
+        self.assertEqual(governance.minimum_risk("dev", [path]), "standard")
+        event, _contract_value, comments = _fixture(risk="low")
+        errors = _validate(event, comments, [path])
+        self.assertTrue(any("lower than computed risk" in error for error in errors), errors)
 
     def test_broad_or_cross_system_change_computes_high_risk(self) -> None:
         broad_docs = [f"docs/generated/topic-{index}.md" for index in range(25)]
@@ -295,6 +307,28 @@ class PullRequestGovernanceTests(unittest.TestCase):
             base_is_ancestor=False,
         )
         self.assertTrue(any("contain the exact current main base" in error for error in errors), errors)
+
+    def test_dev_requires_independently_resolved_current_base_ancestry(self) -> None:
+        event, _contract_value, comments = _fixture()
+        self.assertEqual(_validate(event, comments, base_is_ancestor=True), [])
+
+        errors = _validate(event, comments, base_is_ancestor=False)
+        self.assertTrue(any("contain the exact current dev base" in error for error in errors), errors)
+
+        errors = _validate(event, comments, base_is_ancestor=None)
+        self.assertTrue(any("base ancestry was not independently resolved" in error for error in errors), errors)
+
+    def test_main_resolves_base_ancestry_for_dev(self) -> None:
+        event, _contract_value, comments = _fixture()
+        with (
+            mock.patch.object(governance, "_load_json_file", side_effect=[event, comments]),
+            mock.patch.object(governance, "_changed_paths", return_value=["objects/player.gml"]),
+            mock.patch.object(governance, "_commit_sha", return_value=HEAD_SHA),
+            mock.patch.object(governance, "_is_ancestor", return_value=True) as ancestry,
+            mock.patch.object(sys, "argv", ["check_pr_governance.py", "--event", "event.json", "--comments", "comments.json"]),
+        ):
+            self.assertEqual(governance.main(), 0)
+        ancestry.assert_called_once_with(BASE_SHA, HEAD_SHA)
 
     def test_stale_head_base_and_contract_hash_are_rejected(self) -> None:
         event, contract, comments = _fixture()
@@ -654,6 +688,21 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertTrue(any("verdict must be 'pass'" in error for error in errors), errors)
         self.assertTrue(any("blocking_findings must be empty" in error for error in errors), errors)
 
+    def test_each_live_evaluation_rejects_edited_or_deleted_attestations(self) -> None:
+        event, contract, comments = _fixture()
+        self.assertEqual(_validate(event, comments), [])
+
+        edited = copy.deepcopy(comments)
+        blocking = _attestation(contract, "correctness")
+        blocking["verdict"] = "request-changes"
+        blocking["blocking_findings"] = ["P1: the current review was withdrawn."]
+        edited[0] = _comment(blocking)
+        errors = _validate(event, edited)
+        self.assertTrue(any("verdict must be 'pass'" in error for error in errors), errors)
+
+        errors = _validate(event, comments[1:])
+        self.assertTrue(any("missing required role" in error for error in errors), errors)
+
     def test_extra_specialist_role_does_not_replace_or_block_required_roles(self) -> None:
         event, contract, comments = _fixture(risk="low")
         comments.append(_comment(_attestation(contract, "validation")))
@@ -790,6 +839,23 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 "ref: ${{ github.event.pull_request.head.sha || github.sha }}"
             ),
             2,
+        )
+
+    def test_required_ci_name_is_reserved_for_pull_request_runs(self) -> None:
+        workflow = (governance.ROOT / ".github/workflows/gamemaker-tests.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "name: ${{ github.event_name == 'pull_request' && 'Required CI' || "
+            "'Non-PR CI (not merge evidence)' }}",
+            workflow,
+        )
+        self.assertIn("Manual dispatches are diagnostic", workflow)
+        required_job = workflow.split("  required_ci:\n", 1)[1]
+        self.assertIn('if [[ "$EVENT_NAME" == "pull_request" ]]', required_job)
+        self.assertIn(
+            'require_result "PR governance" "$GOVERNANCE_RESULT" "success"',
+            required_job,
         )
 
 

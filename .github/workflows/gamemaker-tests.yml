@@ -16,6 +16,10 @@ on:
       - dev
   workflow_dispatch:
 
+# Manual dispatches are diagnostic. Only pull_request runs may publish the
+# stable Required CI merge-evidence name; the final PR-event run is rerun after
+# attestations and immediately before merge.
+
 permissions: {}
 
 concurrency:
@@ -287,7 +291,7 @@ jobs:
           retention-days: 14
 
   required_ci:
-    name: Required CI
+    name: ${{ github.event_name == 'pull_request' && 'Required CI' || 'Non-PR CI (not merge evidence)' }}
     if: always()
     needs:
       - repository_hygiene

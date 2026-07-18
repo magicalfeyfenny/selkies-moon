@@ -31,11 +31,16 @@
 ## Independent agent review
 
 Fresh-agent attestations are posted as PR comments and bind the contract below.
+After the final attestation, rerun the newest exact `pull_request` workflow and
+re-fetch live refs, body, and comments immediately before merge. A subsequent
+trusted attestation change requires another rerun. Manual-dispatch runs are not
+merge evidence.
 
 <!--
 Replace every placeholder after the PR number and exact base/head are known.
 Fresh reviewers post agent-review:v1 attestations as separate PR comments.
 Any commit, base advance, target change, or semantic contract edit requires new reviews.
+Only the final current pull-request-event run named Required CI counts as merge evidence.
 -->
 <!-- pr-contract:v1
 {

@@ -32,6 +32,12 @@ contract, base commit, and candidate commit. See [Agent Review Policy](AGENT_REV
 Review readiness and merge authority are separate. An active task that
 authorizes implementing and publishing a bounded change may authorize the
 orchestrator to merge its passing PR into `dev` without another manual review.
+The head must contain the exact current base. After the final attestation, the
+orchestrator reruns the newest exact pull-request-event workflow and re-fetches
+live refs, contract, and comments immediately before merge; a later trusted
+attestation change requires another rerun. Manual-dispatch checks are not merge
+evidence. Automatic invalidation after comment or base mutation is part of
+issue #17's remote-enforcement rollout.
 Advancing `main` still requires an explicit promotion or release request for
 the named frozen candidate. Tagging and publishing binaries are separate
 actions and are not implied by review completion.

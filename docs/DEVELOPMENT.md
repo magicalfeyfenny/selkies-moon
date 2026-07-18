@@ -93,13 +93,16 @@ The governance checker binds those reviews to the repository, pull request,
 base/head commits, target branch, canonical contract hash, and digest of the
 visible acceptance sections. A new commit, base advance, retarget, or semantic
 contract edit invalidates old reviews.
-After reviewers post their comments, the orchestrator reruns the governance
-workflow so GitHub evaluates the live attestations without a manual approval
-step.
+The PR head must contain the exact current base. After the final review comment,
+the orchestrator reruns the newest exact `pull_request` workflow, waits for its
+`Required CI` result, and re-fetches live refs, body, and comments immediately
+before merge. Any subsequent trusted attestation creation, edit, or deletion
+requires another rerun. Manual-dispatch runs are diagnostic and cannot supply
+the merge-evidence check name.
 
 ## GitHub Actions unit tests
 
-`.github/workflows/gamemaker-tests.yml` first runs the fast repository-hygiene and package-ownership gate, including a full PR-range check for large ordinary Git blobs and tracked junk. Same-repository changes also fetch and hash every changed final-state LFS payload. Forks cannot upload LFS objects to the repository remote, so fork pull requests that change LFS paths fail with instructions to transfer the commit onto a maintainer-owned branch. Pull requests into `dev` or `main` also receive a `PR governance` check using live PR metadata and review comments. A stable aggregate check fails unless every applicable gate actually succeeds, preventing a skipped job from becoming a false green. The workflow runs the GMTL suite for pull requests targeting `dev` or `main`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
+`.github/workflows/gamemaker-tests.yml` first runs the fast repository-hygiene and package-ownership gate, including a full PR-range check for large ordinary Git blobs and tracked junk. Same-repository changes also fetch and hash every changed final-state LFS payload. Forks cannot upload LFS objects to the repository remote, so fork pull requests that change LFS paths fail with instructions to transfer the commit onto a maintainer-owned branch. Pull requests into `dev` or `main` also receive a `PR governance` check using live PR metadata and review comments. The PR-only `Required CI` aggregate fails unless every applicable gate actually succeeds, preventing a skipped job from becoming a false green. Push and manual-dispatch aggregates use a different non-merge-evidence name. The workflow runs the GMTL suite for pull requests targeting `dev` or `main`, pushes to `dev`, and manual dispatches. The Windows runner installs the pinned GameMaker runtime, builds a VM executable, launches it with `--run-test`, validates the GMTL summary, and retains the runner and compiler logs for 14 days.
 
 The repository must have an Actions secret named `ACCESS_KEY`. Generate one on the [GameMaker account access-key page](https://gamemaker.io/account/access_keys), then add it under **Settings > Secrets and variables > Actions**. Never commit the key or paste it into a workflow file. Licensed CI is skipped for fork pull requests because GitHub does not provide repository secrets to untrusted fork code.
 

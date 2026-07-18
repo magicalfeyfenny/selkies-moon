@@ -15,6 +15,11 @@ read and follow [Agent Review Policy](docs/AGENT_REVIEW_POLICY.md).
   the repository, pull-request number, full head and base SHAs, target branch,
   and canonical contract hash. Any commit, base advance, target change, or
   semantic contract edit invalidates the review and requires fresh agents.
+- Only a `pull_request` run named `Required CI` is merge evidence. After the
+  final attestation, rerun the newest workflow run for the exact PR head, then
+  re-fetch live refs, body, and comments immediately before merging. A later
+  trusted attestation creation, edit, or deletion requires another rerun;
+  `workflow_dispatch` runs are diagnostic only.
 - Fenny's manual review approval is not required when all required agents pass,
   required checks are green, and no blocking finding remains.
 - Review authority is not merge or release authority. Merge only when the task

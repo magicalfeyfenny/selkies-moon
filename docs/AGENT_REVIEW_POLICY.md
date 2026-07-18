@@ -55,7 +55,7 @@ allowed; declaring lower than the path-derived class fails the check.
 
 | Risk | Minimum trigger | Required independent roles |
 | --- | --- | --- |
-| `low` | Documentation-only change outside governance/release policy | `correctness` |
+| `low` | Markdown-only repository documentation outside governance, release, or canonical source-authority policy | `correctness` |
 | `standard` | Normal code, tests, content, or derivative assets targeting `dev` | `correctness`, `validation` |
 | `high` | CI, governance, dependencies, migrations, save/schema changes, canonical asset ownership, packaging, privacy/licensing/security, destructive cleanup, or broad cross-system work | `correctness`, `validation`, `governance` |
 | `main-promotion` | Every pull request targeting `main` | `correctness`, `validation`, `release-governance` |
@@ -120,8 +120,11 @@ ordinary Markdown or a fenced example instead.
 -->
 ```
 
-For `main-promotion`, the contract additionally requires `candidate_sha` equal
-to the PR head and `candidate_tree` equal to that commit's full Git tree ID.
+Every PR head must contain the exact base commit named by its live event and
+contract. Exact-head validation therefore tests the tree that would land while
+that base remains current. For `main-promotion`, the contract additionally
+requires `candidate_sha` equal to the PR head and `candidate_tree` equal to that
+commit's full Git tree ID.
 CI checks out that exact head rather than GitHub's synthetic merge ref,
 independently resolves its tree, and requires the current `main` base to be an
 ancestor of the candidate. The tested tree can therefore be promoted unchanged
@@ -176,14 +179,31 @@ Trusted discussion comments without an attestation marker are ignored.
 Every PR validation checkout is pinned to the event's exact head. Before
 running repository code, the token-bearing context collector also confirms
 that the live base SHA, base ref, head SHA, and head ref still equal the event
-snapshot. A base advance or retarget therefore requires a fresh event and
-fresh bound reviews rather than mixing old and new workflow context.
+snapshot. The checker independently requires that exact base to be an ancestor
+of the head. Drift during a run or rerun therefore fails rather than mixing old
+and new workflow context.
 
 GitHub does not start a pull-request workflow merely because an issue comment
-was added. After posting the required review comments, the orchestrator reruns
-the current governance workflow (or moves the draft to ready) so the live
-comments are evaluated against the same head. This is an automated coordination
-step, not a request for Fenny to approve the review.
+was created, edited, or deleted. A successful check is therefore a
+point-in-time snapshot, not an immutable approval. After the final attestation,
+the orchestrator reruns the newest `pull_request` workflow for the exact
+contract head and waits for its `Required CI` result. It then re-fetches the
+live base/head, body, and comments immediately before merging with the expected
+head SHA. Any later trusted attestation creation, edit, or deletion invalidates
+operational approval and requires another rerun. A `workflow_dispatch` run is
+diagnostic and its aggregate job deliberately has a different name; it is not
+merge evidence. These are automated coordination steps, not a request for
+Fenny to approve the review.
+
+Select the newest `pull_request` run whose head SHA equals the contract, then:
+
+```zsh
+gh run rerun <exact-pr-run-id> --repo magicalfeyfenny/selkies-moon
+gh run watch <exact-pr-run-id> --repo magicalfeyfenny/selkies-moon --exit-status
+```
+
+Never substitute a manual-dispatch run. If live evidence changed after the
+rerun began, repeat the rerun before merging.
 
 ## Mandatory escalation
 
@@ -201,11 +221,13 @@ Stop and request direction when:
 
 ## GitHub enforcement boundary
 
-The check runs on pull requests into `dev` and `main`. Remote rulesets,
-required-check sources, default-branch choice, and auto-merge settings belong to
-issue #17 and must be bootstrapped and tested before enforcement. Until then,
-this is a mandatory Codex policy plus visible CI evidence, not a claim that the
-unprotected remote cannot be bypassed.
+The check runs on pull requests into `dev` and `main`. Remote rulesets, strict
+up-to-date enforcement, required-check sources, default-branch choice,
+auto-merge settings, and a trusted default-branch or App status producer for
+`issue_comment` creation/edit/deletion belong to issue #17 and must be
+bootstrapped and tested before enforcement. Until then, this is a mandatory
+Codex policy plus point-in-time CI evidence and a final live rerun, not a claim
+that the unprotected remote or an old green check cannot be bypassed.
 
 Because a same-repository pull request can modify its own workflow, a policy or
 workflow self-change requires the independent governance role even when CI is
