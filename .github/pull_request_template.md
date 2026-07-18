@@ -47,7 +47,7 @@ Any commit, base advance, target change, or semantic contract edit requires new 
   "base_ref": "dev",
   "head_ref": "REPLACE_WITH_HEAD_BRANCH",
   "implementation_agent": "REPLACE_WITH_UNIQUE_IMPLEMENTATION_RUN_ID",
-  "acceptance_sha256": "REPLACE_WITH_64_CHARACTER_VISIBLE_ACCEPTANCE_SHA256",
+  "acceptance_sha256": "REPLACE_WITH_64_CHARACTER_CANONICAL_BODY_SHA256",
   "risk": "standard",
   "controls": {
     "target_branch": "dev",

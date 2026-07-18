@@ -90,6 +90,13 @@ non-semantic trailing-whitespace normalization. Editing a
 required section or adding visible scope elsewhere therefore changes the
 contract hash and invalidates its reviews.
 
+Required headings count only when they are rendered as top-level Markdown;
+headings hidden in HTML comments or shown inside code are not contract
+sections. Machine contracts and attestations likewise count only as HTML
+comments beginning at column zero outside fenced, indented, or inline code.
+Raw HTML blocks are not permitted in a review contract or attestation; use
+ordinary Markdown or a fenced example instead.
+
 ```text
 <!-- pr-contract:v1
 {
@@ -101,7 +108,7 @@ contract hash and invalidates its reviews.
   "base_ref": "dev",
   "head_ref": "codex/example",
   "implementation_agent": "codex-thread:<thread-id>/root",
-  "acceptance_sha256": "<64-character visible acceptance SHA-256>",
+  "acceptance_sha256": "<64-character canonical PR-body SHA-256>",
   "risk": "standard",
   "controls": {
     "target_branch": "dev",

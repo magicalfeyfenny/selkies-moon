@@ -83,6 +83,13 @@ PLACEHOLDER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 HTML_COMMENT_PATTERN = re.compile(r"<!--(?P<content>.*?)-->", re.DOTALL)
+RAW_HTML_BLOCK_PATTERN = re.compile(
+    r"^ {0,3}(?:"
+    r"</?[A-Za-z][A-Za-z0-9:-]*(?:[ \t]|/?>|\r?$)|"
+    r"<\?|<![A-Za-z]|<!\[CDATA\["
+    r")",
+    re.MULTILINE,
+)
 MARKER_OPEN_PATTERNS = {
     "pr-contract:v1": re.compile(r"<!--\s*pr-contract:v1\b", re.IGNORECASE),
     "agent-review:v1": re.compile(r"<!--\s*agent-review:v1\b", re.IGNORECASE),
@@ -315,10 +322,181 @@ def canonical_contract_sha256(contract: dict[str, object]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _mask_non_newlines(characters: list[str], start: int, end: int) -> None:
+    for index in range(start, end):
+        if characters[index] not in "\r\n":
+            characters[index] = " "
+
+
+def _fence_opening(line: str) -> tuple[str, int] | None:
+    match = re.fullmatch(r" {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)", line)
+    if match is None:
+        return None
+    fence = match.group("fence")
+    if fence[0] == "`" and "`" in match.group("info"):
+        return None
+    return fence[0], len(fence)
+
+
+def _fence_closing(line: str, fence: tuple[str, int]) -> bool:
+    character, minimum_length = fence
+    return bool(
+        re.fullmatch(
+            rf" {{0,3}}{re.escape(character)}{{{minimum_length},}}[ \t]*",
+            line,
+        )
+    )
+
+
+def _leading_indentation_columns(line: str) -> int:
+    columns = 0
+    for character in line:
+        if character == " ":
+            columns += 1
+        elif character == "\t":
+            columns += 4 - (columns % 4)
+        else:
+            break
+    return columns
+
+
+def _mask_markdown_code(text: str) -> str:
+    """Mask Markdown code while preserving byte offsets and HTML comments."""
+    characters = list(text)
+    fence: tuple[str, int] | None = None
+    inline_ticks: int | None = None
+    in_html_comment = False
+    offset = 0
+
+    for raw_line in text.splitlines(keepends=True):
+        line = raw_line.rstrip("\r\n")
+        content_end = offset + len(line)
+
+        if fence is not None:
+            _mask_non_newlines(characters, offset, offset + len(raw_line))
+            if _fence_closing(line, fence):
+                fence = None
+            offset += len(raw_line)
+            continue
+
+        if inline_ticks is None and not in_html_comment:
+            opening = _fence_opening(line)
+            if opening is not None:
+                fence = opening
+                _mask_non_newlines(characters, offset, offset + len(raw_line))
+                offset += len(raw_line)
+                continue
+            if _leading_indentation_columns(line) >= 4:
+                _mask_non_newlines(characters, offset, offset + len(raw_line))
+                offset += len(raw_line)
+                continue
+
+        index = offset
+        while index < content_end:
+            if in_html_comment:
+                closing = text.find("-->", index, content_end)
+                if closing < 0:
+                    index = content_end
+                else:
+                    in_html_comment = False
+                    index = closing + 3
+                continue
+
+            if inline_ticks is not None:
+                if text[index] == "`":
+                    run_end = index + 1
+                    while run_end < content_end and text[run_end] == "`":
+                        run_end += 1
+                    _mask_non_newlines(characters, index, run_end)
+                    if run_end - index == inline_ticks:
+                        inline_ticks = None
+                    index = run_end
+                else:
+                    _mask_non_newlines(characters, index, index + 1)
+                    index += 1
+                continue
+
+            if text.startswith("<!--", index):
+                in_html_comment = True
+                index += 4
+                continue
+            if text[index] == "`":
+                run_end = index + 1
+                while run_end < content_end and text[run_end] == "`":
+                    run_end += 1
+                inline_ticks = run_end - index
+                _mask_non_newlines(characters, index, run_end)
+                index = run_end
+                continue
+            index += 1
+        offset += len(raw_line)
+
+    return "".join(characters)
+
+
+def _html_comment_spans_outside_code(text: str) -> list[tuple[int, int]]:
+    code_masked = _mask_markdown_code(text)
+    spans: list[tuple[int, int]] = []
+    offset = 0
+    while True:
+        start = code_masked.find("<!--", offset)
+        if start < 0:
+            break
+        closing = code_masked.find("-->", start + 4)
+        end = len(code_masked) if closing < 0 else closing + 3
+        spans.append((start, end))
+        if closing < 0:
+            break
+        offset = end
+    return spans
+
+
+def _mask_html_comments_outside_code(text: str) -> str:
+    characters = list(text)
+    for start, end in _html_comment_spans_outside_code(text):
+        _mask_non_newlines(characters, start, end)
+    return "".join(characters)
+
+
+def _reviewable_markdown_structure(text: str) -> str:
+    return _mask_markdown_code(_mask_html_comments_outside_code(text))
+
+
+def _contains_raw_html_block(text: str) -> bool:
+    comments_masked = _mask_html_comments_outside_code(text)
+    return bool(RAW_HTML_BLOCK_PATTERN.search(_mask_markdown_code(comments_masked)))
+
+
+def _is_top_level_position(text: str, position: int) -> bool:
+    line_start = text.rfind("\n", 0, position) + 1
+    prefix = text[line_start:position]
+    prefix_without_comments = HTML_COMMENT_PATTERN.sub("", prefix)
+    return bool(
+        re.fullmatch(r"(?:-->[ \t]*)?", prefix_without_comments)
+    )
+
+
+def _html_comments_outside_code(text: str) -> list[re.Match[str]]:
+    code_masked = _mask_markdown_code(text)
+    return [
+        match
+        for match in HTML_COMMENT_PATTERN.finditer(code_masked)
+        if _is_top_level_position(text, match.start())
+    ]
+
+
+def _top_level_marker_open_count(text: str, marker: str) -> int:
+    code_masked = _mask_markdown_code(text)
+    return sum(
+        _is_top_level_position(text, match.start())
+        for match in MARKER_OPEN_PATTERNS[marker].finditer(code_masked)
+    )
+
+
 def _body_without_machine_contract(body: str) -> str:
     contract_comments = [
         match
-        for match in HTML_COMMENT_PATTERN.finditer(body)
+        for match in _html_comments_outside_code(body)
         if re.match(
             r"^pr-contract:v1\b",
             match.group("content").strip(),
@@ -354,21 +532,25 @@ def canonical_acceptance_sha256(body: str) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _section_content(body: str, section: str) -> str | None:
+def _section_content(body: str, structure: str, section: str) -> str | None:
     pattern = re.compile(
-        rf"^##\s+{re.escape(section)}\s*$\n(?P<content>.*?)(?=^##\s+|\Z)",
+        rf"^##[ \t]+{re.escape(section)}[ \t]*\r?$\n"
+        rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
         re.IGNORECASE | re.MULTILINE | re.DOTALL,
     )
-    match = pattern.search(body)
-    return match.group("content").strip() if match else None
+    match = pattern.search(structure)
+    if match is None:
+        return None
+    start, end = match.span("content")
+    return body[start:end].strip()
 
 
-def _section_heading_count(body: str, section: str) -> int:
+def _section_heading_count(structure: str, section: str) -> int:
     pattern = re.compile(
-        rf"^##\s+{re.escape(section)}\s*$",
+        rf"^##[ \t]+{re.escape(section)}[ \t]*\r?$",
         re.IGNORECASE | re.MULTILINE,
     )
-    return len(pattern.findall(body))
+    return len(pattern.findall(structure))
 
 
 def _marker_payloads(
@@ -377,11 +559,17 @@ def _marker_payloads(
     location: str,
     errors: list[str],
 ) -> list[str]:
-    open_count = len(MARKER_OPEN_PATTERNS[marker].findall(text))
+    if _contains_raw_html_block(text):
+        errors.append(
+            f"{location}: raw HTML blocks cannot contain or accompany machine evidence"
+        )
+        return []
+    open_count = _top_level_marker_open_count(text, marker)
     payloads: list[str] = []
     marker_pattern = re.compile(rf"^{re.escape(marker)}(?:\s+)(?P<payload>.+)$", re.DOTALL)
-    for html_comment in HTML_COMMENT_PATTERN.finditer(text):
-        content = html_comment.group("content").strip()
+    for html_comment in _html_comments_outside_code(text):
+        start, end = html_comment.span("content")
+        content = text[start:end].strip()
         if not re.match(rf"^{re.escape(marker)}\b", content, re.IGNORECASE):
             continue
         match = marker_pattern.fullmatch(content)
@@ -414,7 +602,7 @@ def _parse_contract(body: str, errors: list[str]) -> dict[str, object] | None:
     if len(payloads) != 1:
         errors.append(f"contract: expected exactly one marker, found {len(payloads)}")
         return None
-    if MARKER_OPEN_PATTERNS["agent-review:v1"].search(body):
+    if _top_level_marker_open_count(body, "agent-review:v1"):
         errors.append("review: agent-review:v1 attestations must be PR comments, not PR-body claims")
     return _parse_json_object(payloads[0], "contract", errors)
 
@@ -742,8 +930,9 @@ def validate_pull_request(
     if context is None:
         return errors
     body = str(context["body"])
+    structure = _reviewable_markdown_structure(body)
     for section in REQUIRED_SECTIONS:
-        heading_count = _section_heading_count(body, section)
+        heading_count = _section_heading_count(structure, section)
         if heading_count == 0:
             errors.append(f"body: missing required section '## {section}'")
             continue
@@ -751,9 +940,9 @@ def validate_pull_request(
             errors.append(
                 f"body: expected exactly one '## {section}' section, found {heading_count}"
             )
-        content = _section_content(body, section)
+        content = _section_content(body, structure, section)
         if content is not None:
-            visible = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL).strip()
+            visible = _mask_html_comments_outside_code(content).strip()
             if not visible:
                 errors.append(f"body: section '## {section}' has no reviewable content")
 

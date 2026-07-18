@@ -76,6 +76,21 @@ def _body(contract: dict[str, object], *, raw_contract: str | None = None) -> st
     return "\n\n".join(sections)
 
 
+def _hidden_body(contract: dict[str, object]) -> str:
+    sections = [
+        "## Intent\n\nDeliver one bounded governance change.",
+        "## Scope\n\nAdd a machine-checked contract and review evidence.",
+        "## Non-goals\n\nDo not publish a release.",
+        f"## Risk\n\nDeclared risk: {contract.get('risk', 'unknown')}.",
+        "## Validation\n\nRun the governance unit tests and repository checks.",
+        "## Rollback\n\nRevert the governance commit.",
+        "## Independent agent review\n\nAttestations bind this exact contract.",
+    ]
+    hidden_sections = "\n\n".join(f"<!--\n{section}\n-->" for section in sections)
+    payload = json.dumps(contract, indent=2)
+    return f"{hidden_sections}\n\n<!-- pr-contract:v1\n{payload}\n-->"
+
+
 def _attestation(
     contract: dict[str, object],
     role: str,
@@ -294,6 +309,183 @@ class PullRequestGovernanceTests(unittest.TestCase):
         )
         errors = _validate(event, comments)
         self.assertTrue(any("acceptance_sha256" in error for error in errors), errors)
+
+    def test_hidden_or_fenced_required_sections_and_contract_are_rejected(self) -> None:
+        event, contract, _comments = _fixture()
+        contract["acceptance_sha256"] = "0" * 64
+        hidden_body = _hidden_body(contract)
+        contract["acceptance_sha256"] = governance.canonical_acceptance_sha256(hidden_body)
+        event["pull_request"]["body"] = _hidden_body(contract)  # type: ignore[index]
+        comments = [_comment(_attestation(contract, role)) for role in _roles_for("standard")]
+        errors = _validate(event, comments)
+        self.assertTrue(any("missing required section" in error for error in errors), errors)
+
+        event, contract, comments = _fixture()
+        event["pull_request"]["body"] = f"```markdown\n{_body(contract)}\n```"  # type: ignore[index]
+        errors = _validate(event, comments)
+        self.assertTrue(any("missing required section" in error for error in errors), errors)
+        self.assertTrue(any("missing <!-- pr-contract" in error for error in errors), errors)
+
+    def test_split_headings_are_not_treated_as_markdown_sections(self) -> None:
+        event, contract, _comments = _fixture()
+        contract["acceptance_sha256"] = "0" * 64
+
+        def split_heading_body() -> str:
+            body = _body(contract)
+            for section in governance.REQUIRED_SECTIONS:
+                body = body.replace(f"## {section}", f"##\n{section}")
+            return body
+
+        contract["acceptance_sha256"] = governance.canonical_acceptance_sha256(
+            split_heading_body()
+        )
+        event["pull_request"]["body"] = split_heading_body()  # type: ignore[index]
+        comments = [_comment(_attestation(contract, role)) for role in _roles_for("standard")]
+        errors = _validate(event, comments)
+        self.assertTrue(any("missing required section" in error for error in errors), errors)
+
+    def test_indented_or_blockquoted_machine_markers_are_rejected(self) -> None:
+        event, contract, _comments = _fixture()
+        body = _body(contract)
+        marker = governance.HTML_COMMENT_PATTERN.search(body)
+        self.assertIsNotNone(marker)
+        assert marker is not None
+        payload = json.dumps(contract, separators=(",", ":"))
+
+        indented_marker = f" \t<!-- pr-contract:v1 {payload} -->"
+        event["pull_request"]["body"] = (  # type: ignore[index]
+            body[: marker.start()] + indented_marker + body[marker.end() :]
+        )
+        errors = _validate(event, [])
+        self.assertTrue(any("missing <!-- pr-contract" in error for error in errors), errors)
+
+        blockquoted_marker = (
+            f"> ~~~html\n> <!-- pr-contract:v1 {payload} -->\n> ~~~"
+        )
+        event["pull_request"]["body"] = (  # type: ignore[index]
+            body[: marker.start()] + blockquoted_marker + body[marker.end() :]
+        )
+        errors = _validate(event, [])
+        self.assertTrue(any("missing <!-- pr-contract" in error for error in errors), errors)
+
+        list_marker = f"- machine evidence:\n  <!-- pr-contract:v1 {payload} -->"
+        event["pull_request"]["body"] = (  # type: ignore[index]
+            body[: marker.start()] + list_marker + body[marker.end() :]
+        )
+        errors = _validate(event, [])
+        self.assertTrue(any("missing <!-- pr-contract" in error for error in errors), errors)
+
+        indented_reviews = [
+            {
+                "id": index,
+                "user": {"login": "magicalfeyfenny"},
+                "body": (
+                    " \t<!-- agent-review:v1 "
+                    + json.dumps(_attestation(contract, role), separators=(",", ":"))
+                    + " -->"
+                ),
+            }
+            for index, role in enumerate(_roles_for("standard"))
+        ]
+        event["pull_request"]["body"] = body  # type: ignore[index]
+        errors = _validate(event, indented_reviews)
+        self.assertTrue(any("no agent-review" in error for error in errors), errors)
+
+        blockquoted_reviews = copy.deepcopy(indented_reviews)
+        for comment in blockquoted_reviews:
+            comment["body"] = f"> ~~~html\n> {comment['body'].lstrip()}\n> ~~~"
+        errors = _validate(event, blockquoted_reviews)
+        self.assertTrue(any("no agent-review" in error for error in errors), errors)
+
+        list_reviews = copy.deepcopy(indented_reviews)
+        for comment in list_reviews:
+            comment["body"] = f"- review evidence:\n  {comment['body'].lstrip()}"
+        errors = _validate(event, list_reviews)
+        self.assertTrue(any("no agent-review" in error for error in errors), errors)
+
+    def test_raw_html_blocks_cannot_hide_contract_structure_or_reviews(self) -> None:
+        for tag in ("pre", "div"):
+            with self.subTest(tag=tag):
+                event, contract, _comments = _fixture()
+                contract["acceptance_sha256"] = "0" * 64
+
+                def raw_html_body() -> str:
+                    body = _body(contract)
+                    marker = governance.HTML_COMMENT_PATTERN.search(body)
+                    assert marker is not None
+                    return (
+                        f"<{tag}>\n"
+                        + body[: marker.start()]
+                        + f"</{tag}>\n"
+                        + body[marker.start() :]
+                    )
+
+                contract["acceptance_sha256"] = governance.canonical_acceptance_sha256(
+                    raw_html_body()
+                )
+                event["pull_request"]["body"] = raw_html_body()  # type: ignore[index]
+                comments = [
+                    _comment(_attestation(contract, role))
+                    for role in _roles_for("standard")
+                ]
+                errors = _validate(event, comments)
+                self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+
+        for opening, line_ending in (
+            ("<pre", "\n"),
+            ("<PRE", "\n"),
+            ("<div", "\n"),
+            ("<pre", "\r\n"),
+        ):
+            with self.subTest(unclosed_opening=opening, line_ending=line_ending):
+                event, contract, _comments = _fixture()
+                contract["acceptance_sha256"] = "0" * 64
+
+                def unclosed_raw_html_body() -> str:
+                    return f"{opening}{line_ending}{_body(contract)}"
+
+                contract["acceptance_sha256"] = governance.canonical_acceptance_sha256(
+                    unclosed_raw_html_body()
+                )
+                event["pull_request"]["body"] = unclosed_raw_html_body()  # type: ignore[index]
+                comments = [
+                    _comment(_attestation(contract, role))
+                    for role in _roles_for("standard")
+                ]
+                errors = _validate(event, comments)
+                self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+
+        event, _contract_value, comments = _fixture()
+        for comment in comments:
+            comment["body"] = f"<pre>\n{comment['body']}\n</pre>"
+        errors = _validate(event, comments)
+        self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+
+    def test_fenced_examples_do_not_create_duplicate_sections_or_attestations(self) -> None:
+        event, contract, _comments = _fixture()
+        contract["acceptance_sha256"] = "0" * 64
+
+        def body_with_example() -> str:
+            return (
+                _body(contract)
+                + "\n\n```markdown\n## Scope\n\n<div>Example only.</div>\n"
+                + "<!-- agent-review:v1\n{}\n-->\n```\n\n"
+                + "> ~~~html\n> <!-- agent-review:v1 {} -->\n> ~~~\n\n"
+                + " \t<!-- agent-review:v1 {} -->"
+            )
+
+        contract["acceptance_sha256"] = governance.canonical_acceptance_sha256(
+            body_with_example()
+        )
+        event["pull_request"]["body"] = body_with_example()  # type: ignore[index]
+        comments = [_comment(_attestation(contract, role)) for role in _roles_for("standard")]
+        self.assertEqual(_validate(event, comments), [])
+
+        fenced_comments = copy.deepcopy(comments)
+        for comment in fenced_comments:
+            comment["body"] = f"```html\n{comment['body']}\n```"
+        errors = _validate(event, fenced_comments)
+        self.assertTrue(any("no agent-review" in error for error in errors), errors)
 
     def test_copied_repository_or_pr_number_is_rejected(self) -> None:
         event, contract, comments = _fixture()
