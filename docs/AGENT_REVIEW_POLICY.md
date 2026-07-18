@@ -122,7 +122,11 @@ ordinary Markdown or a fenced example instead.
 
 For `main-promotion`, the contract additionally requires `candidate_sha` equal
 to the PR head and `candidate_tree` equal to that commit's full Git tree ID.
-Those fields are forbidden for other risk classes. Unknown fields, duplicate
+CI checks out that exact head rather than GitHub's synthetic merge ref,
+independently resolves its tree, and requires the current `main` base to be an
+ancestor of the candidate. The tested tree can therefore be promoted unchanged
+even when GitHub records the merge with a merge commit. Those fields are
+forbidden for other risk classes. Unknown fields, duplicate
 JSON keys, duplicate required headings, short SHAs, stale visible-acceptance
 digests, and placeholders are invalid.
 
@@ -164,10 +168,16 @@ hashes, unresolved blocking findings, and nonpassing verdicts fail.
 Only comments from the repository's configured trusted review identity are
 eligible; untrusted commenters can neither approve nor block the check by
 copying a marker. The newest trusted attestation for each role supersedes older
-historical comments, so a corrected commit can be reviewed again without
-erasing the earlier report. A current trusted request-changes or blocking
-finding fails governance even when that review role was optional for the
-computed tier.
+comments only when it binds the same current contract; stale history cannot
+erase a current blocker. A current trusted request-changes or blocking finding
+fails governance even when that review role was optional for the computed tier.
+Trusted discussion comments without an attestation marker are ignored.
+
+Every PR validation checkout is pinned to the event's exact head. Before
+running repository code, the token-bearing context collector also confirms
+that the live base SHA, base ref, head SHA, and head ref still equal the event
+snapshot. A base advance or retarget therefore requires a fresh event and
+fresh bound reviews rather than mixing old and new workflow context.
 
 GitHub does not start a pull-request workflow merely because an issue comment
 was added. After posting the required review comments, the orchestrator reruns

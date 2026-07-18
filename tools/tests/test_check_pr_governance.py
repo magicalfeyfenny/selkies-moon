@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -165,12 +166,14 @@ def _validate(
     paths: list[str] | None = None,
     *,
     candidate_tree: str | None = None,
+    base_is_ancestor: bool | None = None,
 ) -> list[str]:
     return governance.validate_pull_request(
         event,
         paths or ["objects/obj_player/Step_0.gml"],
         comments,
         actual_candidate_tree=candidate_tree,
+        actual_base_is_ancestor=base_is_ancestor,
     )
 
 
@@ -232,7 +235,16 @@ class PullRequestGovernanceTests(unittest.TestCase):
         event, _contract_value, comments = _fixture(
             base_ref="main", head_ref="dev", risk="main-promotion"
         )
-        self.assertEqual(_validate(event, comments, ["README.md"], candidate_tree=TREE_SHA), [])
+        self.assertEqual(
+            _validate(
+                event,
+                comments,
+                ["README.md"],
+                candidate_tree=TREE_SHA,
+                base_is_ancestor=True,
+            ),
+            [],
+        )
 
     def test_main_promotion_rejects_disallowed_or_fork_source(self) -> None:
         event, _contract_value, comments = _fixture(
@@ -241,7 +253,13 @@ class PullRequestGovernanceTests(unittest.TestCase):
             risk="main-promotion",
             head_repository="fork/selkies-moon",
         )
-        errors = _validate(event, comments, ["README.md"], candidate_tree=TREE_SHA)
+        errors = _validate(
+            event,
+            comments,
+            ["README.md"],
+            candidate_tree=TREE_SHA,
+            base_is_ancestor=True,
+        )
         self.assertTrue(any("PRs into main" in error for error in errors), errors)
         self.assertTrue(any("same repository" in error for error in errors), errors)
 
@@ -255,9 +273,28 @@ class PullRequestGovernanceTests(unittest.TestCase):
         contract["candidate_sha"] = "d" * 40
         event["pull_request"]["body"] = _body(contract)  # type: ignore[index]
         comments = [_comment(_attestation(contract, role)) for role in _roles_for("main-promotion")]
-        errors = _validate(event, comments, ["README.md"], candidate_tree="e" * 40)
+        errors = _validate(
+            event,
+            comments,
+            ["README.md"],
+            candidate_tree="e" * 40,
+            base_is_ancestor=True,
+        )
         self.assertTrue(any("candidate_sha" in error for error in errors), errors)
         self.assertTrue(any("candidate_tree" in error for error in errors), errors)
+
+    def test_main_promotion_requires_candidate_to_contain_current_main(self) -> None:
+        event, _contract_value, comments = _fixture(
+            base_ref="main", head_ref="dev", risk="main-promotion"
+        )
+        errors = _validate(
+            event,
+            comments,
+            ["README.md"],
+            candidate_tree=TREE_SHA,
+            base_is_ancestor=False,
+        )
+        self.assertTrue(any("contain the exact current main base" in error for error in errors), errors)
 
     def test_stale_head_base_and_contract_hash_are_rejected(self) -> None:
         event, contract, comments = _fixture()
@@ -301,6 +338,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
             governance.canonical_acceptance_sha256(fenced_before),
             governance.canonical_acceptance_sha256(fenced_after),
         )
+        self.assertFalse(governance._contains_raw_html_block("`<div>example</div>`"))
 
         event, _contract_value, comments = _fixture()
         event["pull_request"]["body"] = event["pull_request"]["body"].replace(  # type: ignore[index]
@@ -309,6 +347,26 @@ class PullRequestGovernanceTests(unittest.TestCase):
         )
         errors = _validate(event, comments)
         self.assertTrue(any("acceptance_sha256" in error for error in errors), errors)
+
+    def test_unmatched_backticks_do_not_hide_later_raw_html(self) -> None:
+        event, contract, _comments = _fixture()
+        contract["acceptance_sha256"] = "0" * 64
+
+        def unmatched_body() -> str:
+            return (
+                _body(contract)
+                + "\n\n`unclosed inline delimiter\n\n"
+                + '<div style="display:none">\nHidden material\n</div>'
+            )
+
+        contract["acceptance_sha256"] = governance.canonical_acceptance_sha256(
+            unmatched_body()
+        )
+        event["pull_request"]["body"] = unmatched_body()  # type: ignore[index]
+        comments = [_comment(_attestation(contract, role)) for role in _roles_for("standard")]
+        self.assertTrue(governance._contains_raw_html_block(unmatched_body()))
+        errors = _validate(event, comments)
+        self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
 
     def test_hidden_or_fenced_required_sections_and_contract_are_rejected(self) -> None:
         event, contract, _comments = _fixture()
@@ -625,12 +683,43 @@ class PullRequestGovernanceTests(unittest.TestCase):
         }
         self.assertEqual(_validate(event, [malformed, *comments]), [])
 
+        unrelated_trusted = {
+            "id": 101,
+            "user": {"login": "magicalfeyfenny"},
+            "body": "<details><summary>Discussion notes</summary>Nothing here is a review.</details>",
+        }
+        self.assertEqual(_validate(event, [unrelated_trusted, *comments]), [])
+
     def test_latest_trusted_attestation_per_role_supersedes_stale_history(self) -> None:
         event, _contract_value, current = _fixture()
         stale = copy.deepcopy(current)
         for comment in stale:
             comment["body"] = comment["body"].replace(HEAD_SHA, "d" * 40)
         self.assertEqual(_validate(event, [*stale, *current]), [])
+        self.assertEqual(_validate(event, [*current, *stale]), [])
+
+        event, contract, required = _fixture(risk="low")
+        blocking = _attestation(contract, "validation")
+        blocking["verdict"] = "request-changes"
+        blocking["blocking_findings"] = ["P1: the current optional review found a blocker."]
+        stale_pass = _attestation(contract, "validation")
+        stale_pass["head_sha"] = "d" * 40
+        errors = _validate(
+            event,
+            [*required, _comment(blocking), _comment(stale_pass)],
+            ["docs/README.md"],
+        )
+        self.assertTrue(any("verdict must be 'pass'" in error for error in errors), errors)
+
+        current_pass = _attestation(contract, "validation")
+        self.assertEqual(
+            _validate(
+                event,
+                [*required, _comment(blocking), _comment(current_pass)],
+                ["docs/README.md"],
+            ),
+            [],
+        )
 
     def test_rename_parser_returns_both_sides_and_deletion_path(self) -> None:
         output = b"R100\0docs/old.md\0.github/workflows/new.yml\0D\0AGENTS.md\0"
@@ -685,6 +774,23 @@ class PullRequestGovernanceTests(unittest.TestCase):
             governance_job.index("- name: Check out complete validation history"),
         )
         self.assertIn("python3 -I -", governance_job)
+        self.assertIn("EXPECTED_BASE_SHA", governance_job)
+        self.assertIn("EXPECTED_BASE_REF", governance_job)
+        self.assertIn("EXPECTED_HEAD_REF", governance_job)
+        self.assertIn('live["base"]["sha"] != expected_base', governance_job)
+        self.assertIn('live["base"]["ref"] != expected_base_ref', governance_job)
+        self.assertIn('live["head"]["ref"] != expected_head_ref', governance_job)
+        self.assertIn("ref: ${{ github.event.pull_request.head.sha }}", governance_job)
+
+        collector = governance_job.split("<<'PY'\n", 1)[1].split("\n          PY", 1)[0]
+        compile(textwrap.dedent(collector), "workflow-context-collector", "exec")
+
+        self.assertGreaterEqual(
+            workflow.count(
+                "ref: ${{ github.event.pull_request.head.sha || github.sha }}"
+            ),
+            2,
+        )
 
 
 if __name__ == "__main__":

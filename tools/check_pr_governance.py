@@ -214,6 +214,30 @@ def _tree_sha(commit_sha: str) -> str:
     return tree_sha
 
 
+def _commit_sha(ref: str) -> str:
+    value = _run_git("rev-parse", "--verify", f"{ref}^{{commit}}")
+    commit_sha = value.decode("ascii", errors="strict").strip()
+    if not SHA_PATTERN.fullmatch(commit_sha):
+        raise RuntimeError("git rev-parse did not return a full SHA-1 commit identity")
+    return commit_sha
+
+
+def _is_ancestor(base_sha: str, head_sha: str) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", base_sha, head_sha],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    detail = result.stderr.decode("utf-8", errors="replace").strip()
+    raise RuntimeError(f"git merge-base --is-ancestor failed: {detail}")
+
+
 def _path_parts(path: str) -> tuple[str, ...]:
     pure = PurePosixPath(path)
     return pure.parts
@@ -360,11 +384,30 @@ def _leading_indentation_columns(line: str) -> int:
     return columns
 
 
+def _matching_backtick_run_end(
+    text: str,
+    start: int,
+    content_end: int,
+    run_length: int,
+) -> int | None:
+    cursor = start
+    while cursor < content_end:
+        opening = text.find("`", cursor, content_end)
+        if opening < 0:
+            return None
+        run_end = opening + 1
+        while run_end < content_end and text[run_end] == "`":
+            run_end += 1
+        if run_end - opening == run_length:
+            return run_end
+        cursor = run_end
+    return None
+
+
 def _mask_markdown_code(text: str) -> str:
     """Mask Markdown code while preserving byte offsets and HTML comments."""
     characters = list(text)
     fence: tuple[str, int] | None = None
-    inline_ticks: int | None = None
     in_html_comment = False
     offset = 0
 
@@ -379,7 +422,7 @@ def _mask_markdown_code(text: str) -> str:
             offset += len(raw_line)
             continue
 
-        if inline_ticks is None and not in_html_comment:
+        if not in_html_comment:
             opening = _fence_opening(line)
             if opening is not None:
                 fence = opening
@@ -402,20 +445,6 @@ def _mask_markdown_code(text: str) -> str:
                     index = closing + 3
                 continue
 
-            if inline_ticks is not None:
-                if text[index] == "`":
-                    run_end = index + 1
-                    while run_end < content_end and text[run_end] == "`":
-                        run_end += 1
-                    _mask_non_newlines(characters, index, run_end)
-                    if run_end - index == inline_ticks:
-                        inline_ticks = None
-                    index = run_end
-                else:
-                    _mask_non_newlines(characters, index, index + 1)
-                    index += 1
-                continue
-
             if text.startswith("<!--", index):
                 in_html_comment = True
                 index += 4
@@ -424,9 +453,17 @@ def _mask_markdown_code(text: str) -> str:
                 run_end = index + 1
                 while run_end < content_end and text[run_end] == "`":
                     run_end += 1
-                inline_ticks = run_end - index
-                _mask_non_newlines(characters, index, run_end)
-                index = run_end
+                closing_end = _matching_backtick_run_end(
+                    text,
+                    run_end,
+                    content_end,
+                    run_end - index,
+                )
+                if closing_end is None:
+                    index = run_end
+                else:
+                    _mask_non_newlines(characters, index, closing_end)
+                    index = closing_end
                 continue
             index += 1
         offset += len(raw_line)
@@ -613,8 +650,7 @@ def _parse_attestations(comments: object, errors: list[str]) -> list[dict[str, o
     if not isinstance(comments, list):
         errors.append("review: comments fixture must be an array")
         return []
-    latest_by_role: dict[str, dict[str, object]] = {}
-    unkeyed_attestations: list[dict[str, object]] = []
+    attestations: list[dict[str, object]] = []
     for index, comment in enumerate(comments):
         if not isinstance(comment, dict):
             errors.append(f"review: comments[{index}] must be an object")
@@ -630,6 +666,8 @@ def _parse_attestations(comments: object, errors: list[str]) -> list[dict[str, o
             # Untrusted comments must be unable to approve or denial-of-service
             # governance merely by copying a machine-readable marker.
             continue
+        if not _top_level_marker_open_count(body, "agent-review:v1"):
+            continue
         payloads = _marker_payloads(body, "agent-review:v1", f"review: comments[{index}]", errors)
         if len(payloads) > 1:
             errors.append(
@@ -642,14 +680,7 @@ def _parse_attestations(comments: object, errors: list[str]) -> list[dict[str, o
                 errors,
             )
             if value is not None:
-                role = value.get("role")
-                if isinstance(role, str):
-                    # GitHub returns issue comments oldest first. A fresh review
-                    # for the same role supersedes its stale historical marker.
-                    latest_by_role[role] = value
-                else:
-                    unkeyed_attestations.append(value)
-    attestations = unkeyed_attestations + list(latest_by_role.values())
+                attestations.append(value)
     if not attestations:
         errors.append("review: no agent-review:v1 attestations found in PR comments")
     return attestations
@@ -753,6 +784,7 @@ def _validate_contract(
     context: dict[str, object],
     changed_paths: Sequence[str],
     actual_candidate_tree: str | None,
+    actual_base_is_ancestor: bool | None,
     errors: list[str],
 ) -> str:
     base_ref = context["base_ref"]
@@ -816,6 +848,12 @@ def _validate_contract(
             errors.append("contract: main-promotion candidate tree was not independently resolved")
         elif candidate_tree != actual_candidate_tree:
             errors.append("contract: candidate_tree does not match the current PR head tree")
+        if actual_base_is_ancestor is None:
+            errors.append("branch: main-promotion base ancestry was not independently resolved")
+        elif not actual_base_is_ancestor:
+            errors.append(
+                "branch: main-promotion head must contain the exact current main base"
+            )
     return str(risk)
 
 
@@ -831,20 +869,19 @@ def _validate_attestations(
         risk,
         REQUIRED_ROLES[minimum_risk(str(context["base_ref"]), [])],
     )
-    seen_roles: set[str] = set()
-    seen_reviewers: set[str] = set()
+    binding_fields = (
+        "repository",
+        "pr_number",
+        "head_sha",
+        "base_sha",
+        "base_ref",
+        "head_ref",
+    )
+    current_by_role: dict[str, dict[str, object]] = {}
+    stale_required_by_role: dict[str, dict[str, object]] = {}
+    current_unkeyed: list[dict[str, object]] = []
     implementation_agent = contract.get("implementation_agent")
-    for index, attestation in enumerate(attestations):
-        label = f"review: attestation[{index}]"
-        role = attestation.get("role")
-        binding_fields = (
-            "repository",
-            "pr_number",
-            "head_sha",
-            "base_sha",
-            "base_ref",
-            "head_ref",
-        )
+    for attestation in attestations:
         binding_is_current = all(
             attestation.get(field) == context[field] for field in binding_fields
         ) and all(
@@ -854,12 +891,29 @@ def _validate_attestations(
                 attestation.get("risk") == risk,
             )
         )
-        role_is_required = isinstance(role, str) and role in required_roles
-        if not role_is_required and not binding_is_current:
-            # Stale optional specialist reviews remain historical evidence but
-            # do not deadlock a newer contract. Every current trusted review is
-            # validated below, including non-required request-changes verdicts.
-            continue
+        role = attestation.get("role")
+        if binding_is_current:
+            if isinstance(role, str):
+                # GitHub issue comments are oldest first. Only a newer review
+                # bound to this same contract supersedes an earlier current
+                # verdict; stale history can never erase a current blocker.
+                current_by_role[role] = attestation
+            else:
+                current_unkeyed.append(attestation)
+        elif isinstance(role, str) and role in required_roles:
+            stale_required_by_role[role] = attestation
+
+    selected_by_role = dict(current_by_role)
+    for role in required_roles - set(selected_by_role):
+        if role in stale_required_by_role:
+            selected_by_role[role] = stale_required_by_role[role]
+    attestations = [*current_unkeyed, *selected_by_role.values()]
+
+    seen_roles: set[str] = set()
+    seen_reviewers: set[str] = set()
+    for index, attestation in enumerate(attestations):
+        label = f"review: attestation[{index}]"
+        role = attestation.get("role")
         _check_exact_keys(attestation, ATTESTATION_FIELDS, label, errors)
         if attestation.get("version") != 1 or type(attestation.get("version")) is not int:
             errors.append(f"{label}: version must be integer 1")
@@ -923,6 +977,7 @@ def validate_pull_request(
     comments: object,
     *,
     actual_candidate_tree: str | None = None,
+    actual_base_is_ancestor: bool | None = None,
 ) -> list[str]:
     """Return deterministic governance findings; an empty list means pass."""
     errors: list[str] = []
@@ -966,7 +1021,14 @@ def validate_pull_request(
     attestations = _parse_attestations(comments, errors)
     if contract is None:
         return errors
-    risk = _validate_contract(contract, context, valid_paths, actual_candidate_tree, errors)
+    risk = _validate_contract(
+        contract,
+        context,
+        valid_paths,
+        actual_candidate_tree,
+        actual_base_is_ancestor,
+        errors,
+    )
     _validate_attestations(attestations, contract, context, risk, errors)
     return errors
 
@@ -999,12 +1061,22 @@ def main() -> int:
         base = pull_request["base"]
         head = pull_request["head"]
         changed_paths = _changed_paths(base["sha"], head["sha"])
-        candidate_tree = _tree_sha(head["sha"]) if base["ref"] == "main" else None
+        checkout_sha = _commit_sha("HEAD")
+        if checkout_sha != head["sha"]:
+            raise RuntimeError(
+                "checked-out validation commit does not match the current PR head"
+            )
+        is_main_promotion = base["ref"] == "main"
+        candidate_tree = _tree_sha(checkout_sha) if is_main_promotion else None
+        base_is_ancestor = (
+            _is_ancestor(base["sha"], checkout_sha) if is_main_promotion else None
+        )
         errors = validate_pull_request(
             event,
             changed_paths,
             comments,
             actual_candidate_tree=candidate_tree,
+            actual_base_is_ancestor=base_is_ancestor,
         )
     except (KeyError, OSError, RuntimeError, UnicodeError, json.JSONDecodeError, DuplicateKeyError) as error:
         print(f"PR governance could not run: {error}", file=sys.stderr)

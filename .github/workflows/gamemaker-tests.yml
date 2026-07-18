@@ -36,6 +36,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Reject repository and package debris
         shell: bash
@@ -77,7 +78,10 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPECTED_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -98,7 +102,10 @@ jobs:
             "$comment_pages" \
             "$review_event" \
             "$review_comments" \
+            "$EXPECTED_BASE_SHA" \
+            "$EXPECTED_BASE_REF" \
             "$EXPECTED_HEAD_SHA" \
+            "$EXPECTED_HEAD_REF" \
             "$REPOSITORY" \
             "$PR_NUMBER" <<'PY'
           import json
@@ -111,7 +118,10 @@ jobs:
               pages_path,
               event_out,
               comments_out,
+              expected_base,
+              expected_base_ref,
               expected_head,
+              expected_head_ref,
               expected_repository,
               expected_number,
           ) = sys.argv[1:]
@@ -123,10 +133,22 @@ jobs:
               raise SystemExit("event repository does not match the trusted workflow context")
           if live["number"] != int(expected_number):
               raise SystemExit("live PR number does not match the trusted workflow context")
+          if live["base"]["sha"] != expected_base:
+              raise SystemExit(
+                  "PR base changed after this workflow event; a fresh event and reviews are required"
+              )
+          if live["base"]["ref"] != expected_base_ref:
+              raise SystemExit(
+                  "PR target changed after this workflow event; a fresh event and reviews are required"
+              )
           if live["head"]["sha"] != expected_head:
               raise SystemExit(
                   "PR head changed while governance context was being fetched; "
                   "the synchronize event must run against the new head"
+              )
+          if live["head"]["ref"] != expected_head_ref:
+              raise SystemExit(
+                  "PR source branch changed after this workflow event; a fresh event is required"
               )
 
           event["number"] = live["number"]
@@ -145,6 +167,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Validate current agent review attestations
         shell: bash
@@ -177,6 +200,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Hydrate registered GameMaker runtime LFS assets
         shell: pwsh
