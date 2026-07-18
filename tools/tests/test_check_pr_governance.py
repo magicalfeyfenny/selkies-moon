@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 import textwrap
 import unittest
@@ -176,6 +177,31 @@ def _validate(
         actual_candidate_tree=candidate_tree,
         actual_base_is_ancestor=base_is_ancestor,
     )
+
+
+def _rebind_modified_body(
+    event: dict[str, object],
+    contract: dict[str, object],
+    body: str,
+) -> tuple[dict[str, object], list[dict[str, object]]]:
+    rebound = copy.deepcopy(contract)
+    rebound["acceptance_sha256"] = governance.canonical_acceptance_sha256(body)
+    marker = f"<!-- pr-contract:v1\n{json.dumps(rebound, indent=2)}\n-->"
+    body, replacements = re.subn(
+        r"<!--\s*pr-contract:v1\b.*?-->",
+        marker,
+        body,
+        count=1,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    if replacements != 1:
+        raise AssertionError("test fixture must contain one PR contract")
+    event["pull_request"]["body"] = body  # type: ignore[index]
+    comments = [
+        _comment(_attestation(rebound, role))
+        for role in _roles_for(str(rebound["risk"]))
+    ]
+    return rebound, comments
 
 
 class PullRequestGovernanceTests(unittest.TestCase):
@@ -805,6 +831,83 @@ class PullRequestGovernanceTests(unittest.TestCase):
         event, _contract_value, _comments = _fixture()
         errors = _validate(event, [])
         self.assertTrue(any("no agent-review" in error for error in errors), errors)
+
+    def test_every_required_section_rejects_a_bare_heading_at_eof(self) -> None:
+        for section in governance.REQUIRED_SECTIONS:
+            with self.subTest(section=section):
+                event, contract, _comments = _fixture()
+                body = str(event["pull_request"]["body"])
+                body = body.replace(
+                    f"## {section}\n",
+                    f"## Moved {section}\n",
+                    1,
+                ).rstrip() + f"\n\n## {section}"
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                errors = _validate(event, comments)
+                self.assertTrue(
+                    any(
+                        f"section '## {section}' has no reviewable content" in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+    def test_every_required_section_rejects_placeholder_content(self) -> None:
+        for section in governance.REQUIRED_SECTIONS:
+            with self.subTest(section=section):
+                event, contract, _comments = _fixture()
+                body = str(event["pull_request"]["body"])
+                pattern = re.compile(
+                    rf"(^##[ \t]+{re.escape(section)}[ \t]*\r?\n)"
+                    rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
+                    re.MULTILINE | re.DOTALL,
+                )
+                match = pattern.search(body)
+                self.assertIsNotNone(match)
+                assert match is not None
+                machine_contract = ""
+                if section == "Independent agent review":
+                    contract_match = re.search(
+                        r"<!--\s*pr-contract:v1\b.*?-->",
+                        match.group("content"),
+                        re.DOTALL | re.IGNORECASE,
+                    )
+                    self.assertIsNotNone(contract_match)
+                    assert contract_match is not None
+                    machine_contract = f"\n\n{contract_match.group(0)}"
+                replacement = f"{match.group(1)}\nTODO{machine_contract}\n"
+                body = body[: match.start()] + replacement + body[match.end() :]
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                errors = _validate(event, comments)
+                self.assertTrue(
+                    any(
+                        f"section '## {section}' contains placeholder text" in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+    def test_required_sections_allow_autolinks_and_angle_comparisons(self) -> None:
+        examples = (
+            "See <https://example.com/report> for the hosted log.",
+            "The supported range is x < y > z.",
+        )
+        for content in examples:
+            with self.subTest(content=content):
+                event, contract, _comments = _fixture()
+                body = str(event["pull_request"]["body"])
+                pattern = re.compile(
+                    r"(^##[ \t]+Validation[ \t]*\r?\n)"
+                    r"(?P<content>.*?)(?=^##[ \t]+|\Z)",
+                    re.MULTILINE | re.DOTALL,
+                )
+                match = pattern.search(body)
+                self.assertIsNotNone(match)
+                assert match is not None
+                replacement = f"{match.group(1)}\n{content}\n\n"
+                body = body[: match.start()] + replacement + body[match.end() :]
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertEqual(_validate(event, comments), [])
 
     def test_required_body_sections_cannot_be_duplicated(self) -> None:
         event, _contract_value, comments = _fixture()

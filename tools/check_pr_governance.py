@@ -82,6 +82,11 @@ PLACEHOLDER_PATTERN = re.compile(
     r"<[^>\n]+>|\{\{[^}\n]+\}\})",
     re.IGNORECASE,
 )
+SECTION_PLACEHOLDER_PATTERN = re.compile(
+    r"(?:\b(?:todo|tbd|fixme|placeholder|changeme|replace[-_ ]?me)\b|"
+    r"\{\{[^}\n]+\}\})",
+    re.IGNORECASE,
+)
 HTML_COMMENT_PATTERN = re.compile(r"<!--(?P<content>.*?)-->", re.DOTALL)
 RAW_HTML_BLOCK_PATTERN = re.compile(
     r"^ {0,3}(?:"
@@ -573,7 +578,7 @@ def canonical_acceptance_sha256(body: str) -> str:
 
 def _section_content(body: str, structure: str, section: str) -> str | None:
     pattern = re.compile(
-        rf"^##[ \t]+{re.escape(section)}[ \t]*\r?$\n"
+        rf"^##[ \t]+{re.escape(section)}[ \t]*\r?(?:\n|\Z)"
         rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
         re.IGNORECASE | re.MULTILINE | re.DOTALL,
     )
@@ -999,10 +1004,14 @@ def validate_pull_request(
                 f"body: expected exactly one '## {section}' section, found {heading_count}"
             )
         content = _section_content(body, structure, section)
-        if content is not None:
-            visible = _mask_html_comments_outside_code(content).strip()
-            if not visible:
-                errors.append(f"body: section '## {section}' has no reviewable content")
+        if content is None:
+            errors.append(f"body: section '## {section}' has no reviewable content")
+            continue
+        visible = _mask_html_comments_outside_code(content).strip()
+        if not visible:
+            errors.append(f"body: section '## {section}' has no reviewable content")
+        elif SECTION_PLACEHOLDER_PATTERN.search(_mask_markdown_code(visible)):
+            errors.append(f"body: section '## {section}' contains placeholder text")
 
     paths = list(changed_paths)
     valid_paths: list[str] = []
