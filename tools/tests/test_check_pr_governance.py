@@ -854,43 +854,55 @@ class PullRequestGovernanceTests(unittest.TestCase):
 
     def test_every_required_section_rejects_placeholder_content(self) -> None:
         for section in governance.REQUIRED_SECTIONS:
-            with self.subTest(section=section):
-                event, contract, _comments = _fixture()
-                body = str(event["pull_request"]["body"])
-                pattern = re.compile(
-                    rf"(^##[ \t]+{re.escape(section)}[ \t]*\r?\n)"
-                    rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
-                    re.MULTILINE | re.DOTALL,
-                )
-                match = pattern.search(body)
-                self.assertIsNotNone(match)
-                assert match is not None
-                machine_contract = ""
-                if section == "Independent agent review":
-                    contract_match = re.search(
-                        r"<!--\s*pr-contract:v1\b.*?-->",
-                        match.group("content"),
-                        re.DOTALL | re.IGNORECASE,
+            for placeholder in ("TODO", "_TBD_", "__TODO__"):
+                with self.subTest(section=section, placeholder=placeholder):
+                    self._assert_required_section_rejects_placeholder(
+                        section,
+                        placeholder,
                     )
-                    self.assertIsNotNone(contract_match)
-                    assert contract_match is not None
-                    machine_contract = f"\n\n{contract_match.group(0)}"
-                replacement = f"{match.group(1)}\nTODO{machine_contract}\n"
-                body = body[: match.start()] + replacement + body[match.end() :]
-                _rebound, comments = _rebind_modified_body(event, contract, body)
-                errors = _validate(event, comments)
-                self.assertTrue(
-                    any(
-                        f"section '## {section}' contains placeholder text" in error
-                        for error in errors
-                    ),
-                    errors,
-                )
+
+    def _assert_required_section_rejects_placeholder(
+        self,
+        section: str,
+        placeholder: str,
+    ) -> None:
+        event, contract, _comments = _fixture()
+        body = str(event["pull_request"]["body"])
+        pattern = re.compile(
+            rf"(^##[ \t]+{re.escape(section)}[ \t]*\r?\n)"
+            rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
+            re.MULTILINE | re.DOTALL,
+        )
+        match = pattern.search(body)
+        self.assertIsNotNone(match)
+        assert match is not None
+        machine_contract = ""
+        if section == "Independent agent review":
+            contract_match = re.search(
+                r"<!--\s*pr-contract:v1\b.*?-->",
+                match.group("content"),
+                re.DOTALL | re.IGNORECASE,
+            )
+            self.assertIsNotNone(contract_match)
+            assert contract_match is not None
+            machine_contract = f"\n\n{contract_match.group(0)}"
+        replacement = f"{match.group(1)}\n{placeholder}{machine_contract}\n"
+        body = body[: match.start()] + replacement + body[match.end() :]
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertTrue(
+            any(
+                f"section '## {section}' contains placeholder text" in error
+                for error in errors
+            ),
+            errors,
+        )
 
     def test_required_sections_allow_autolinks_and_angle_comparisons(self) -> None:
         examples = (
             "See <https://example.com/report> for the hosted log.",
             "The supported range is x < y > z.",
+            "The placeholder check rejects a bare TODO marker.",
         )
         for content in examples:
             with self.subTest(content=content):

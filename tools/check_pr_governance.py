@@ -83,7 +83,8 @@ PLACEHOLDER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SECTION_PLACEHOLDER_PATTERN = re.compile(
-    r"(?:\b(?:todo|tbd|fixme|placeholder|changeme|replace[-_ ]?me)\b|"
+    r"(?:(?<![^\W_])(?:todo|tbd|fixme|placeholder|changeme|replace[-_ ]?me)"
+    r"(?![^\W_])|"
     r"\{\{[^}\n]+\}\})",
     re.IGNORECASE,
 )
@@ -717,6 +718,14 @@ def _contains_placeholder(value: object) -> bool:
     return False
 
 
+def _section_is_placeholder_only(value: str) -> bool:
+    reviewable = _mask_markdown_code(value)
+    if not SECTION_PLACEHOLDER_PATTERN.search(reviewable):
+        return False
+    remainder = SECTION_PLACEHOLDER_PATTERN.sub("", reviewable)
+    return not re.sub(r"[\W_]+", "", remainder)
+
+
 def _valid_sha(value: object) -> bool:
     return isinstance(value, str) and bool(SHA_PATTERN.fullmatch(value))
 
@@ -1010,7 +1019,7 @@ def validate_pull_request(
         visible = _mask_html_comments_outside_code(content).strip()
         if not visible:
             errors.append(f"body: section '## {section}' has no reviewable content")
-        elif SECTION_PLACEHOLDER_PATTERN.search(_mask_markdown_code(visible)):
+        elif _section_is_placeholder_only(visible):
             errors.append(f"body: section '## {section}' contains placeholder text")
 
     paths = list(changed_paths)
