@@ -20,6 +20,28 @@ Do not commit ordinary work directly to `main` or `dev`. Push the work branch,
 open a pull request into `dev`, run the required checks, and merge only the
 reviewed scope. Delete the work branch when it is no longer useful.
 
+## Delegated pull-request review
+
+Independent fresh-context agent review may satisfy the review requirement
+without a manual approval click from Fenny. Review depth scales from one agent
+for low-risk documentation to three agents for CI, governance, source-authority,
+or other high-risk changes. Every pull request into `main` requires distinct
+correctness, validation, and release-governance reviews tied to the exact PR
+contract, base commit, and candidate commit. See [Agent Review Policy](AGENT_REVIEW_POLICY.md).
+
+Review readiness and merge authority are separate. An active task that
+authorizes implementing and publishing a bounded change may authorize the
+orchestrator to merge its passing PR into `dev` without another manual review.
+The head must contain the exact current base. After the final attestation, the
+orchestrator reruns the newest exact pull-request-event workflow and re-fetches
+live refs, contract, and comments immediately before merge; a later trusted
+attestation change requires another rerun. Manual-dispatch checks are not merge
+evidence. Automatic invalidation after comment or base mutation is part of
+issue #17's remote-enforcement rollout.
+Advancing `main` still requires an explicit promotion or release request for
+the named frozen candidate. Tagging and publishing binaries are separate
+actions and are not implied by review completion.
+
 ## Releasing from `dev`
 
 1. Select and freeze an exact candidate from `dev`. Update version, credits,
@@ -31,7 +53,8 @@ reviewed scope. Delete the work branch when it is no longer useful.
 3. Promote the candidate's unchanged source tree to `main`. A fast-forward is
    preferred. If branch protection requires a merge commit, verify that its
    tree is identical to the tested candidate; never squash, rebase, or add
-   content during promotion.
+   content during promotion. Complete the required delegated main-promotion
+   reviews against that exact candidate and base before merging.
 4. Create an annotated `vX.Y.Z` tag for the exact source used to build the
    binaries. Record the source identifier, supported platforms, toolchain, and
    artifact checksums in the release notes.

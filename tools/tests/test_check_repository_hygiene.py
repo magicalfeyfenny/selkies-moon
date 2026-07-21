@@ -14,6 +14,17 @@ import check_repository_hygiene as hygiene  # noqa: E402
 
 
 class RepositoryHygieneUnitTests(unittest.TestCase):
+    def test_authoritative_governance_documents_are_required_controls(self) -> None:
+        expected = {
+            "docs/AGENT_REVIEW_POLICY.md",
+            "docs/ARCHITECTURE.md",
+            "docs/ASSET_PIPELINE.md",
+            "docs/BRANCH_AND_RELEASE_POLICY.md",
+            "docs/DEVELOPMENT.md",
+            "docs/GOVERNANCE_HANDOFF.md",
+        }
+        self.assertLessEqual(expected, hygiene.CONTROL_PATHS)
+
     def test_game_maker_trailing_commas_do_not_change_strings(self) -> None:
         source = '{"value":"literal,}","items":[1,2,],}'
         self.assertEqual(

@@ -4,13 +4,23 @@ on:
   pull_request:
     branches:
       - dev
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - ready_for_review
   push:
     branches:
       - dev
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Manual dispatches are diagnostic. Only pull_request runs may publish the
+# stable Required CI merge-evidence name; the final PR-event run is rerun after
+# attestations and immediately before merge.
+
+permissions: {}
 
 concurrency:
   group: gamemaker-unit-tests-${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +29,8 @@ concurrency:
 jobs:
   repository_hygiene:
     name: Repository hygiene
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 5
 
@@ -27,6 +39,8 @@ jobs:
         uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Reject repository and package debris
         shell: bash
@@ -50,17 +64,149 @@ jobs:
             python3 tools/check_repository_hygiene.py
           fi
 
+  pr_governance:
+    name: PR governance
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      # Pull-request event payloads are snapshots. Refresh the mutable body and
+      # review comments before checkout, while no PR-controlled module can be
+      # imported by the token-bearing context collector.
+      - name: Fetch live pull request review context
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          live_pr="$RUNNER_TEMP/live-pr.json"
+          comment_pages="$RUNNER_TEMP/pr-comment-pages.json"
+          review_event="$RUNNER_TEMP/pr-governance-event.json"
+          review_comments="$RUNNER_TEMP/pr-governance-comments.json"
+
+          gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > "$live_pr"
+          gh api --paginate --slurp \
+            "repos/$REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
+            > "$comment_pages"
+
+          python3 -I - \
+            "$GITHUB_EVENT_PATH" \
+            "$live_pr" \
+            "$comment_pages" \
+            "$review_event" \
+            "$review_comments" \
+            "$EXPECTED_BASE_SHA" \
+            "$EXPECTED_BASE_REF" \
+            "$EXPECTED_HEAD_SHA" \
+            "$EXPECTED_HEAD_REF" \
+            "$REPOSITORY" \
+            "$PR_NUMBER" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          (
+              event_path,
+              live_path,
+              pages_path,
+              event_out,
+              comments_out,
+              expected_base,
+              expected_base_ref,
+              expected_head,
+              expected_head_ref,
+              expected_repository,
+              expected_number,
+          ) = sys.argv[1:]
+          event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+          live = json.loads(Path(live_path).read_text(encoding="utf-8"))
+          pages = json.loads(Path(pages_path).read_text(encoding="utf-8"))
+
+          if event["repository"]["full_name"] != expected_repository:
+              raise SystemExit("event repository does not match the trusted workflow context")
+          if live["number"] != int(expected_number):
+              raise SystemExit("live PR number does not match the trusted workflow context")
+          if live["base"]["sha"] != expected_base:
+              raise SystemExit(
+                  "PR base changed after this workflow event; a fresh event and reviews are required"
+              )
+          if live["base"]["ref"] != expected_base_ref:
+              raise SystemExit(
+                  "PR target changed after this workflow event; a fresh event and reviews are required"
+              )
+          if live["head"]["sha"] != expected_head:
+              raise SystemExit(
+                  "PR head changed while governance context was being fetched; "
+                  "the synchronize event must run against the new head"
+              )
+          if live["head"]["ref"] != expected_head_ref:
+              raise SystemExit(
+                  "PR source branch changed after this workflow event; a fresh event is required"
+              )
+
+          event["number"] = live["number"]
+          event["pull_request"] = live
+
+          comments = [comment for page in pages for comment in page]
+          Path(event_out).write_text(json.dumps(event), encoding="utf-8")
+          Path(comments_out).write_text(json.dumps(comments), encoding="utf-8")
+          PY
+
+          echo "PR_GOVERNANCE_EVENT=$review_event" >> "$GITHUB_ENV"
+          echo "PR_GOVERNANCE_COMMENTS=$review_comments" >> "$GITHUB_ENV"
+
+      - name: Check out complete validation history
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Validate current agent review attestations
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${GH_TOKEN:-}" || -n "${GITHUB_TOKEN:-}" ]]; then
+            echo "Refusing to run repository code with a GitHub API token in its environment." >&2
+            exit 1
+          fi
+          python3 tools/check_pr_governance.py \
+            --event "$PR_GOVERNANCE_EVENT" \
+            --comments "$PR_GOVERNANCE_COMMENTS"
+
   gmtl:
     name: GMTL unit tests
-    needs: repository_hygiene
+    needs:
+      - repository_hygiene
+      - pr_governance
+    permissions:
+      contents: read
     runs-on: windows-2022
     timeout-minutes: 30
     # GitHub does not expose repository secrets to pull requests from forks.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      always() &&
+      needs.repository_hygiene.result == 'success' &&
+      (github.event_name != 'pull_request' || needs.pr_governance.result == 'success') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Hydrate registered GameMaker runtime LFS assets
         shell: pwsh
@@ -143,3 +289,55 @@ jobs:
             ${{ steps.build.outputs.log-dir }}
           if-no-files-found: ignore
           retention-days: 14
+
+  required_ci:
+    name: ${{ github.event_name == 'pull_request' && 'Required CI' || 'Non-PR CI (not merge evidence)' }}
+    if: always()
+    needs:
+      - repository_hygiene
+      - pr_governance
+      - gmtl
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every applicable validation job
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          HYGIENE_RESULT: ${{ needs.repository_hygiene.result }}
+          GOVERNANCE_RESULT: ${{ needs.pr_governance.result }}
+          GMTL_RESULT: ${{ needs.gmtl.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+
+          require_result() {
+            local job_name="$1"
+            local actual="$2"
+            local expected="$3"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "::error::$job_name concluded '$actual'; expected '$expected'."
+              failed=1
+            fi
+          }
+
+          require_result "Repository hygiene" "$HYGIENE_RESULT" "success"
+          require_result "GMTL unit tests" "$GMTL_RESULT" "success"
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            require_result "PR governance" "$GOVERNANCE_RESULT" "success"
+          else
+            require_result "PR governance" "$GOVERNANCE_RESULT" "skipped"
+          fi
+
+          if [[ "$IS_FORK_PR" == "true" ]]; then
+            echo "::error::Fork pull requests cannot access ACCESS_KEY, so GMTL cannot be proven. Transfer the exact commit to a maintainer-owned branch before merge."
+            failed=1
+          fi
+
+          if (( failed != 0 )); then
+            exit 1
+          fi
+          echo "All applicable required checks passed."
