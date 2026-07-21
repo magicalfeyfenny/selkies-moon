@@ -90,19 +90,22 @@ non-semantic trailing-whitespace normalization. Editing a
 required section or adding visible scope elsewhere therefore changes the
 contract hash and invalidates its reviews.
 
-Required headings count only when they are rendered as top-level Markdown;
-headings hidden in HTML comments or shown inside code are not contract
-sections. Machine contracts and attestations likewise count only as HTML
-comments beginning at column zero outside fenced, indented, or inline code.
-Raw HTML blocks are not permitted in a review contract or attestation; use
-ordinary Markdown or a fenced example instead.
+Required headings use the exact column-zero form `## Name`, without closing
+hashes, outside comments and code. This deliberately narrow contract grammar is
+more deterministic than accepting every equivalent CommonMark spelling.
+Machine contracts and attestations likewise count only as HTML comments
+beginning at column zero outside fenced, indented, or inline code. Required
+machine comments and ordinary HTML comments are permitted, but comments never
+contribute prose. Other HTML markup or HTML-shaped tags are forbidden except in
+code forms recognized by the gate; use ordinary Markdown or a separate
+top-level fenced example instead.
 
 ```text
 <!-- pr-contract:v1
 {
   "version": 1,
   "repository": "magicalfeyfenny/selkies-moon",
-  "pr_number": 45,
+  "pr_number": 123,
   "head_sha": "<40-character PR head SHA>",
   "base_sha": "<40-character PR base SHA>",
   "base_ref": "dev",
@@ -144,7 +147,7 @@ PR body makes the acceptance contract and reviewer evidence distinct.
 {
   "version": 1,
   "repository": "magicalfeyfenny/selkies-moon",
-  "pr_number": 45,
+  "pr_number": 123,
   "head_sha": "<40-character PR head SHA>",
   "base_sha": "<40-character PR base SHA>",
   "base_ref": "dev",
@@ -168,12 +171,33 @@ minimum risk from the target and both old/new paths of changes, verifies the
 strict contract schema, and requires unique non-implementing agents for every
 role. Copied attestations, stale head or base identifiers, stale contract
 hashes, unresolved blocking findings, and nonpassing verdicts fail.
-Only comments from the repository's configured trusted review identity are
-eligible; untrusted commenters can neither approve nor block the check by
-copying a marker. The newest trusted attestation for each role supersedes older
-comments only when it binds the same current contract; stale history cannot
-erase a current blocker. A current trusted request-changes or blocking finding
-fails governance even when that review role was optional for the computed tier.
+Only comments matching the repository's configured immutable GitHub user ID
+and current expected login are eligible; untrusted commenters and reclaimed
+usernames can neither approve nor block the check by copying a marker. Review
+evidence must contain deterministic plain prose rather than markup padding.
+Only unindented, column-zero prose lines are eligible. A required PR section
+needs at least three ASCII words containing at least 12 ASCII letters or digits;
+each evidence item needs at least four ASCII words containing at least 20 ASCII
+letters or digits. List items, block quotes, headings, indented text, code,
+math, bracket markup, images, task markers, emoji aliases, entities, URLs,
+contextual GitHub references, and full commit IDs do not contribute. A line
+containing bracket, backtick, or dollar markup is ineligible as a whole.
+Examples may accompany evidence on separate lines but cannot replace a plain
+explanatory sentence. HTML-shaped source is forbidden except in code forms
+recognized by the gate; HTML comments are ignored rather than counted. This
+conservative grammar is intentional: it avoids relying on a changing Markdown
+renderer or Unicode database for a merge gate.
+
+The newest trusted attestation for each role supersedes older comments only
+when it binds the same current contract. Newness is ordered by the comment's
+live `updated_at`. GitHub reports that field at whole-second precision, so two
+distinct current comments for the same role tied at the latest timestamp fail
+closed; post or edit one attestation in a later second to resolve the ambiguity.
+Immutable comment ID and API order provide deterministic selection only after
+that safety check. Editing an older pass into a blocker therefore cannot hide
+behind a later-created pass. Stale history cannot erase a current blocker. A
+current trusted request-changes or blocking finding fails governance even when
+that review role was optional for the computed tier.
 Trusted discussion comments without an attestation marker are ignored.
 
 Every PR validation checkout is pinned to the event's exact head. Before

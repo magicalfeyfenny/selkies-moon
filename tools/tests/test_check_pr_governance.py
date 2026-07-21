@@ -24,6 +24,7 @@ HEAD_SHA = "a" * 40
 BASE_SHA = "b" * 40
 TREE_SHA = "c" * 40
 IMPLEMENTATION_AGENT = "/root"
+TRUSTED_REVIEWER_ID = 26424169
 
 
 def _roles_for(risk: str) -> list[str]:
@@ -124,11 +125,14 @@ def _comment(
     *,
     raw: str | None = None,
     author: str = "magicalfeyfenny",
+    author_id: int | None = None,
 ) -> dict[str, object]:
     payload = raw if raw is not None else json.dumps(attestation, indent=2)
+    if author_id is None:
+        author_id = TRUSTED_REVIEWER_ID if author == "magicalfeyfenny" else 999999999
     return {
         "id": 100,
-        "user": {"login": author},
+        "user": {"login": author, "id": author_id},
         "body": f"<!-- agent-review:v1\n{payload}\n-->",
     }
 
@@ -204,6 +208,29 @@ def _rebind_modified_body(
     return rebound, comments
 
 
+def _replace_required_section_content(body: str, section: str, content: str) -> str:
+    pattern = re.compile(
+        rf"(^##[ \t]+{re.escape(section)}[ \t]*\r?\n)"
+        rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    match = pattern.search(body)
+    if match is None:
+        raise AssertionError(f"test fixture is missing section {section!r}")
+    machine_contract = ""
+    if section == "Independent agent review":
+        contract_match = re.search(
+            r"<!--\s*pr-contract:v1\b.*?-->",
+            match.group("content"),
+            re.DOTALL | re.IGNORECASE,
+        )
+        if contract_match is None:
+            raise AssertionError("test fixture is missing the PR contract")
+        machine_contract = f"\n\n{contract_match.group(0)}"
+    replacement = f"{match.group(1)}\n{content}{machine_contract}\n"
+    return body[: match.start()] + replacement + body[match.end() :]
+
+
 class PullRequestGovernanceTests(unittest.TestCase):
     def test_valid_standard_contract_and_two_comment_reviews_pass(self) -> None:
         event, _contract_value, comments = _fixture()
@@ -222,13 +249,18 @@ class PullRequestGovernanceTests(unittest.TestCase):
             "package-lock.json",
             "art/masters/moon.kra",
             "audio/score.logicx/ProjectData",
+            "art/audio_production/sfx_cue_sheets/sfx_install_report.json",
             "Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp",
             "Selkie's Moon ~ until we meet again ~/art/original_character_references/moon.png",
             "Selkie's Moon ~ until we meet again ~/art/character_portraits/PORTRAIT_BRIEFS.md",
             "Selkie's Moon ~ until we meet again ~/art/character_portraits/README.md",
             "Selkie's Moon ~ until we meet again ~/scripts/scr_setup/scr_setup.gml",
             "tools/build_stage3d_runtime_buffers.py",
+            "tools/tests/test_check_repository_hygiene.py",
+            "docs/ARCHITECTURE.md",
             "docs/ASSET_PIPELINE.md",
+            "docs/DEVELOPMENT.md",
+            "docs/GOVERNANCE_HANDOFF.md",
             "art/font_sources/not_jam_old_style/Licence.txt",
             "docs/SECURITY.md",
             "Selkie's Moon ~ until we meet again ~/options/windows/options_windows.yy",
@@ -398,7 +430,18 @@ class PullRequestGovernanceTests(unittest.TestCase):
             governance.canonical_acceptance_sha256(fenced_before),
             governance.canonical_acceptance_sha256(fenced_after),
         )
-        self.assertFalse(governance._contains_raw_html_block("`<div>example</div>`"))
+        self.assertFalse(governance._contains_forbidden_html("`<div>example</div>`"))
+        ordinary_comment = (
+            "<!-- hidden markup never counts -->\n"
+            "Reviewed the complete diff and tests."
+        )
+        self.assertFalse(governance._contains_forbidden_html(ordinary_comment))
+        self.assertTrue(governance._valid_review_evidence_item(ordinary_comment))
+        self.assertFalse(
+            governance._has_substantive_visible_text(
+                "<!-- hidden prose cannot satisfy a section -->"
+            )
+        )
 
         event, _contract_value, comments = _fixture()
         event["pull_request"]["body"] = event["pull_request"]["body"].replace(  # type: ignore[index]
@@ -424,9 +467,43 @@ class PullRequestGovernanceTests(unittest.TestCase):
         )
         event["pull_request"]["body"] = unmatched_body()  # type: ignore[index]
         comments = [_comment(_attestation(contract, role)) for role in _roles_for("standard")]
-        self.assertTrue(governance._contains_raw_html_block(unmatched_body()))
+        self.assertTrue(governance._contains_forbidden_html(unmatched_body()))
         errors = _validate(event, comments)
-        self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+        self.assertTrue(any("HTML-shaped source" in error for error in errors), errors)
+
+    def test_comment_and_escaped_backticks_cannot_hide_duplicate_sections(self) -> None:
+        event, contract, _comments = _fixture()
+        for suffix in (
+            "\n\n<!-- stray ` comment -->\n\n## Scope\nDuplicate rendered scope.\n`tail",
+            "\n\n\\`\n## Scope\nDuplicate rendered scope.\n\\`",
+        ):
+            with self.subTest(suffix=suffix):
+                body = str(event["pull_request"]["body"]) + suffix
+                rebound_event = copy.deepcopy(event)
+                _rebound, comments = _rebind_modified_body(
+                    rebound_event,
+                    contract,
+                    body,
+                )
+                errors = _validate(rebound_event, comments)
+                self.assertTrue(
+                    any("expected exactly one '## Scope'" in error for error in errors),
+                    errors,
+                )
+
+    def test_attestation_comment_backticks_do_not_hide_machine_evidence(self) -> None:
+        event, contract, comments = _fixture()
+        for comment, role in zip(comments, _roles_for("standard")):
+            review = _attestation(contract, role)
+            review["evidence"] = [
+                "`example`\nReviewed the complete diff and tests."
+            ]
+            comment["body"] = (
+                "<!-- agent-review:v1\n"
+                f"{json.dumps(review, indent=2)}\n"
+                "-->"
+            )
+        self.assertEqual(_validate(event, comments), [])
 
     def test_hidden_or_fenced_required_sections_and_contract_are_rejected(self) -> None:
         event, contract, _comments = _fixture()
@@ -443,6 +520,18 @@ class PullRequestGovernanceTests(unittest.TestCase):
         errors = _validate(event, comments)
         self.assertTrue(any("missing required section" in error for error in errors), errors)
         self.assertTrue(any("missing <!-- pr-contract" in error for error in errors), errors)
+
+    def test_machine_markers_must_begin_at_column_zero(self) -> None:
+        for body in (
+            "--><!-- agent-review:v1 {} -->",
+            "<!-- note --><!-- agent-review:v1 {} -->",
+            " <!-- agent-review:v1 {} -->",
+        ):
+            with self.subTest(body=body):
+                self.assertEqual(
+                    governance._top_level_marker_open_count(body, "agent-review:v1"),
+                    0,
+                )
 
     def test_split_headings_are_not_treated_as_markdown_sections(self) -> None:
         event, contract, _comments = _fixture()
@@ -496,7 +585,10 @@ class PullRequestGovernanceTests(unittest.TestCase):
         indented_reviews = [
             {
                 "id": index,
-                "user": {"login": "magicalfeyfenny"},
+                "user": {
+                    "login": "magicalfeyfenny",
+                    "id": TRUSTED_REVIEWER_ID,
+                },
                 "body": (
                     " \t<!-- agent-review:v1 "
                     + json.dumps(_attestation(contract, role), separators=(",", ":"))
@@ -547,7 +639,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     for role in _roles_for("standard")
                 ]
                 errors = _validate(event, comments)
-                self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+                self.assertTrue(any("HTML-shaped source" in error for error in errors), errors)
 
         for opening, line_ending in (
             ("<pre", "\n"),
@@ -571,13 +663,13 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     for role in _roles_for("standard")
                 ]
                 errors = _validate(event, comments)
-                self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+                self.assertTrue(any("HTML-shaped source" in error for error in errors), errors)
 
         event, _contract_value, comments = _fixture()
         for comment in comments:
             comment["body"] = f"<pre>\n{comment['body']}\n</pre>"
         errors = _validate(event, comments)
-        self.assertTrue(any("raw HTML blocks" in error for error in errors), errors)
+        self.assertTrue(any("HTML-shaped source" in error for error in errors), errors)
 
     def test_fenced_examples_do_not_create_duplicate_sections_or_attestations(self) -> None:
         event, contract, _comments = _fixture()
@@ -680,7 +772,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertTrue(any("unknown field" in error for error in errors), errors)
 
         event, contract, comments = _fixture()
-        comments[0]["body"] += comments[1]["body"]
+        comments[0]["body"] += "\n" + comments[1]["body"]
         errors = _validate(event, comments)
         self.assertTrue(any("expected at most one" in error for error in errors), errors)
 
@@ -751,6 +843,27 @@ class PullRequestGovernanceTests(unittest.TestCase):
         errors = _validate(event, untrusted)
         self.assertTrue(any("no agent-review" in error for error in errors), errors)
 
+        claimed_login = [
+            _comment(
+                _attestation(contract, role),
+                author_id=999999999,
+            )
+            for role in _roles_for("standard")
+        ]
+        errors = _validate(event, claimed_login)
+        self.assertTrue(any("no agent-review" in error for error in errors), errors)
+
+        mismatched_login = [
+            _comment(
+                _attestation(contract, role),
+                author="renamed-or-claimed-login",
+                author_id=TRUSTED_REVIEWER_ID,
+            )
+            for role in _roles_for("standard")
+        ]
+        errors = _validate(event, mismatched_login)
+        self.assertTrue(any("no agent-review" in error for error in errors), errors)
+
         malformed = {
             "id": 99,
             "user": {"login": "untrusted-reviewer"},
@@ -760,7 +873,10 @@ class PullRequestGovernanceTests(unittest.TestCase):
 
         unrelated_trusted = {
             "id": 101,
-            "user": {"login": "magicalfeyfenny"},
+            "user": {
+                "login": "magicalfeyfenny",
+                "id": TRUSTED_REVIEWER_ID,
+            },
             "body": "<details><summary>Discussion notes</summary>Nothing here is a review.</details>",
         }
         self.assertEqual(_validate(event, [unrelated_trusted, *comments]), [])
@@ -795,6 +911,68 @@ class PullRequestGovernanceTests(unittest.TestCase):
             ),
             [],
         )
+
+    def test_later_edit_time_supersedes_later_creation_position(self) -> None:
+        event, contract, comments = _fixture()
+        blocking = _attestation(contract, "correctness")
+        blocking["verdict"] = "request-changes"
+        blocking["blocking_findings"] = ["P1: an edited review withdrew its pass."]
+        edited_older = _comment(blocking)
+        edited_older.update(
+            {
+                "id": 90,
+                "created_at": "2026-07-21T10:00:00Z",
+                "updated_at": "2026-07-21T12:00:00Z",
+            }
+        )
+
+        newer_pass = _comment(_attestation(contract, "correctness"))
+        newer_pass.update(
+            {
+                "id": 100,
+                "created_at": "2026-07-21T11:00:00Z",
+                "updated_at": "2026-07-21T11:00:00Z",
+            }
+        )
+        validation = next(
+            comment
+            for comment, role in zip(comments, _roles_for("standard"))
+            if role == "validation"
+        )
+
+        errors = _validate(event, [edited_older, newer_pass, validation])
+        self.assertTrue(any("verdict must be 'pass'" in error for error in errors), errors)
+        self.assertTrue(any("blocking_findings must be empty" in error for error in errors), errors)
+
+    def test_equal_second_same_role_attestations_fail_closed(self) -> None:
+        event, contract, comments = _fixture()
+        blocking = _attestation(contract, "correctness")
+        blocking["verdict"] = "request-changes"
+        blocking["blocking_findings"] = ["P1: same-second edit withdrew approval."]
+        edited_older = _comment(blocking)
+        edited_older.update(
+            {
+                "id": 90,
+                "created_at": "2026-07-21T10:00:00Z",
+                "updated_at": "2026-07-21T12:00:00Z",
+            }
+        )
+        newer_pass = _comment(_attestation(contract, "correctness"))
+        newer_pass.update(
+            {
+                "id": 100,
+                "created_at": "2026-07-21T11:00:00Z",
+                "updated_at": "2026-07-21T12:00:00Z",
+            }
+        )
+        validation = next(
+            comment
+            for comment, role in zip(comments, _roles_for("standard"))
+            if role == "validation"
+        )
+
+        errors = _validate(event, [edited_older, newer_pass, validation])
+        self.assertTrue(any("share the latest whole-second updated_at" in error for error in errors), errors)
 
     def test_rename_parser_returns_both_sides_and_deletion_path(self) -> None:
         output = b"R100\0docs/old.md\0.github/workflows/new.yml\0D\0AGENTS.md\0"
@@ -868,26 +1046,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
     ) -> None:
         event, contract, _comments = _fixture()
         body = str(event["pull_request"]["body"])
-        pattern = re.compile(
-            rf"(^##[ \t]+{re.escape(section)}[ \t]*\r?\n)"
-            rf"(?P<content>.*?)(?=^##[ \t]+|\Z)",
-            re.MULTILINE | re.DOTALL,
-        )
-        match = pattern.search(body)
-        self.assertIsNotNone(match)
-        assert match is not None
-        machine_contract = ""
-        if section == "Independent agent review":
-            contract_match = re.search(
-                r"<!--\s*pr-contract:v1\b.*?-->",
-                match.group("content"),
-                re.DOTALL | re.IGNORECASE,
-            )
-            self.assertIsNotNone(contract_match)
-            assert contract_match is not None
-            machine_contract = f"\n\n{contract_match.group(0)}"
-        replacement = f"{match.group(1)}\n{placeholder}{machine_contract}\n"
-        body = body[: match.start()] + replacement + body[match.end() :]
+        body = _replace_required_section_content(body, section, placeholder)
         _rebound, comments = _rebind_modified_body(event, contract, body)
         errors = _validate(event, comments)
         self.assertTrue(
@@ -920,6 +1079,451 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 body = body[: match.start()] + replacement + body[match.end() :]
                 _rebound, comments = _rebind_modified_body(event, contract, body)
                 self.assertEqual(_validate(event, comments), [])
+
+    def test_every_required_section_rejects_visually_blank_content(self) -> None:
+        for section in governance.REQUIRED_SECTIONS:
+            for content in (
+                "&nbsp;",
+                "...",
+                "- [ ]",
+                "\u200b",
+                "A" + "." * 19,
+                "A" + "\ufe0f" * 19,
+                "A" + "\u0301" * 19,
+                "![twenty character label](https://example.com/image.png)",
+                ":abcdefghijklmnopqrst:",
+                "```text\nabcdefghijklmnopqrst\n```",
+            ):
+                with self.subTest(section=section, content=content):
+                    event, contract, _comments = _fixture()
+                    body = _replace_required_section_content(
+                        str(event["pull_request"]["body"]),
+                        section,
+                        content,
+                    )
+                    _rebound, comments = _rebind_modified_body(event, contract, body)
+                    errors = _validate(event, comments)
+                    self.assertTrue(
+                        any(
+                            f"section '## {section}' has no reviewable content" in error
+                            for error in errors
+                        ),
+                        errors,
+                    )
+
+    def test_production_main_rejects_blank_sections_and_review_evidence(self) -> None:
+        event, contract, _comments = _fixture(risk="high")
+        body = str(event["pull_request"]["body"])
+        for section in governance.REQUIRED_SECTIONS:
+            body = _replace_required_section_content(body, section, "&nbsp;")
+        rebound, _comments = _rebind_modified_body(event, contract, body)
+        comments = []
+        for role in _roles_for("high"):
+            review = _attestation(rebound, role)
+            review["evidence"] = ["&nbsp;&nbsp;&nbsp;&nbsp;"]
+            comments.append(_comment(review))
+
+        errors = _validate(event, comments, ["AGENTS.md"])
+        self.assertEqual(
+            sum("four plain ASCII words" in error for error in errors),
+            3,
+            errors,
+        )
+
+        with (
+            mock.patch.object(governance, "_load_json_file", side_effect=[event, comments]),
+            mock.patch.object(governance, "_changed_paths", return_value=["AGENTS.md"]),
+            mock.patch.object(governance, "_commit_sha", return_value=HEAD_SHA),
+            mock.patch.object(governance, "_is_ancestor", return_value=True),
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "check_pr_governance.py",
+                    "--event",
+                    "event.json",
+                    "--comments",
+                    "comments.json",
+                ],
+            ),
+        ):
+            self.assertEqual(governance.main(), 1)
+
+    def test_production_main_rejects_link_definition_only_evidence(self) -> None:
+        event, contract, _comments = _fixture(risk="high")
+        body = str(event["pull_request"]["body"])
+        definition_forms = (
+            "[hidden-section-0]: https://example.com/section-0",
+            "> [hidden-section-1]: https://example.com/section-1",
+            "- [hidden-section-2]: https://example.com/section-2",
+            "1. [hidden-section-3]: https://example.com/section-3",
+            "> - [hidden-section-4]: https://example.com/section-4",
+            "[hidden-section-5]:\nhttps://example.com/section-5",
+            "> [hidden-section-6]:\n> https://example.com/section-6",
+        )
+        for index, section in enumerate(governance.REQUIRED_SECTIONS):
+            body = _replace_required_section_content(
+                body,
+                section,
+                definition_forms[index],
+            )
+        rebound, _comments = _rebind_modified_body(event, contract, body)
+        comments = []
+        evidence_forms = (
+            "- [hidden-review-0]: https://example.com/review-0",
+            "[hidden-review-1]:\nhttps://example.com/review-1",
+            "[\nhidden-review-2\n]: https://example.com/review-2",
+        )
+        for index, role in enumerate(_roles_for("high")):
+            review = _attestation(rebound, role)
+            review["evidence"] = [evidence_forms[index]]
+            comments.append(_comment(review))
+
+        errors = _validate(event, comments, ["AGENTS.md"])
+        self.assertEqual(
+            sum("has no reviewable content" in error for error in errors),
+            len(governance.REQUIRED_SECTIONS),
+            errors,
+        )
+        self.assertEqual(
+            sum("four plain ASCII words" in error for error in errors),
+            3,
+            errors,
+        )
+        self.assertFalse(
+            governance._has_substantive_visible_text(
+                "```text\n[visible-example]: https://example.com/report\n```"
+            )
+        )
+
+        with (
+            mock.patch.object(governance, "_load_json_file", side_effect=[event, comments]),
+            mock.patch.object(governance, "_changed_paths", return_value=["AGENTS.md"]),
+            mock.patch.object(governance, "_commit_sha", return_value=HEAD_SHA),
+            mock.patch.object(governance, "_is_ancestor", return_value=True),
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "check_pr_governance.py",
+                    "--event",
+                    "event.json",
+                    "--comments",
+                    "comments.json",
+                ],
+            ),
+        ):
+            self.assertEqual(governance.main(), 1)
+
+    def test_plain_prose_gate_rejects_markup_padding(self) -> None:
+        definition_forms = (
+            "[hidden]: https://example.com/report",
+            "> [hidden]: https://example.com/report",
+            "- [hidden]: https://example.com/report",
+            "1. [hidden]: https://example.com/report",
+            "> - 1. [hidden]: https://example.com/report",
+            "[hidden]:\nhttps://example.com/report",
+            "> [hidden]:\n> https://example.com/report",
+            "- [hidden]:\n  https://example.com/report",
+            "[\nhidden\n]: https://example.com/report",
+            "[hidden]: https://example.com/a(b(c(d(e))))",
+            "[hidden]:\n    https://example.com/report",
+            "[hidden]: https://example.com/report\n    \"hidden title text\"",
+            "-\n    [hidden]: https://example.com/report",
+            "-\n    -\n        [hidden]: https://example.com/report",
+            (
+                "-\n    -\n        [hidden]:\n"
+                "            https://example.com/report"
+            ),
+        )
+        for value in definition_forms:
+            with self.subTest(definition=value):
+                self.assertFalse(governance._valid_review_evidence_item(value))
+
+        plain_prose = (
+            "Reviewed the complete diff and all tests.",
+            "Verified expected behavior across every changed governance path.",
+            "Confirmed the placeholder rule rejects unfinished review text.",
+        )
+        for value in plain_prose:
+            with self.subTest(plain_prose=value):
+                self.assertTrue(governance._valid_review_evidence_item(value))
+
+        padding = (
+            "A" + "." * 19,
+            "A" + "\ufe0f" * 19,
+            "A" + "\u0301" * 19,
+            "![twenty character label](https://example.com/image.png)",
+            "![abcdefghijklmnopqrst [x]](https://example.com/image.png)",
+            "![abcdefghijklmnopqrst \\]](https://example.com/image.png)",
+            "![\nabcdefghijklmnopqrst\n](https://example.com/image.png)",
+            (
+                "![abcdefghijklmnopqrst\\" +
+                "\nmore](https://example.com/image.png)"
+            ),
+            "![abcdefghijklmnopqrst](https://example.com/a(b(c(d(e)))))",
+            "![abcdefghijklmnopqrst](https://example.com/a\u00a0b)",
+            "![abcdefghijklmnopqrst](https://example.com/a\u2003b)",
+            "![abcdefghijklmnopqrst](https://example.com/a\u202fb)",
+            "![abcdefghijklmnopqrst](https://example.com/a\u3000b)",
+            "![abcdefghijklmnopqrst](/asset.png )",
+            "![abcdefghijklmnopqrst](/asset.png\t)",
+            "![abcdefghijklmnopqrst](/asset.png\n)",
+            "![abcdefghijklmnopqrst](</asset.png> )",
+            "![abcdefghijklmnopqrst][ref]\n\n[ref]: /asset.png",
+            (
+                "![abcdefghijklmnopqrst][re\nf]\n\n"
+                "[re\nf]: /asset.png"
+            ),
+            (
+                "![abcdefghijklmnopqrst][]\n\n"
+                "[abcdefghijklmnopqrst]: /asset.png"
+            ),
+            "[O[K]](https://example.com/a-very-long-destination)",
+            "[x [y](/abcdefghijklmnopqrst)]",
+            "![x ![abcdefghijklmnopqrst](/asset.png)]",
+            "[^abcdefghijklmnopqrst]\n\n[^abcdefghijklmnopqrst]: &nbsp;",
+            '<span title="> hidden attribute text"></span>',
+            "x <details><summary>x</summary>abcdefghijklmnopqrst</details>",
+            "x <video>\nabcdefghijklmnopqrst\nx </video>",
+            "> - x <span>abcdefghijklmnopqrst</span>",
+            "> <pre\nReviewed complete diff and validation evidence.",
+            "- <div\n\nReviewed complete diff and validation evidence.",
+            "> <!DOCTYPE\n\nReviewed complete diff and validation evidence.",
+            "- <?target\n\nReviewed complete diff and validation evidence.",
+            "> <![CDATA[\n\nReviewed complete diff and validation evidence.",
+            "````abcdefghijkl\n````",
+            "````abcdefghijkl````",
+            "````\nabcdefghijklmnopqrst\n````",
+            "123456789. ```text\nabcdefghijklmnopqrst\n123456789. ```",
+            "-     abcdefghijklmnopqrst",
+            "1.     abcdefghijklmnopqrst",
+            "> -     abcdefghijklmnopqrst",
+            "****abcdefghijkl****",
+            r"$\phantom{abcdefghijklmnopqrst}$",
+            r"$$\phantom{abcdefghijklmnopqrst}$$",
+            "<!DOCTYPE abcdefghijklmnopqrst>",
+            "<?abcdefghijklmnopqrst?>",
+            "<![CDATA[abcdefghijklmnopqrst]]>",
+            "> <!DOCTYPE abcdefghijklmnopqrst>",
+            "- <!DOCTYPE abcdefghijklmnopqrst>",
+            "> <?abcdefghijklmnopqrst?>",
+            "- <![CDATA[abcdefghijklmnopqrst]]>",
+            "\n".join("- [ ]" for _ in range(20)),
+            "\n".join("- [x]" for _ in range(20)),
+            "\r\n".join("- [x]" for _ in range(21)),
+            "\r".join("- [x]" for _ in range(20)),
+            "\n".join("- [x]\u00a0" for _ in range(20)),
+            "\n".join("- [x]\u2003" for _ in range(20)),
+            ":abcdefghijklmnopqrst:",
+            " ".join("1\ufe0f\u20e3" for _ in range(20)),
+            "\u115f" * 20,
+            "\u1160" * 20,
+            "\u3164" * 20,
+            "\uffa0" * 20,
+            "2d0d8f1fef81f5fa2c6e5121c76f7cdea1d1154c",
+            "https://github.com/magicalfeyfenny/selkies-moon/issues/17",
+            "magicalfeyfenny/selkies-moon#17",
+            "TODO TODO TODO TODO TODO",
+            "```text\n[visible-example]: https://example.com/report\n```",
+            "`[visible-example]: https://example.com/report`",
+            "    [visible-code]: https://example.com/report",
+            "\t[visible-code]: https://example.com/report",
+            ">     [visible-code]: https://example.com/report",
+            (
+                "> ```text\n"
+                "> [visible-code]: https://example.com/report\n"
+                "> ```"
+            ),
+            (
+                "> ```text\n"
+                "> &nbsp; remains literal inside code\n"
+                "> ```"
+            ),
+        )
+        for value in padding:
+            with self.subTest(padding=value):
+                self.assertFalse(governance._valid_review_evidence_item(value))
+
+    def test_plain_prose_gate_boundaries_and_eligible_lines(self) -> None:
+        self.assertTrue(governance._has_substantive_visible_text("four five tree"))
+        self.assertFalse(governance._has_substantive_visible_text("governance complete"))
+        self.assertFalse(governance._has_substantive_visible_text("four five six"))
+
+        self.assertTrue(
+            governance._valid_review_evidence_item("alpha bravo delta gamma")
+        )
+        self.assertFalse(
+            governance._valid_review_evidence_item("governance review completed")
+        )
+        self.assertFalse(
+            governance._valid_review_evidence_item("alpha bravo delta four")
+        )
+
+        for content in (
+            "> Reviewed the complete diff and tests.",
+            "- Reviewed the complete diff and tests.",
+            "    Reviewed the complete diff and tests.",
+            "`example` Reviewed the complete diff and tests.",
+            "[example] Reviewed the complete diff and tests.",
+        ):
+            with self.subTest(ineligible_line=content):
+                self.assertFalse(governance._valid_review_evidence_item(content))
+
+    def test_markup_examples_can_accompany_separate_plain_prose(self) -> None:
+        examples = (
+            "```text\nnot review prose\n```\nReviewed the complete diff and tests.",
+            "> ```\n> not review prose\n> ```\nReviewed the complete diff and tests.",
+            "![diagram](/asset.png)\nReviewed the complete diff and tests.",
+            "- [x] example\nReviewed the complete diff and tests.",
+            ":white_check_mark:\nReviewed the complete diff and tests.",
+        )
+        for content in examples:
+            with self.subTest(content=content):
+                self.assertTrue(governance._valid_review_evidence_item(content))
+
+    def test_production_main_rejects_code_only_sections_and_evidence(self) -> None:
+        event, contract, _comments = _fixture(risk="high")
+        body = str(event["pull_request"]["body"])
+        for index, section in enumerate(governance.REQUIRED_SECTIONS):
+            indentation = "    " if index % 2 == 0 else "\t"
+            body = _replace_required_section_content(
+                body,
+                section,
+                f"{indentation}[visible-code-{index}]: https://example.com/report-{index}",
+            )
+        rebound, _comments = _rebind_modified_body(event, contract, body)
+        comments = []
+        for index, role in enumerate(_roles_for("high")):
+            review = _attestation(rebound, role)
+            review["evidence"] = [
+                f"    [visible-review-{index}]: https://example.com/report-{index}"
+            ]
+            comments.append(_comment(review))
+
+        errors = _validate(event, comments, ["AGENTS.md"])
+        self.assertEqual(
+            sum("has no reviewable content" in error for error in errors),
+            len(governance.REQUIRED_SECTIONS),
+            errors,
+        )
+        self.assertEqual(
+            sum("four plain ASCII words" in error for error in errors),
+            3,
+            errors,
+        )
+        with (
+            mock.patch.object(governance, "_load_json_file", side_effect=[event, comments]),
+            mock.patch.object(governance, "_changed_paths", return_value=["AGENTS.md"]),
+            mock.patch.object(governance, "_commit_sha", return_value=HEAD_SHA),
+            mock.patch.object(governance, "_is_ancestor", return_value=True),
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "check_pr_governance.py",
+                    "--event",
+                    "event.json",
+                    "--comments",
+                    "comments.json",
+                ],
+            ),
+        ):
+            self.assertEqual(governance.main(), 1)
+
+    def test_production_main_rejects_composed_non_prose_governance(self) -> None:
+        event, contract, _comments = _fixture(risk="high")
+        section_padding = (
+            "-     abcdefghijklmnopqrst",
+            "![abcdefghijklmnopqrst](/asset.png )",
+            "\r\n".join("- [x]" for _ in range(21)),
+            r"$\phantom{abcdefghijklmnopqrst}$",
+            "2d0d8f1fef81f5fa2c6e5121c76f7cdea1d1154c",
+            "[abcdefghijklmnopqrst]: /asset.png",
+            "```text\nabcdefghijklmnopqrst\n```",
+        )
+        body = str(event["pull_request"]["body"])
+        for section, padding in zip(governance.REQUIRED_SECTIONS, section_padding):
+            body = _replace_required_section_content(body, section, padding)
+        rebound, _comments = _rebind_modified_body(event, contract, body)
+
+        evidence_padding = (
+            "-     abcdefghijklmnopqrst",
+            "![abcdefghijklmnopqrst](/asset.png )",
+            "\r\n".join("- [x]" for _ in range(21)),
+        )
+        comments = []
+        for role, padding in zip(_roles_for("high"), evidence_padding):
+            review = _attestation(rebound, role)
+            review["evidence"] = [padding]
+            comments.append(_comment(review))
+
+        errors = _validate(event, comments, ["AGENTS.md"])
+        self.assertEqual(
+            sum("has no reviewable content" in error for error in errors),
+            len(governance.REQUIRED_SECTIONS),
+            errors,
+        )
+        self.assertEqual(
+            sum("four plain ASCII words" in error for error in errors),
+            3,
+            errors,
+        )
+        with (
+            mock.patch.object(governance, "_load_json_file", side_effect=[event, comments]),
+            mock.patch.object(governance, "_changed_paths", return_value=["AGENTS.md"]),
+            mock.patch.object(governance, "_commit_sha", return_value=HEAD_SHA),
+            mock.patch.object(governance, "_is_ancestor", return_value=True),
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "check_pr_governance.py",
+                    "--event",
+                    "event.json",
+                    "--comments",
+                    "comments.json",
+                ],
+            ),
+        ):
+            self.assertEqual(governance.main(), 1)
+
+    def test_review_evidence_allows_autolinks_and_angle_comparisons(self) -> None:
+        examples = (
+            "Reviewed the hosted log at <https://example.com/report> completely.",
+            "Verified that the supported range x < y > z remains unchanged.",
+            "Confirmed the placeholder check rejects a bare TODO marker.",
+        )
+        for content in examples:
+            with self.subTest(content=content):
+                event, contract, comments = _fixture()
+                for comment, role in zip(comments, _roles_for("standard")):
+                    review = _attestation(contract, role)
+                    review["evidence"] = [content]
+                    comment["body"] = (
+                        "<!-- agent-review:v1\n"
+                        f"{json.dumps(review, indent=2)}\n"
+                        "-->"
+                    )
+                self.assertEqual(_validate(event, comments), [])
+
+    def test_required_sections_reject_raw_html_blocks(self) -> None:
+        event, contract, _comments = _fixture()
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Validation",
+            "<details>\n<summary>&nbsp;</summary>\n"
+            "abcdefghijklmnopqrst\n</details>",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertTrue(
+            any(
+                "section '## Validation' contains forbidden HTML-shaped source" in error
+                for error in errors
+            ),
+            errors,
+        )
 
     def test_required_body_sections_cannot_be_duplicated(self) -> None:
         event, _contract_value, comments = _fixture()

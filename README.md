@@ -70,6 +70,7 @@ Open the .yyp file and run by pressing F5 or clicking the play button in the top
 
 ## Documentation
 
+- [Governance handoff](docs/GOVERNANCE_HANDOFF.md): authority map, current governance state, scoped ownership, verification, and open enforcement work.
 - [Architecture](docs/ARCHITECTURE.md): runtime ownership, modules, object inheritance, and extension rules.
 - [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and repository/asset validation.
 - [Asset pipeline](docs/ASSET_PIPELINE.md): canonical BLEND, KRA, and Logic sources plus runtime and interchange derivatives.

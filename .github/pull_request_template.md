@@ -1,3 +1,9 @@
+<!--
+Under every required heading, write at least one separate, unindented
+plain-prose sentence. Lists, checkboxes, quotes, links, and examples may follow
+but do not satisfy the evidence gate by themselves.
+-->
+
 ## Intent
 
 <!-- State the outcome, root cause, why it is needed, and the issue/acceptance criteria. -->
@@ -38,6 +44,8 @@ merge evidence.
 
 <!--
 Replace every placeholder after the PR number and exact base/head are known.
+Also set the contextual defaults (`base_ref`, `risk`, `controls.target_branch`,
+and the three applicability controls) to this PR's actual target and scope.
 Fresh reviewers post agent-review:v1 attestations as separate PR comments.
 Any commit, base advance, target change, or semantic contract edit requires new reviews.
 Only the final current pull-request-event run named Required CI counts as merge evidence.

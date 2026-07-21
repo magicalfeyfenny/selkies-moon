@@ -68,6 +68,11 @@ ATTESTATION_FIELDS = {
     "blocking_findings",
     "evidence",
 }
+INTERNAL_ATTESTATION_FIELDS = {
+    "__comment_id",
+    "__comment_order",
+    "__comment_updated_at",
+}
 CONTROL_VALUES = {
     "lfs": {"not-applicable", "verified"},
     "generated_ownership": {"not-applicable", "verified"},
@@ -88,6 +93,47 @@ SECTION_PLACEHOLDER_PATTERN = re.compile(
     r"\{\{[^}\n]+\}\})",
     re.IGNORECASE,
 )
+MARKDOWN_ENTITY_PATTERN = re.compile(
+    r"&(?:#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6}|[A-Za-z][A-Za-z0-9]+);"
+)
+GITHUB_EMOJI_ALIAS_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_]):[A-Za-z0-9_+-]+:(?![A-Za-z0-9_])"
+)
+GITHUB_CONTEXT_REFERENCE_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_.-])(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#[0-9]+\b"
+)
+URL_PATTERN = re.compile(r"(?:https?://|mailto:)[^\s<>]+", re.IGNORECASE)
+FULL_SHA_PATTERN = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{40}(?![0-9A-Fa-f])")
+KEYCAP_SEQUENCE_PATTERN = re.compile(r"[#*0-9]\ufe0f?\u20e3")
+PLAIN_PROSE_TOKEN_PATTERN = re.compile(
+    r"[A-Za-z][A-Za-z0-9]*(?:['-][A-Za-z0-9]+)*"
+)
+PLAIN_PROSE_TOKEN_TRIM = ".,;:!?()\"'_*~=-+"
+PLAIN_PROSE_LIST_PATTERN = re.compile(r"(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)")
+INLINE_HTML_TAG_PATTERN = re.compile(
+    r"</?[A-Za-z][A-Za-z0-9-]*"
+    r"(?:[ \t\r\n]+[A-Za-z_:][A-Za-z0-9_.:-]*"
+    r"(?:[ \t\r\n]*=[ \t\r\n]*"
+    r"(?:[^\s\"'=<>`]+|'[^']*'|\"[^\"]*\"))?)*"
+    r"[ \t\r\n]*/?>"
+)
+NON_RENDERING_HTML_PATTERN = re.compile(
+    r"<\?.*?\?>|<!\[CDATA\[.*?\]\]>|<![A-Za-z][^>]*>",
+    re.DOTALL,
+)
+HTML_SHAPED_TAG_PATTERN = re.compile(
+    r"<(?!https?://|mailto:)/?[A-Za-z][A-Za-z0-9:-]*"
+    r"(?=[ \t\r\n/>]|\Z)",
+    re.IGNORECASE,
+)
+HTML_SHAPED_DECLARATION_PATTERN = re.compile(
+    r"<(?:\?|![A-Za-z]|!\[CDATA\[)",
+    re.IGNORECASE,
+)
+MINIMUM_SECTION_ALPHANUMERIC_CHARACTERS = 12
+MINIMUM_SECTION_WORDS = 3
+MINIMUM_EVIDENCE_ALPHANUMERIC_CHARACTERS = 20
+MINIMUM_EVIDENCE_WORDS = 4
 HTML_COMMENT_PATTERN = re.compile(r"<!--(?P<content>.*?)-->", re.DOTALL)
 RAW_HTML_BLOCK_PATTERN = re.compile(
     r"^ {0,3}(?:"
@@ -106,17 +152,22 @@ HIGH_RISK_EXACT_PATHS = {
     ".gitmodules",
     ".lfsconfig",
     "AGENTS.md",
+    "art/audio_production/sfx_cue_sheets/sfx_install_report.json",
     "art/runtime_package_manifest.json",
     "docs/AGENT_REVIEW_POLICY.md",
+    "docs/ARCHITECTURE.md",
     "docs/ASSET_PIPELINE.md",
     "docs/BRANCH_AND_RELEASE_POLICY.md",
     "docs/DATA_FORMATS.md",
+    "docs/DEVELOPMENT.md",
+    "docs/GOVERNANCE_HANDOFF.md",
     "docs/LFS_MIGRATION.md",
     "Selkie's Moon ~ until we meet again ~/art/character_portraits/PORTRAIT_BRIEFS.md",
     "Selkie's Moon ~ until we meet again ~/art/character_portraits/README.md",
     "tools/check_pr_governance.py",
     "tools/check_repository_hygiene.py",
     "tools/tests/test_check_pr_governance.py",
+    "tools/tests/test_check_repository_hygiene.py",
 }
 DEPENDENCY_BASENAMES = {
     "Cargo.lock",
@@ -140,7 +191,7 @@ DEPENDENCY_BASENAMES = {
 SOURCE_AUTHORITY_SUFFIXES = {".blend", ".kra", ".logicx"}
 PACKAGE_SUFFIXES = {".yyp", ".yymps"}
 DOC_SUFFIXES = {".md"}
-TRUSTED_REVIEW_COMMENT_AUTHORS = {"magicalfeyfenny"}
+TRUSTED_REVIEW_COMMENT_IDENTITIES = {26424169: "magicalfeyfenny"}
 BROAD_CHANGE_PATH_THRESHOLD = 25
 CROSS_SYSTEM_PATH_THRESHOLD = 8
 CROSS_SYSTEM_DOMAIN_THRESHOLD = 4
@@ -392,26 +443,6 @@ def _leading_indentation_columns(line: str) -> int:
     return columns
 
 
-def _matching_backtick_run_end(
-    text: str,
-    start: int,
-    content_end: int,
-    run_length: int,
-) -> int | None:
-    cursor = start
-    while cursor < content_end:
-        opening = text.find("`", cursor, content_end)
-        if opening < 0:
-            return None
-        run_end = opening + 1
-        while run_end < content_end and text[run_end] == "`":
-            run_end += 1
-        if run_end - opening == run_length:
-            return run_end
-        cursor = run_end
-    return None
-
-
 def _mask_markdown_code(text: str) -> str:
     """Mask Markdown code while preserving byte offsets and HTML comments."""
     characters = list(text)
@@ -421,23 +452,24 @@ def _mask_markdown_code(text: str) -> str:
 
     for raw_line in text.splitlines(keepends=True):
         line = raw_line.rstrip("\r\n")
+        structural_line = line
         content_end = offset + len(line)
 
         if fence is not None:
             _mask_non_newlines(characters, offset, offset + len(raw_line))
-            if _fence_closing(line, fence):
+            if _fence_closing(structural_line, fence):
                 fence = None
             offset += len(raw_line)
             continue
 
         if not in_html_comment:
-            opening = _fence_opening(line)
+            opening = _fence_opening(structural_line)
             if opening is not None:
                 fence = opening
                 _mask_non_newlines(characters, offset, offset + len(raw_line))
                 offset += len(raw_line)
                 continue
-            if _leading_indentation_columns(line) >= 4:
+            if _leading_indentation_columns(structural_line) >= 4:
                 _mask_non_newlines(characters, offset, offset + len(raw_line))
                 offset += len(raw_line)
                 continue
@@ -461,21 +493,69 @@ def _mask_markdown_code(text: str) -> str:
                 run_end = index + 1
                 while run_end < content_end and text[run_end] == "`":
                     run_end += 1
-                closing_end = _matching_backtick_run_end(
-                    text,
-                    run_end,
-                    content_end,
-                    run_end - index,
-                )
-                if closing_end is None:
-                    index = run_end
-                else:
-                    _mask_non_newlines(characters, index, closing_end)
-                    index = closing_end
+                index = run_end
                 continue
             index += 1
         offset += len(raw_line)
 
+    # Resolve inline code in linear time. Outside code, HTML comments suppress
+    # backtick parsing and odd-backslash runs are escaped. Once a real opener
+    # exists, the next same-length run closes it even if comment-shaped text or
+    # backslashes occur between the delimiters.
+    structure = "".join(characters)
+    characters = list(structure)
+    runs: list[tuple[int, int, int]] = []
+    position = 0
+    while position < len(structure):
+        opening = structure.find("`", position)
+        if opening < 0:
+            break
+        run_end = opening + 1
+        while run_end < len(structure) and structure[run_end] == "`":
+            run_end += 1
+        runs.append((opening, run_end, run_end - opening))
+        position = run_end
+
+    next_same: list[int | None] = [None] * len(runs)
+    next_by_length: dict[int, int] = {}
+    for index in range(len(runs) - 1, -1, -1):
+        run_length = runs[index][2]
+        next_same[index] = next_by_length.get(run_length)
+        next_by_length[run_length] = index
+
+    position = 0
+    run_index = 0
+    while run_index < len(runs):
+        opening, run_end, _run_length = runs[run_index]
+        if opening < position:
+            run_index += 1
+            continue
+
+        comment_start = structure.find("<!--", position, opening)
+        if comment_start >= 0:
+            comment_end = structure.find("-->", comment_start + 4)
+            position = len(structure) if comment_end < 0 else comment_end + 3
+            continue
+
+        backslashes = 0
+        escape_cursor = opening - 1
+        while escape_cursor >= 0 and structure[escape_cursor] == "\\":
+            backslashes += 1
+            escape_cursor -= 1
+        if backslashes % 2:
+            position = run_end
+            run_index += 1
+            continue
+
+        closing_index = next_same[run_index]
+        if closing_index is None:
+            position = run_end
+            run_index += 1
+            continue
+        _closing_start, closing_end, _closing_length = runs[closing_index]
+        _mask_non_newlines(characters, opening, closing_end)
+        position = closing_end
+        run_index = closing_index + 1
     return "".join(characters)
 
 
@@ -507,18 +587,21 @@ def _reviewable_markdown_structure(text: str) -> str:
     return _mask_markdown_code(_mask_html_comments_outside_code(text))
 
 
-def _contains_raw_html_block(text: str) -> bool:
+def _contains_forbidden_html(text: str) -> bool:
     comments_masked = _mask_html_comments_outside_code(text)
-    return bool(RAW_HTML_BLOCK_PATTERN.search(_mask_markdown_code(comments_masked)))
+    structure = _mask_markdown_code(comments_masked)
+    return bool(
+        RAW_HTML_BLOCK_PATTERN.search(structure)
+        or INLINE_HTML_TAG_PATTERN.search(structure)
+        or NON_RENDERING_HTML_PATTERN.search(structure)
+        or HTML_SHAPED_TAG_PATTERN.search(structure)
+        or HTML_SHAPED_DECLARATION_PATTERN.search(structure)
+    )
 
 
 def _is_top_level_position(text: str, position: int) -> bool:
     line_start = text.rfind("\n", 0, position) + 1
-    prefix = text[line_start:position]
-    prefix_without_comments = HTML_COMMENT_PATTERN.sub("", prefix)
-    return bool(
-        re.fullmatch(r"(?:-->[ \t]*)?", prefix_without_comments)
-    )
+    return position == line_start
 
 
 def _html_comments_outside_code(text: str) -> list[re.Match[str]]:
@@ -587,7 +670,10 @@ def _section_content(body: str, structure: str, section: str) -> str | None:
     if match is None:
         return None
     start, end = match.span("content")
-    return body[start:end].strip()
+    content = body[start:end]
+    content = re.sub(r"\A(?:[ \t]*(?:\r\n|\r|\n))+", "", content)
+    content = re.sub(r"(?:(?:\r\n|\r|\n)[ \t]*)+\Z", "", content)
+    return content
 
 
 def _section_heading_count(structure: str, section: str) -> int:
@@ -604,9 +690,10 @@ def _marker_payloads(
     location: str,
     errors: list[str],
 ) -> list[str]:
-    if _contains_raw_html_block(text):
+    if _contains_forbidden_html(text):
         errors.append(
-            f"{location}: raw HTML blocks cannot contain or accompany machine evidence"
+            f"{location}: forbidden HTML-shaped source cannot contain or accompany "
+            "machine evidence"
         )
         return []
     open_count = _top_level_marker_open_count(text, marker)
@@ -668,9 +755,17 @@ def _parse_attestations(comments: object, errors: list[str]) -> list[dict[str, o
             continue
         author = comment.get("user")
         login = author.get("login") if isinstance(author, dict) else None
-        if not isinstance(login, str) or login.casefold() not in {
-            value.casefold() for value in TRUSTED_REVIEW_COMMENT_AUTHORS
-        }:
+        author_id = author.get("id") if isinstance(author, dict) else None
+        trusted_login = (
+            TRUSTED_REVIEW_COMMENT_IDENTITIES.get(author_id)
+            if type(author_id) is int
+            else None
+        )
+        if (
+            not isinstance(login, str)
+            or trusted_login is None
+            or login.casefold() != trusted_login.casefold()
+        ):
             # Untrusted comments must be unable to approve or denial-of-service
             # governance merely by copying a machine-readable marker.
             continue
@@ -688,6 +783,26 @@ def _parse_attestations(comments: object, errors: list[str]) -> list[dict[str, o
                 errors,
             )
             if value is not None:
+                reserved = sorted(INTERNAL_ATTESTATION_FIELDS & set(value))
+                if reserved:
+                    errors.append(
+                        f"review: comments[{index}] marker[{marker_index}]: "
+                        f"reserved field(s): {', '.join(reserved)}"
+                    )
+                    continue
+                updated_at = comment.get("updated_at")
+                created_at = comment.get("created_at")
+                value["__comment_updated_at"] = (
+                    updated_at
+                    if isinstance(updated_at, str)
+                    else created_at
+                    if isinstance(created_at, str)
+                    else ""
+                )
+                value["__comment_id"] = (
+                    comment.get("id") if type(comment.get("id")) is int else -1
+                )
+                value["__comment_order"] = index
                 attestations.append(value)
     if not attestations:
         errors.append("review: no agent-review:v1 attestations found in PR comments")
@@ -724,6 +839,99 @@ def _section_is_placeholder_only(value: str) -> bool:
         return False
     remainder = SECTION_PLACEHOLDER_PATTERN.sub("", reviewable)
     return not re.sub(r"[\W_]+", "", remainder)
+
+
+def _plain_prose_words(value: str) -> list[str]:
+    """Return conservative, runtime-stable words eligible for prose gates.
+
+    Governance does not need to reproduce every CommonMark or GitHub rendering
+    extension. Only unindented top-level prose lines are eligible. Markup and
+    container lines remain useful context, but cannot satisfy the gate.
+    """
+    if _contains_forbidden_html(value):
+        return []
+
+    comments_masked = _mask_html_comments_outside_code(value)
+    fence: tuple[str, int] | None = None
+    in_math_block = False
+    bracket_depth = 0
+    words: list[str] = []
+
+    for raw_line in comments_masked.splitlines():
+        line = raw_line.rstrip("\r")
+        if fence is not None:
+            if _fence_closing(line, fence):
+                fence = None
+            continue
+        opening = _fence_opening(line)
+        if opening is not None:
+            fence = opening
+            continue
+
+        if line.strip() == "$$":
+            in_math_block = not in_math_block
+            continue
+        if in_math_block or not line or line[0].isspace():
+            continue
+
+        opening_brackets = line.count("[")
+        closing_brackets = line.count("]")
+        if bracket_depth or opening_brackets or closing_brackets:
+            bracket_depth = max(
+                0,
+                bracket_depth + opening_brackets - closing_brackets,
+            )
+            continue
+
+        if (
+            line.startswith((">", "#", "<"))
+            or PLAIN_PROSE_LIST_PATTERN.match(line)
+            or any(marker in line for marker in ("`", "$"))
+        ):
+            continue
+
+        candidate = KEYCAP_SEQUENCE_PATTERN.sub(" ", line)
+        candidate = MARKDOWN_ENTITY_PATTERN.sub(" ", candidate)
+        candidate = GITHUB_EMOJI_ALIAS_PATTERN.sub(" ", candidate)
+        candidate = URL_PATTERN.sub(" ", candidate)
+        candidate = GITHUB_CONTEXT_REFERENCE_PATTERN.sub(" ", candidate)
+        candidate = FULL_SHA_PATTERN.sub(" ", candidate)
+        for chunk in candidate.split():
+            token = chunk.strip(PLAIN_PROSE_TOKEN_TRIM)
+            if PLAIN_PROSE_TOKEN_PATTERN.fullmatch(token):
+                words.append(token)
+    return words
+
+
+def _visible_evidence_text(value: str) -> str:
+    return " ".join(_plain_prose_words(value))
+
+
+def _has_substantive_visible_text(
+    value: str,
+    *,
+    minimum_alphanumeric: int = MINIMUM_SECTION_ALPHANUMERIC_CHARACTERS,
+    minimum_words: int = MINIMUM_SECTION_WORDS,
+) -> bool:
+    words = _plain_prose_words(value)
+    return (
+        len(words) >= minimum_words
+        and sum(character.isalnum() for word in words for character in word)
+        >= minimum_alphanumeric
+    )
+
+
+def _valid_review_evidence_item(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    if _contains_forbidden_html(value) or _section_is_placeholder_only(value):
+        return False
+    visible = _visible_evidence_text(value)
+    return (
+        len(visible.split()) >= MINIMUM_EVIDENCE_WORDS
+        and sum(character.isalnum() for character in visible)
+        >= MINIMUM_EVIDENCE_ALPHANUMERIC_CHARACTERS
+    )
 
 
 def _valid_sha(value: object) -> bool:
@@ -895,9 +1103,21 @@ def _validate_attestations(
         "head_ref",
     )
     current_by_role: dict[str, dict[str, object]] = {}
+    ambiguous_current_roles: set[str] = set()
     stale_required_by_role: dict[str, dict[str, object]] = {}
     current_unkeyed: list[dict[str, object]] = []
     implementation_agent = contract.get("implementation_agent")
+
+    def recency(value: dict[str, object]) -> tuple[str, int, int]:
+        updated_at = value.get("__comment_updated_at")
+        comment_id = value.get("__comment_id")
+        comment_order = value.get("__comment_order")
+        return (
+            updated_at if isinstance(updated_at, str) else "",
+            comment_id if type(comment_id) is int else -1,
+            comment_order if type(comment_order) is int else -1,
+        )
+
     for attestation in attestations:
         binding_is_current = all(
             attestation.get(field) == context[field] for field in binding_fields
@@ -911,14 +1131,44 @@ def _validate_attestations(
         role = attestation.get("role")
         if binding_is_current:
             if isinstance(role, str):
-                # GitHub issue comments are oldest first. Only a newer review
-                # bound to this same contract supersedes an earlier current
-                # verdict; stale history can never erase a current blocker.
-                current_by_role[role] = attestation
+                # Edited comments retain their creation position in GitHub's
+                # REST array. Live timestamps have only whole-second precision,
+                # so distinct same-role comments tied at the latest timestamp
+                # are ambiguous and fail closed below.
+                existing = current_by_role.get(role)
+                if existing is None:
+                    current_by_role[role] = attestation
+                else:
+                    current_recency = recency(attestation)
+                    existing_recency = recency(existing)
+                    if current_recency[0] > existing_recency[0]:
+                        current_by_role[role] = attestation
+                        ambiguous_current_roles.discard(role)
+                    elif current_recency[0] == existing_recency[0]:
+                        current_id = current_recency[1]
+                        existing_id = existing_recency[1]
+                        distinct_comments = (
+                            current_id != existing_id
+                            if current_id >= 0 and existing_id >= 0
+                            else current_recency[2] != existing_recency[2]
+                        )
+                        if current_recency[0] and distinct_comments:
+                            ambiguous_current_roles.add(role)
+                        if current_recency >= existing_recency:
+                            current_by_role[role] = attestation
             else:
                 current_unkeyed.append(attestation)
         elif isinstance(role, str) and role in required_roles:
-            stale_required_by_role[role] = attestation
+            existing = stale_required_by_role.get(role)
+            if existing is None or recency(attestation) >= recency(existing):
+                stale_required_by_role[role] = attestation
+
+    for role in sorted(ambiguous_current_roles):
+        errors.append(
+            "review: multiple current attestations for role "
+            f"{role!r} share the latest whole-second updated_at; post or edit "
+            "one attestation later"
+        )
 
     selected_by_role = dict(current_by_role)
     for role in required_roles - set(selected_by_role):
@@ -931,7 +1181,12 @@ def _validate_attestations(
     for index, attestation in enumerate(attestations):
         label = f"review: attestation[{index}]"
         role = attestation.get("role")
-        _check_exact_keys(attestation, ATTESTATION_FIELDS, label, errors)
+        _check_exact_keys(
+            attestation,
+            ATTESTATION_FIELDS | INTERNAL_ATTESTATION_FIELDS,
+            label,
+            errors,
+        )
         if attestation.get("version") != 1 or type(attestation.get("version")) is not int:
             errors.append(f"{label}: version must be integer 1")
         for field in ("repository", "pr_number", "head_sha", "base_sha", "base_ref", "head_ref"):
@@ -945,7 +1200,16 @@ def _validate_attestations(
             errors.append(f"{label}: implementation_agent does not match the PR contract")
         if attestation.get("risk") != risk:
             errors.append(f"{label}: risk does not match the validated PR contract")
-        if _contains_placeholder(attestation):
+        # Evidence has its own rendered-prose validation below. Applying the
+        # broad machine-field placeholder grammar to it would incorrectly
+        # reject legitimate prose containing CommonMark autolinks or angle
+        # comparisons such as ``x < y > z``.
+        placeholder_fields = {
+            key: value
+            for key, value in attestation.items()
+            if key != "evidence" and key not in INTERNAL_ATTESTATION_FIELDS
+        }
+        if _contains_placeholder(placeholder_fields):
             errors.append(f"{label}: placeholder or empty string detected")
 
         if not isinstance(role, str) or role not in set().union(*REQUIRED_ROLES.values()):
@@ -980,8 +1244,12 @@ def _validate_attestations(
         evidence = attestation.get("evidence")
         if not isinstance(evidence, list) or not evidence:
             errors.append(f"{label}: evidence must be a nonempty array")
-        elif any(not isinstance(item, str) or len(item.strip()) < 20 for item in evidence):
-            errors.append(f"{label}: every evidence item must be a concrete string of at least 20 characters")
+        elif any(not _valid_review_evidence_item(item) for item in evidence):
+            errors.append(
+                f"{label}: every evidence item must contain at least four plain "
+                "ASCII words and 20 ASCII letters or digits, with no forbidden "
+                "HTML-shaped source"
+            )
 
     missing = sorted(required_roles - seen_roles)
     if missing:
@@ -1016,11 +1284,15 @@ def validate_pull_request(
         if content is None:
             errors.append(f"body: section '## {section}' has no reviewable content")
             continue
-        visible = _mask_html_comments_outside_code(content).strip()
-        if not visible:
-            errors.append(f"body: section '## {section}' has no reviewable content")
-        elif _section_is_placeholder_only(visible):
+        visible = _mask_html_comments_outside_code(content)
+        if _section_is_placeholder_only(visible):
             errors.append(f"body: section '## {section}' contains placeholder text")
+        elif _contains_forbidden_html(content):
+            errors.append(
+                f"body: section '## {section}' contains forbidden HTML-shaped source"
+            )
+        elif not visible.strip() or not _has_substantive_visible_text(visible):
+            errors.append(f"body: section '## {section}' has no reviewable content")
 
     paths = list(changed_paths)
     valid_paths: list[str] = []

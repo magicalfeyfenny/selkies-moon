@@ -41,7 +41,12 @@ The later repository-hygiene follow-up reconciled the remaining packaging correc
 
 Before mirror cleanup, the corrected raster pipeline was validated twice. The normal export covered 80 sprites, 87 active frames, 15 standalone assets, and 251 then-declared PNG targets; it repaired or created 76 derivatives while 175 were already current. A fresh `--check` render then reported 0 changes and 251 matches. Before/after SHA-256 inventories were identical for all 95 KRA masters and all 201 GameMaker `.yy` files, proving that the normal build changed neither source art nor engine metadata. The subsequent catalog cleanup removed redundant art-side targets, and the later fixture purge removed three exact-import masters that no longer had runtime consumers. The current static gate registers all 92 KRAs, covers 77 sprites and 84 frames, distinguishes six standalone runtime assets from nine source-only masters, and proves exact ownership of all 174 required runtime PNG targets with no unowned outputs.
 
-### Current repository snapshot
+### Historical audit snapshot
+
+This table preserves the corrected branch as measured before the coordinated
+LFS rewrite. Storage-size rows are historical and must not be used as current
+repository state; use [Git LFS Migration](LFS_MIGRATION.md) and the live hygiene
+check instead.
 
 | Signal | Observed state | Interpretation |
 | --- | ---: | --- |
@@ -52,8 +57,8 @@ Before mirror cleanup, the corrected raster pipeline was validated twice. The no
 | Runtime sprite source mapping | 77/77 resources, 84/84 active frames | Every active root frame and GameMaker editor-layer copy is exported from KRA |
 | Native 3D sources | 5 `.blend`, 5 repository-only OBJ build intermediates, and 5 packaged VBUFF files | Runtime code and package load only VBUFF; the exact split is manifest-owned |
 | Audio production | 16 MIDI metadata files, 16 canonical Logic projects, 30 lossless WAV derivatives, 15 runtime OGG and 15 runtime WAV | Complete source-to-runtime production chains |
-| Tracked audio-production size | about 878 MB | Ordinary Git is being used as a large-binary store |
-| Loose Git object database | about 1.4 GiB | Clone, fetch, storage, and history-rewrite costs are already material |
+| Tracked audio-production size | about 878 MB before migration | Historical ordinary-Git measurement that motivated LFS |
+| Loose Git object database | about 1.4 GiB before migration | Historical clone/storage measurement that motivated the rewrite |
 | Hosted test workflow | [current `dev` run passed](https://github.com/magicalfeyfenny/selkies-moon/actions/runs/29449774072) | Independent Windows signal now exists |
 | Local audit test run | 126/126 passed; latest run succeeded on attempt 3 after two compiler crashes | Retry isolates the known compiler fault without masking completed test failures |
 
@@ -508,7 +513,14 @@ Git branch/status and next safe action
 
 ## Ready-to-paste general instruction block
 
-The following is intentionally written as agent instructions rather than commentary:
+The following is retained as historical, reusable advice rather than live
+repository policy. Current agents must follow `AGENTS.md` and the scoped
+documents it routes to. Its source-mode vocabulary reflects the raster-focused
+audit; current 3D, raster, and audio authority is defined only by
+[Asset Pipeline](ASSET_PIPELINE.md).
+
+The historical block is intentionally written as agent instructions rather
+than commentary:
 
 ```text
 When working on a large game project, optimize for maintainability, reviewability,
@@ -763,9 +775,16 @@ repairs. Clearly separate product defects, maintainability debt, and toolchain
 failures.
 ```
 
-## Recommended follow-up backlog for this repository
+## Follow-up status ledger for this repository
 
-These remain after the KRA-authority and repository-hygiene corrections made during this post-mortem. The cleanup already reconciled the README's major gameplay claims, removed the tracked `.DS_Store`, repaired the 29 then-current story-assignment keys and retained the 21 reachable assignments, added exact runtime-PNG ownership rejection, retained the portrait design brief in tracked source history, and removed superseded runtime derivatives.
+This ledger preserves both completed and open follow-ups after the KRA-authority
+and repository-hygiene corrections. Items marked addressed are historical
+completion evidence, not remaining work. The cleanup already reconciled the
+README's major gameplay claims, removed the tracked `.DS_Store`, repaired the
+29 then-current story-assignment keys and retained the 21 reachable
+assignments, added exact runtime-PNG ownership rejection, retained the portrait
+design brief in tracked source history, and removed superseded runtime
+derivatives.
 
 ### Priority 0: prevent further ambiguity and repository growth
 

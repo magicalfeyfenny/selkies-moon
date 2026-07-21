@@ -1,30 +1,15 @@
-# Repository Agent Review Policy
+# Repository Instructions
 
-Before describing a pull request as reviewed, marking it ready, or merging it,
-read and follow [Agent Review Policy](docs/AGENT_REVIEW_POLICY.md).
+Start with [Governance Handoff](docs/GOVERNANCE_HANDOFF.md) for the authority
+map, current governance state, verification commands, and open enforcement gap.
 
-- Codex may create independent review agents without asking Fenny for a separate
-  approval. Review agents must use fresh context, remain read-only, and may not
-  be the implementation agent.
-- Scale review to the computed risk. Low-risk documentation needs one
-  correctness reviewer; standard work needs correctness and validation;
-  high-risk work needs correctness, validation, and governance; every pull
-  request into `main` needs correctness, validation, and release-governance.
-- Put the acceptance contract in the pull-request body and each independent
-  review attestation in a separate pull-request comment. Bind every review to
-  the repository, pull-request number, full head and base SHAs, target branch,
-  and canonical contract hash. Any commit, base advance, target change, or
-  semantic contract edit invalidates the review and requires fresh agents.
-- Only a `pull_request` run named `Required CI` is merge evidence. After the
-  final attestation, rerun the newest workflow run for the exact PR head, then
-  re-fetch live refs, body, and comments immediately before merging. A later
-  trusted attestation creation, edit, or deletion requires another rerun;
-  `workflow_dispatch` runs are diagnostic only.
-- Fenny's manual review approval is not required when all required agents pass,
-  required checks are green, and no blocking finding remains.
-- Review authority is not merge or release authority. Merge only when the task
-  authorizes publishing that change. Advancing `main`, tagging, or publishing
-  binaries still requires an explicit promotion/release task.
-- Escalate disagreements, failed or skipped required checks, unresolved
-  correctness/security findings, secrets, privacy or licensing decisions,
-  destructive history operations, and ambiguous release provenance.
+- Base ordinary bounded work on `dev`; `main` is release-pinned. Follow
+  [Branch and Release Policy](docs/BRANCH_AND_RELEASE_POLICY.md).
+- Use one issue or acceptance contract per task. Record non-goals, evidence,
+  rollback, and deferred work in the issue and pull request.
+- Find runtime subsystem ownership in [Architecture](docs/ARCHITECTURE.md) and
+  source/generated ownership in [Asset Pipeline](docs/ASSET_PIPELINE.md).
+- Before calling a PR reviewed, ready, or mergeable, follow
+  [Agent Review Policy](docs/AGENT_REVIEW_POLICY.md) and its executable checks.
+- Treat the [post-mortem](docs/AI_ASSISTED_DEVELOPMENT_POSTMORTEM.md) as
+  historical evidence, never as current policy.

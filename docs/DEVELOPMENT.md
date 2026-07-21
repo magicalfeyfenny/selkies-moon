@@ -18,7 +18,9 @@ Open `Selkie's Moon ~ until we meet again ~/Selkies Moon.yyp` in GameMaker. Pres
 `dev` is the normal integration branch. Start bounded work on a feature branch,
 push that branch to the remote, and merge it into `dev` through a pull request.
 `main` is reserved for the exact source tree corresponding to the currently
-published binary release. See [Branch and Release Policy](BRANCH_AND_RELEASE_POLICY.md)
+published binary release after the first policy-governed promotion. Historical
+binary/source correspondence is not assumed without separate evidence. See
+[Branch and Release Policy](BRANCH_AND_RELEASE_POLICY.md)
 for release promotion, tagging, hotfixes, and the narrowly scoped history-rewrite
 exception used by coordinated repository migrations such as Git LFS. Follow
 [Agent Review Policy](AGENT_REVIEW_POLICY.md) for risk-scaled fresh-context
