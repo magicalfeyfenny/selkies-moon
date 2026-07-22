@@ -650,6 +650,275 @@ suite(function() {
 
     });
 
+    section("Shared ornate UI characterization", function() {
+        beforeEach(function() {
+            global.game_config = GameConfigCreateDefault();
+            global.game_save = GameSaveDataCreateDefault();
+            global.game_runtime = GameRuntimeDataCreateDefault();
+
+            draw_set_alpha(1);
+            draw_set_color(c_white);
+            draw_set_halign(fa_left);
+            draw_set_valign(fa_top);
+            draw_set_font(fn_dialogue_speech);
+        });
+
+        afterEach(function() {
+            draw_set_alpha(1);
+            draw_set_color(c_white);
+            draw_set_halign(fa_left);
+            draw_set_valign(fa_top);
+            draw_set_font(fn_dialogue_speech);
+        });
+
+        test("Ornate palettes and title panels preserve normal and selected visual states", function() {
+            var _normal = GameUiStoryFramePaletteCreate(false);
+            var _selected = GameUiStoryFramePaletteCreate(true);
+            var _normal_panel = GameTitlePanelStyleCreate(false);
+            var _selected_panel = GameTitlePanelStyleCreate(true);
+
+            expect(_normal.fill_color).toBe(make_color_rgb(28, 12, 48));
+            expect(_normal.shadow_color).toBe(make_color_rgb(8, 5, 20));
+            expect(_normal.border_color).toBe(make_color_rgb(242, 232, 255));
+            expect(_normal.inner_border_color).toBe(make_color_rgb(255, 184, 224));
+            expect(_normal.ornament_color).toBe(make_color_rgb(255, 116, 198));
+            expect(_normal.vine_color).toBe(make_color_rgb(104, 214, 204));
+            expect(_normal.jewel_color).toBe(make_color_rgb(132, 102, 224));
+            expect(_normal.title_color).toBe(make_color_rgb(255, 232, 184));
+            expect(_normal.text_color).toBe(c_white);
+            expect(_normal.muted_text_color).toBe(make_color_rgb(180, 204, 232));
+
+            expect(_selected.fill_color).toBe(make_color_rgb(70, 24, 98));
+            expect(_selected.shadow_color).toBe(_normal.shadow_color);
+            expect(_selected.border_color).toBe(_normal.border_color);
+            expect(_selected.inner_border_color).toBe(make_color_rgb(255, 220, 150));
+            expect(_selected.ornament_color).toBe(make_color_rgb(255, 230, 164));
+            expect(_selected.vine_color).toBe(make_color_rgb(138, 242, 218));
+            expect(_selected.jewel_color).toBe(make_color_rgb(255, 142, 208));
+            expect(_selected.title_color).toBe(make_color_rgb(255, 246, 188));
+            expect(_selected.text_color).toBe(_normal.text_color);
+            expect(_selected.muted_text_color).toBe(_normal.muted_text_color);
+
+            expect(_normal_panel.fill_color).toBe(make_color_rgb(58, 18, 92));
+            expect(_normal_panel.border_color).toBe(_normal.border_color);
+            expect(_normal_panel.text_color).toBe(c_white);
+            expect(_normal_panel.fill_alpha).toBe(0.56);
+            expect(_selected_panel.fill_color).toBe(make_color_rgb(78, 28, 116));
+            expect(_selected_panel.border_color).toBe(_selected.inner_border_color);
+            expect(_selected_panel.text_color).toBe(make_color_rgb(255, 255, 160));
+            expect(_selected_panel.fill_alpha).toBe(0.72);
+        });
+
+        test("Title main and options surfaces preserve row order, labels, values, and limits", function() {
+            var _main = GameTitleMainItemsCreate();
+            var _main_ids = ["start_game", "scores", "cg_gallery", "music_room", "options", "practice", "quit"];
+            var _main_labels = ["Start Game", "Scores", "CG Gallery", "Music Room", "Options", "Practice", "Quit"];
+
+            expect(array_length(_main)).toBe(7);
+            for (var i = 0; i < array_length(_main); i++) {
+                expect(_main[i].id).toBe(_main_ids[i]);
+                expect(_main[i].label).toBe(_main_labels[i]);
+            }
+
+            global.game_config.fullscreen = true;
+            global.game_config.display_scale = 6;
+            global.game_config.master_volume = 0;
+            global.game_config.music_volume = 55;
+            global.game_config.sfx_volume = 100;
+
+            var _title_options = GameTitleConfigEntriesCreate(true);
+            var _pause_options = GameTitleConfigEntriesCreate(false);
+            var _option_ids = ["fullscreen", "display_scale", "master_volume", "music_volume", "sfx_volume", "controls_keyboard", "controls_gamepad"];
+            var _option_labels = ["Fullscreen", "Display Scale", "Master Volume", "Music Volume", "SFX Volume", "Keyboard Controls", "Gamepad Controls"];
+            var _option_values = ["On", "6", "0%", "55%", "100%", "Configure", "Configure"];
+
+            expect(array_length(_title_options)).toBe(7);
+            expect(array_length(_pause_options)).toBe(5);
+            for (var o = 0; o < array_length(_title_options); o++) {
+                expect(_title_options[o].id).toBe(_option_ids[o]);
+                expect(_title_options[o].label).toBe(_option_labels[o]);
+                expect(_title_options[o].value).toBe(_option_values[o]);
+            }
+            expect(_title_options[2].meter_ratio).toBe(0);
+            expect(_title_options[3].meter_ratio).toBe(0.55);
+            expect(_title_options[4].meter_ratio).toBe(1);
+            expect(_title_options[5].submenu).toBeTruthy();
+            expect(_title_options[6].submenu).toBeTruthy();
+        });
+
+        test("Opening-story composition preserves portrait bounds and empty text layout", function() {
+            var _left = GameStoryPortraitRectGet("left");
+            var _center = GameStoryPortraitRectGet("center");
+            var _right = GameStoryPortraitRectGet("right");
+            var _fallback = GameStoryPortraitRectGet("unknown");
+            var _empty = GameStoryTextLinesCreate("", 520, 2);
+            var _hidden = GameStoryVisibleLinesCreate("Moon over the tide", 520, 2, 0);
+
+            expect(_left.x).toBe(0);
+            expect(_center.x).toBe(140);
+            expect(_right.x).toBe(280);
+            expect(_fallback.x).toBe(_left.x);
+            expect(_left.y).toBe(0);
+            expect(_left.width).toBe(360);
+            expect(_left.height).toBe(360);
+            expect(_right.x + _right.width).toBe(640);
+
+            expect(array_length(_empty)).toBe(1);
+            expect(_empty[0]).toBe("");
+            expect(array_length(_hidden)).toBe(1);
+            expect(_hidden[0]).toBe("");
+        });
+
+        test("Final-boss HUD anchors and heart states preserve empty, minimum, maximum, and boundary cases", function() {
+            var _layout = GameGameplayHudLayoutCreate();
+            var _empty = GameBossPhaseHeartStatesCreate(0, 0);
+            var _minimum = GameBossPhaseHeartStatesCreate(0, 1);
+            var _before_first = GameBossPhaseHeartStatesCreate(-4, 15);
+            var _after_last = GameBossPhaseHeartStatesCreate(99, 15);
+
+            expect(_layout.playfield_left).toBe(200);
+            expect(_layout.playfield_right).toBe(440);
+            expect(_layout.left_panel_left).toBe(0);
+            expect(_layout.left_panel_right).toBe(200);
+            expect(_layout.right_panel_left).toBe(440);
+            expect(_layout.right_panel_right).toBe(640);
+            expect(_layout.panel_padding).toBe(12);
+            expect(_layout.line_height).toBe(16);
+            expect(_layout.meter_left).toBe(452);
+            expect(_layout.meter_top).toBe(86);
+            expect(_layout.meter_width).toBe(176);
+            expect(_layout.meter_height).toBe(12);
+            expect(_layout.boss_bar_left).toBe(452);
+            expect(_layout.boss_bar_top).toBe(152);
+            expect(_layout.boss_bar_width).toBe(176);
+            expect(_layout.boss_bar_height).toBe(8);
+            expect(_layout.boss_bar_gap).toBe(5);
+
+            expect(array_length(_empty)).toBe(1);
+            expect(_empty[0]).toBe(2);
+            expect(array_length(_minimum)).toBe(1);
+            expect(_minimum[0]).toBe(2);
+            expect(array_length(_before_first)).toBe(15);
+            expect(_before_first[0]).toBe(2);
+            expect(_before_first[14]).toBe(1);
+            expect(array_length(_after_last)).toBe(15);
+            expect(_after_last[0]).toBe(0);
+            expect(_after_last[13]).toBe(0);
+            expect(_after_last[14]).toBe(2);
+        });
+
+        test("All pause pages preserve row visibility, ordering, and selection boundaries", function() {
+            var _normal_items = GamePauseMainItemsCreate(false);
+            var _practice_items = GamePauseMainItemsCreate(true);
+            var _practice_entries = GamePracticeLiveEntriesCreate();
+
+            expect(array_length(_normal_items)).toBe(3);
+            expect(_normal_items[0]).toBe("Resume");
+            expect(_normal_items[1]).toBe("Settings");
+            expect(_normal_items[2]).toBe("Quit to Main Menu");
+            expect(array_length(_practice_items)).toBe(4);
+            expect(_practice_items[2]).toBe("Practice Tuning");
+            expect(_practice_items[3]).toBe("Quit to Main Menu");
+
+            expect(array_length(_practice_entries)).toBe(6);
+            expect(_practice_entries[0].label).toBe("Shot Power");
+            expect(_practice_entries[1].label).toBe("Rank");
+            expect(_practice_entries[2].label).toBe("Dynamic Rank");
+            expect(_practice_entries[3].label).toBe("Lives");
+            expect(_practice_entries[4].label).toBe("Bombs");
+            expect(_practice_entries[5].label).toBe("Berserk Meter");
+
+            var _main = GamePauseStateCreate();
+            _main.active = true;
+            GamePauseStateStep(_main,
+                GamePauseInputSnapshotCreate(true), false);
+            expect(_main.main_index).toBe(2);
+
+            var _practice_main = GamePauseStateCreate();
+            _practice_main.active = true;
+            GamePauseStateStep(_practice_main,
+                GamePauseInputSnapshotCreate(true), true);
+            expect(_practice_main.main_index).toBe(3);
+
+            var _options = GamePauseStateCreate();
+            _options.active = true;
+            _options.page = "options";
+            GamePauseStateStep(_options,
+                GamePauseInputSnapshotCreate(true), false);
+            expect(_options.options_index).toBe(5);
+
+            var _practice = GamePauseStateCreate();
+            _practice.active = true;
+            _practice.page = "practice";
+            GamePauseStateStep(_practice,
+                GamePauseInputSnapshotCreate(true), true);
+            expect(_practice.practice_index).toBe(7);
+
+            var _quit = GamePauseStateCreate();
+            _quit.active = true;
+            _quit.page = "quit_confirm";
+            GamePauseStateStep(_quit,
+                GamePauseInputSnapshotCreate(false, false, false, true), false);
+            expect(_quit.quit_index).toBe(1);
+        });
+
+        test("Ornate draw helpers preserve alignment, font, filtering, and current color postconditions", function() {
+            var _palette = GameUiStoryFramePaletteCreate(false);
+            var _font = draw_get_font();
+            var _texfilter = gpu_get_texfilter();
+            var _text_color = make_color_rgb(18, 210, 132);
+            var _ornament_color = make_color_rgb(240, 64, 112);
+
+            draw_set_halign(fa_right);
+            draw_set_valign(fa_bottom);
+            draw_set_alpha(0.25);
+            draw_set_color(c_aqua);
+
+            GameUiDrawOutlinedText("state", 4, 4, _text_color, c_black, 0.5);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(_text_color);
+
+            GameUiDrawOutlinedTextExt("state", 4, 4, 12, 40, _text_color, c_black, 0.5);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(_text_color);
+
+            GameUiDrawOrnamentDiamond(8, 8, 3, _ornament_color, 0.4);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(_ornament_color);
+
+            GameUiDrawQuadraticThread(2, 2, 8, 0, 14, 2, c_aqua, 0.6, 4);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(c_white);
+
+            GameUiDrawFiligreeDivider(2, 62, 18, _palette, 0.7, -3);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(_palette.jewel_color);
+
+            GameUiDrawVolumeGauge(4, 60, 28, 0, false);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(c_white);
+
+            GameUiDrawVolumeGauge(4, 60, 28, 1, true);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(c_white);
+
+            GameUiDrawPixelHeart(4, 36, 0, 0.5);
+            GameUiDrawPixelHeart(16, 36, 2, 1);
+            GameUiDrawBossPhaseHearts(28, 36, 0, 1, 0.75);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(c_white);
+
+            GameUiDrawOrnateFrame(2, 48, 24, 20, _palette.fill_color, 0.5,
+                _palette.border_color, false, 0.8);
+            expect(draw_get_alpha()).toBe(1);
+            expect(draw_get_color()).toBe(c_white);
+            expect(draw_get_halign()).toBe(fa_right);
+            expect(draw_get_valign()).toBe(fa_bottom);
+            expect(draw_get_font()).toBe(_font);
+            expect(gpu_get_texfilter()).toBe(_texfilter);
+        });
+    });
+
     section("Gameplay", function() {
         beforeEach(function() {
             global.game_config = GameConfigCreateDefault();

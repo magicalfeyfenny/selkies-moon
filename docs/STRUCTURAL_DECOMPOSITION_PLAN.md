@@ -171,7 +171,7 @@ Included File dependencies remain material and are listed in the module map.
 | Run transition matrix is incomplete | normal start, practice restart/return, abort, death/continue, ending, credits reset | focused tests cover normal start, practice, continue, game-over, and ending transitions | Add a table-driven trace for result-write/no-write behavior and runtime fields across every exit path. |
 | Exact frame sequence across scene/player/bullets is not captured | rank, Berserk, bombs, cancellation, medals, waves | focused unit/event tests cover individual behaviors | Record per-frame stage frame, rank counters, meter, bomb state, spawn/cancel/medal events, and entity counts through freeze/unfreeze boundaries. |
 | Dual-boss finale transition lacks a complete ordered trace | boss runtime | GMTL verifies both personal defeats unlock the shared finale | Record member enumeration order, both instances' HP/phase/timers/visibility, bullet count, medal markers, and scene completion through the finale seam. |
-| Draw helpers lack automated pixel baselines and explicit draw-state assertions | shared ornate UI, title view, story view, gameplay HUD | 26-capture visual tour covers title, story, bosses, practice, and pause; focused tests cover some pure style/layout structs | Save approved before/after captures for the selected scenes, compare dimensions and representative pixels or hashes where stable, and assert helpers restore alpha/color/alignment/filter state where applicable. |
+| Shared ornate UI lacks runner-confirmed assertions, approved stable captures, and pixel baselines | shared ornate UI, title view, story view, gameplay HUD | 26-capture visual tour covers title, story, bosses, practice, and pause; focused tests now define palettes, caller-visible state/layout boundaries, and current alpha/color/alignment/font/filter postconditions; the project compiles with those assertions | Obtain passing GMTL summaries and save approved captures `01`, `05`, `06`, `16`, and `21`-`24` from an authorized runner, then compare dimensions and representative pixels or hashes where stable. Do not normalize the characterized ornament/divider color side effect during extraction. |
 | Story data failure behavior is only partly exercised | story data and flow | Included File loading, wrapping, reveal, and room-flow tests exist | Characterize missing, malformed, empty, array-root, and struct-root JSON without changing the current failure contract. |
 | Most boss family functions are covered through the dispatcher, not direct family contracts | boss pattern families | configured-shot-kind, representative geometry, and variance tests exist; only 2 of 17 functions have direct GMTL references | For each family move, assert recognized shot kinds, bullet type/count/order, key angles/speeds, boss state toggles, RNG draw count, unknown-value behavior, and one visual capture. |
 | Persistence helper coverage is integration-heavy | persistence transport/migration/results | strong load, migration, malformed/future-version, isolation, initialization, and non-qualifying-score tests | Add direct backup/rewrite/no-rewrite and qualifying-score alignment checks before changing ownership. Never write player filenames in tests. |
@@ -272,12 +272,40 @@ the known local runner as part of characterization. If no authorized runner can
 produce the captures, record the visual portion as unverified and stop before
 extraction rather than treating compilation or test construction as a pass.
 
+### Milestone 1 characterization status
+
+The focused `Shared ornate UI characterization` GMTL section defines normal and
+selected palettes, title-main and title-options ordering and boundary values,
+opening-story portrait and empty-text layout, final-boss HUD anchors and
+one-to-fifteen heart states, all four pause-page row/selection contracts, and
+draw-state postconditions for the shared primitives.
+
+The current local harness compiles the 134-test project, but it exhausted all
+eight supported attempts without GMTL summaries: Igor repeatedly raised
+`System.AccessViolationException`, direct runner execution produced no test
+output, and app launch also failed with `kLSNoExecutableErr`. Runner repair or
+replacement is outside milestone 1, so these assertions remain runtime
+unconfirmed.
+
+The selected visual-tour evidence remains required: `01_title_main_menu`,
+`05_title_options`, `06_opening_story`, `16_final_boss`, `21_pause_main`,
+`22_pause_settings`, `23_pause_practice_tuning`, and
+`24_pause_quit_confirm`. Until those captures are produced and reviewed from an
+authorized working runner, milestone 1 has only compiled characterization
+assertions and milestone 2 extraction is not safe to begin.
+
+Suspicious existing behavior is recorded rather than repaired here:
+`GameUiDrawOrnamentDiamond` restores alpha but leaves the requested draw color,
+and `GameUiDrawFiligreeDivider` therefore leaves the palette jewel color after
+its final ornament. The characterization test preserves those current
+postconditions; any normalization belongs to a separate behavior-change task.
+
 ## Migration status
 
 | Area | Status | Next action |
 | --- | --- | --- |
 | Audit and routing | Complete | Use this plan and the module map for every structural thread |
-| Shared ornate UI | Characterization required | Milestone 1 |
+| Shared ornate UI | Characterization assertions compile; local runner blocked; approved visual evidence pending | Obtain passing milestone 1 GMTL results and capture/review `01`, `05`, `06`, `16`, and `21`-`24` before milestone 2 |
 | Stage rules | Characterization required | Milestone 3 after shared UI extraction |
 | Boss plans | Existing focused coverage is likely sufficient; determinism checkpoint still required at extraction | Milestone 5 |
 | Rank | Existing focused coverage is strong; frozen-frame checkpoint required | Milestone 6 |

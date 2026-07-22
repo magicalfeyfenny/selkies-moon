@@ -20,7 +20,7 @@ Current facts that governance verification binds to executable sources:
   pressure point used by compatibility and practice calculations.
 - Boss stage phase counts: `3,5,3+shared,7,15`. Stage 3 gives each personal boss
   three phases, then runs one synchronized shared finale.
-- GMTL tests declared: `128`.
+- GMTL tests declared: `134`.
 - Visual-tour captures declared: `26`.
 - Editable Logic projects present: `0/15`.
 
@@ -30,7 +30,7 @@ checked discovery summary, not a second place to tune them.
 
 ## Validation snapshot
 
-- `scripts/test_bootstrap/test_bootstrap.gml` contains 128 regression tests.
+- `scripts/test_bootstrap/test_bootstrap.gml` contains 134 regression tests.
 - `tools/run_gmtl_tests.zsh` is the supported local full-suite entry point.
 - `.github/workflows/gamemaker-tests.yml` runs the Windows VM suite for `dev`
   pull requests, `dev` pushes, and manual dispatches when the licensed secret is
