@@ -171,7 +171,6 @@ Included File dependencies remain material and are listed in the module map.
 | Run transition matrix is incomplete | normal start, practice restart/return, abort, death/continue, ending, credits reset | focused tests cover normal start, practice, continue, game-over, and ending transitions | Add a table-driven trace for result-write/no-write behavior and runtime fields across every exit path. |
 | Exact frame sequence across scene/player/bullets is not captured | rank, Berserk, bombs, cancellation, medals, waves | focused unit/event tests cover individual behaviors | Record per-frame stage frame, rank counters, meter, bomb state, spawn/cancel/medal events, and entity counts through freeze/unfreeze boundaries. |
 | Dual-boss finale transition lacks a complete ordered trace | boss runtime | GMTL verifies both personal defeats unlock the shared finale | Record member enumeration order, both instances' HP/phase/timers/visibility, bullet count, medal markers, and scene completion through the finale seam. |
-| Shared ornate UI lacks runner-confirmed assertions, approved stable captures, and pixel baselines | shared ornate UI, title view, story view, gameplay HUD | 26-capture visual tour covers title, story, bosses, practice, and pause; focused tests now define palettes, caller-visible state/layout boundaries, and current alpha/color/alignment/font/filter postconditions; the project compiles with those assertions | Obtain passing GMTL summaries and save approved captures `01`, `05`, `06`, `16`, and `21`-`24` from an authorized runner, then compare dimensions and representative pixels or hashes where stable. Do not normalize the characterized ornament/divider color side effect during extraction. |
 | Story data failure behavior is only partly exercised | story data and flow | Included File loading, wrapping, reveal, and room-flow tests exist | Characterize missing, malformed, empty, array-root, and struct-root JSON without changing the current failure contract. |
 | Most boss family functions are covered through the dispatcher, not direct family contracts | boss pattern families | configured-shot-kind, representative geometry, and variance tests exist; only 2 of 17 functions have direct GMTL references | For each family move, assert recognized shot kinds, bullet type/count/order, key angles/speeds, boss state toggles, RNG draw count, unknown-value behavior, and one visual capture. |
 | Persistence helper coverage is integration-heavy | persistence transport/migration/results | strong load, migration, malformed/future-version, isolation, initialization, and non-qualifying-score tests | Add direct backup/rewrite/no-rewrite and qualifying-score alignment checks before changing ownership. Never write player filenames in tests. |
@@ -280,19 +279,42 @@ opening-story portrait and empty-text layout, final-boss HUD anchors and
 one-to-fifteen heart states, all four pause-page row/selection contracts, and
 draw-state postconditions for the shared primitives.
 
-The current local harness compiles the 134-test project, but it exhausted all
-eight supported attempts without GMTL summaries: Igor repeatedly raised
-`System.AccessViolationException`, direct runner execution produced no test
-output, and app launch also failed with `kLSNoExecutableErr`. Runner repair or
-replacement is outside milestone 1, so these assertions remain runtime
-unconfirmed.
+Hosted validation is complete for immutable candidate
+`acdf8e529ffe68e38fb87580c73ca5cee2286f6d`:
 
-The selected visual-tour evidence remains required: `01_title_main_menu`,
-`05_title_options`, `06_opening_story`, `16_final_boss`, `21_pause_main`,
-`22_pause_settings`, `23_pause_practice_tuning`, and
-`24_pause_quit_confirm`. Until those captures are produced and reviewed from an
-authorized working runner, milestone 1 has only compiled characterization
-assertions and milestone 2 extraction is not safe to begin.
+- [GMTL run `29889767822`](https://github.com/magicalfeyfenny/selkies-moon/actions/runs/29889767822)
+  checked out that exact SHA and reported `Test Suites: 1 passed, 1 total` and
+  `Tests: 134 passed, 134 total`.
+- [Visual-tour run `29889883786`](https://github.com/magicalfeyfenny/selkies-moon/actions/runs/29889883786)
+  checked out the same candidate under reviewed workflow SHA
+  `23340db00676a343c826db3ef51ef2b2e60aa543`. Artifacts
+  `ornate-ui-visual-tour-captures-acdf8e529ffe68e38fb87580c73ca5cee2286f6d`
+  and
+  `ornate-ui-visual-tour-evidence-acdf8e529ffe68e38fb87580c73ca5cee2286f6d`
+  preserve the selected captures, execution logs, and provenance manifest.
+- All eight selected captures decoded as 640x360 RGBA PNGs and were reviewed.
+  Title and options ordering, values, selection accents, story-frame bounds,
+  final-boss HUD anchors and heart wrapping, and all four pause layouts were
+  intact. The first opening narration frame correctly has no portrait and a
+  partial typewriter reveal. No clipping, overlap, incorrect spacing, missing
+  elements, unintended tint, or cross-page state leakage was found.
+
+Approved capture SHA-256 baselines are:
+
+| Capture | SHA-256 |
+| --- | --- |
+| `01_title_main_menu.png` | `d023caf10c5993ff717c145f2d542a03fc73da9124ea6d6088b8719b6211d13f` |
+| `05_title_options.png` | `1e125f04cea26c7d31101c48822881b78fd1200520ac9bba84f0476079bee1cd` |
+| `06_opening_story.png` | `cac3458ab2bfb5801a89b1657c19cb9539b8f8e0f3be773985b22fcaed68f80d` |
+| `16_final_boss.png` | `3994c1714575c865f82e23565f9e0e976cf944324e4f093cb09a38a5a23c79e4` |
+| `21_pause_main.png` | `64748c4712c68175bfcf3ef90c70702a1053e5a947991e7fc556a093b61767a9` |
+| `22_pause_settings.png` | `3434152e32d48581c1c7ad4ea2d98303f5b8d7e6a29a5465dabe45a8900ea088` |
+| `23_pause_practice_tuning.png` | `58cce498bbfbb6d2a5ac75cbc50169e5ebfba703f9bf9b432735f73ad0303e2c` |
+| `24_pause_quit_confirm.png` | `e45f2caf211fa076100313af61219ec0c8949c8a00c15b527b438c3270ffdb16` |
+
+This evidence makes milestone 1 extraction-ready. It applies to the immutable
+candidate SHA above; the later documentation-only commit that records the
+result did not itself receive runtime validation.
 
 Suspicious existing behavior is recorded rather than repaired here:
 `GameUiDrawOrnamentDiamond` restores alpha but leaves the requested draw color,
@@ -305,7 +327,7 @@ postconditions; any normalization belongs to a separate behavior-change task.
 | Area | Status | Next action |
 | --- | --- | --- |
 | Audit and routing | Complete | Use this plan and the module map for every structural thread |
-| Shared ornate UI | Characterization assertions compile; local runner blocked; approved visual evidence pending | Obtain passing milestone 1 GMTL results and capture/review `01`, `05`, `06`, `16`, and `21`-`24` before milestone 2 |
+| Shared ornate UI | Milestone 1 validated and extraction-ready at `acdf8e529ffe68e38fb87580c73ca5cee2286f6d` | Begin milestone 2 only as a separate authorized extraction task |
 | Stage rules | Characterization required | Milestone 3 after shared UI extraction |
 | Boss plans | Existing focused coverage is likely sufficient; determinism checkpoint still required at extraction | Milestone 5 |
 | Rank | Existing focused coverage is strong; frozen-frame checkpoint required | Milestone 6 |
@@ -319,6 +341,7 @@ postconditions; any normalization belongs to a separate behavior-change task.
 | Boss pattern families | Cohesive current owner; defer until family geometry/RNG characterization | Milestones 40-48 |
 | Input/audio/stage 3D | Monitor; no extraction selected by this audit | Re-audit only when a bounded task demonstrates recurring mixed ownership |
 
-The repository is ready to begin milestone 1 characterization. It is not ready
-to begin RNG-sensitive extraction without the specified traces, and this audit
-does not authorize any production milestone.
+Milestone 1 characterization is complete, so milestone 2 shared ornate UI
+extraction is safe to begin as a separate authorized task. The repository is
+not ready for RNG-sensitive extraction without the specified traces, and this
+audit does not itself authorize any production milestone.

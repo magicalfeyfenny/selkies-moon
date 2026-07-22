@@ -36,6 +36,12 @@ checked discovery summary, not a second place to tune them.
   pull requests, `dev` pushes, and manual dispatches when the licensed secret is
   available. Its separate governance job is unlicensed and runs on every
   workflow invocation, including fork pull requests.
+- Milestone 1 shared ornate UI characterization is extraction-ready at immutable
+  candidate `acdf8e529ffe68e38fb87580c73ca5cee2286f6d`: hosted GMTL run
+  `29889767822` passed all 134 tests, and visual-tour run `29889883786` produced
+  and passed review for the eight selected 640x360 captures. This runtime
+  evidence belongs to that candidate, not to the later documentation-only
+  commit that records it.
 - `art/audio_production/loop_validation.json` records all 15 score masters as
   completed with no missing cues; the matching runtime sound metadata uses the
   production durations.
