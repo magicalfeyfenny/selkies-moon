@@ -14,6 +14,7 @@ shapes belong in [`DATA_FORMATS.md`](DATA_FORMATS.md).
 | Run flow, rank, weapons, enemies, pickups | [Gameplay systems](GAMEPLAY_SYSTEMS.md) | `scripts/scr_gameplay_helpers`, `obj_scene_manager`, player/enemy/bullet objects | gameplay, practice, and rank tests |
 | Boss plans or patterns | [Bosses](GAMEPLAY_SYSTEMS.md#bosses), [phase schema](DATA_FORMATS.md#boss-phase-descriptors) | `scripts/scr_gameplay_helpers`, `scripts/scr_boss_patterns`, `obj_boss_parent`, `obj_boss_sunset` | boss-plan, phase, interpreter, and encounter tests |
 | Story or dialogue data | [Story JSON](DATA_FORMATS.md#story-json) | `scripts/scr_story_helpers`, `obj_UI_story`, `datafiles/` | story UI and Included File tests |
+| Shared ornate or crystal UI | [Structural plan](STRUCTURAL_DECOMPOSITION_PLAN.md) | `scripts/scr_ui_ornate`, `scripts/scr_ui_crystal` | shared ornate UI characterization plus selected visual-tour captures |
 | Audio routing or production | [Audio direction](AUDIO_DIRECTION.md), [asset pipelines](ASSET_PIPELINES.md#audio) | `scripts/scr_audio_helpers`, `sounds/`, audio tools and manifests | audio routing tests plus score/SFX validators |
 | 3D stages, generated art, portraits | [Asset pipelines](ASSET_PIPELINES.md) | `scripts/scr_stage_3d`, `obj_scene_manager`, named `tools/` generator and matching `art/` source manifest | deterministic generator check and visual QA |
 | Tests, CI, local playtest | [Validation](VALIDATION.md) | `scripts/test_bootstrap`, `scripts/scr_test_helpers`, test tools, `.github/workflows/` | the selected validation tier itself |
@@ -76,9 +77,10 @@ migration, and tests.
 | `scr_audio_helpers` | music routing, preview ownership, gains, and named SFX entry points |
 | `scr_gameplay_helpers` | constants, run/practice/pause/rank, stages, players, encounters, pickups, and enemies |
 | `scr_boss_patterns` | boss descriptor interpretation and bullet primitives |
-| `scr_story_helpers` | story loading/state, text layout, portraits/backgrounds, and story UI primitives |
+| `scr_story_helpers` | story loading/state, text layout, portraits/backgrounds, and story-specific drawing |
 | `scr_stage_3d` | stage buffers, camera paths, lighting/fog, and atmosphere |
 | `scr_title_helpers` | title pages, character/practice/music state, and drawing |
+| `scr_ui_ornate` | shared outlined text, palettes, filigree, gauges, hearts, and ornate frames |
 | `scr_ui_crystal` | clean-backdrop capture, GUI mapping, and crystal-pane shaders |
 | `scr_test_helpers` | automation isolation and the visual tour |
 | `test_bootstrap` | project GMTL regression suite |

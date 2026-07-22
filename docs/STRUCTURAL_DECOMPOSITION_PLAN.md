@@ -280,19 +280,19 @@ opening-story portrait and empty-text layout, final-boss HUD anchors and
 one-to-fifteen heart states, all four pause-page row/selection contracts, and
 draw-state postconditions for the shared primitives.
 
-The current local harness compiles the 134-test project, but it exhausted all
-eight supported attempts without GMTL summaries: Igor repeatedly raised
-`System.AccessViolationException`, direct runner execution produced no test
-output, and app launch also failed with `kLSNoExecutableErr`. Runner repair or
-replacement is outside milestone 1, so these assertions remain runtime
-unconfirmed.
+Milestone 1 is fully validated at characterization candidate
+`acdf8e529ffe68e38fb87580c73ca5cee2286f6d`. Hosted GMTL run `29889767822`
+reported `Test Suites: 1 passed, 1 total` and `Tests: 134 passed, 134 total`.
+Visual-tour run `29889883786`, using reviewed workflow commit
+`23340db00676a343c826db3ef51ef2b2e60aa543`, produced and passed review for
+`01_title_main_menu`, `05_title_options`, `06_opening_story`, `16_final_boss`,
+`21_pause_main`, `22_pause_settings`, `23_pause_practice_tuning`, and
+`24_pause_quit_confirm` without a visual regression.
 
-The selected visual-tour evidence remains required: `01_title_main_menu`,
-`05_title_options`, `06_opening_story`, `16_final_boss`, `21_pause_main`,
-`22_pause_settings`, `23_pause_practice_tuning`, and
-`24_pause_quit_confirm`. Until those captures are produced and reviewed from an
-authorized working runner, milestone 1 has only compiled characterization
-assertions and milestone 2 extraction is not safe to begin.
+Milestone 2 moves exactly the characterized primitives into the registered
+`scr_ui_ornate` resource without renaming symbols or adding a facade. Its own
+frozen candidate still requires the full hosted GMTL and selected visual-tour
+validation specified by the milestone.
 
 Suspicious existing behavior is recorded rather than repaired here:
 `GameUiDrawOrnamentDiamond` restores alpha but leaves the requested draw color,
@@ -305,7 +305,7 @@ postconditions; any normalization belongs to a separate behavior-change task.
 | Area | Status | Next action |
 | --- | --- | --- |
 | Audit and routing | Complete | Use this plan and the module map for every structural thread |
-| Shared ornate UI | Characterization assertions compile; local runner blocked; approved visual evidence pending | Obtain passing milestone 1 GMTL results and capture/review `01`, `05`, `06`, `16`, and `21`-`24` before milestone 2 |
+| Shared ornate UI | Milestone 1 validated; milestone 2 extracted to registered `scr_ui_ornate` | Validate the frozen milestone 2 candidate with full hosted GMTL, selected captures, and high-tier delegated review |
 | Stage rules | Characterization required | Milestone 3 after shared UI extraction |
 | Boss plans | Existing focused coverage is likely sufficient; determinism checkpoint still required at extraction | Milestone 5 |
 | Rank | Existing focused coverage is strong; frozen-frame checkpoint required | Milestone 6 |

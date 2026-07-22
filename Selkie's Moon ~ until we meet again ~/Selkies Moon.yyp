@@ -121,6 +121,7 @@
     {"id":{"name":"scr_test_helpers","path":"scripts/scr_test_helpers/scr_test_helpers.yy",},},
     {"id":{"name":"scr_title_helpers","path":"scripts/scr_title_helpers/scr_title_helpers.yy",},},
     {"id":{"name":"scr_ui_crystal","path":"scripts/scr_ui_crystal/scr_ui_crystal.yy",},},
+    {"id":{"name":"scr_ui_ornate","path":"scripts/scr_ui_ornate/scr_ui_ornate.yy",},},
     {"id":{"name":"test_bootstrap","path":"scripts/test_bootstrap/test_bootstrap.yy",},},
     {"id":{"name":"shd_stage_3d","path":"shaders/shd_stage_3d/shd_stage_3d.yy",},},
     {"id":{"name":"shd_ui_crystal","path":"shaders/shd_ui_crystal/shd_ui_crystal.yy",},},

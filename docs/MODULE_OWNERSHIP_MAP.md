@@ -1,12 +1,14 @@
 # Structural Module Ownership Map
 
 This map supports the [structural decomposition plan](STRUCTURAL_DECOMPOSITION_PLAN.md).
-It records current ownership and proposed future seams; proposed resources do
-not exist and are not current runtime owners.
+It records current ownership and proposed future seams. A proposed resource is
+not a current runtime owner unless its row explicitly records the extraction.
 
 Status values:
 
 - **current**: implemented ownership;
+- **extracted**: the approved ownership move is implemented and awaits or has
+  completed its milestone validation;
 - **characterize**: contract evidence is required before moving code;
 - **extract-ready**: focused coverage exists, subject to the milestone's stated
   deterministic checkpoint;
@@ -249,7 +251,7 @@ function names are preserved.
 | Options/remap | `GameTitleConfigEntriesCreate`, `GameTitleControlEntriesCreate`, `GameTitleRemapBegin`, `GameTitleRemapCommit`, `GameTitleRemapCancel`, `GameTitleRemapCaptureUpdate`, `GameTitleConfigValueWrap`, `GameTitleConfigEntryAdjust` | Raw keyboard/gamepad polling, `global.game_input`, config mutation, save/apply, SFX | options/remap/volume tests; pause is an external caller; gap: raw capture release timing | `scr_options_menu` | characterize for timing |
 | Practice page | `GameTitlePracticeEntriesCreate`, `GameTitlePracticeEntryAdjust`, `GameTitlePracticeHelpGet` | Mutates title practice struct; depends on gameplay practice/rank/stock macros | practice menu and normalization tests | page view/state can remain title-owned; shared rules move to `scr_practice` | extract-ready after practice owner |
 | Music Room | `GameTitleMusicPreviewStop`, `GameTitleMusicPreviewPlaySelected`, `GameTitleMusicPreviewToggle` | Mutates local preview IDs and delegates audio preview ownership | focused preview test | `scr_music_room` or remain thin title adapter over audio | defer until title split |
-| Title/shared view | `GameTitleDrawFrame`, `GameTitleDrawSpriteFit`, `GameTitleDrawBackground`, `GameTitleDrawSilhouetteDecorators`, `GameTitlePressStartSubtitleAnimCreate`, `GameUiDrawOutlinedText`, `GameUiDrawOutlinedTextExt`, `GameTitleDrawPageHeading`, `GameTitlePanelStyleCreate`, `GameTitleDrawLogo`, `GameTitlePressPromptTextGet`, `GameTitleDrawPrompt`, `GameTitleDrawMenuItem`, `GameTitleDrawMainMenu`, `GameTitleDrawOptionsPage`, `GameTitleDrawControlsPage`, `GameTitleDrawPracticePage`, `GameTitleDrawScoresPage`, `GameTitleDrawGalleryPage`, `GameTitleDrawMusicRoomPage`, `GameTitleDrawCharacterSelectPage`, `GameTitleDrawCharacterAttackPreview`, `GameTitleDraw` | Draw state, many sprites/fonts, gameplay weapon preview; outlined text is shared by story/gameplay/pause | prompt/style tests and visual tour; gap: pixel/draw-state assertions | shared primitives to `scr_ui_ornate`; remainder to `scr_title_view` | characterize |
+| Title view | `GameTitleDrawFrame`, `GameTitleDrawSpriteFit`, `GameTitleDrawBackground`, `GameTitleDrawSilhouetteDecorators`, `GameTitlePressStartSubtitleAnimCreate`, `GameTitleDrawPageHeading`, `GameTitlePanelStyleCreate`, `GameTitleDrawLogo`, `GameTitlePressPromptTextGet`, `GameTitleDrawPrompt`, `GameTitleDrawMenuItem`, `GameTitleDrawMainMenu`, `GameTitleDrawOptionsPage`, `GameTitleDrawControlsPage`, `GameTitleDrawPracticePage`, `GameTitleDrawScoresPage`, `GameTitleDrawGalleryPage`, `GameTitleDrawMusicRoomPage`, `GameTitleDrawCharacterSelectPage`, `GameTitleDrawCharacterAttackPreview`, `GameTitleDraw` | Draw state, many sprites/fonts, gameplay weapon preview; consumes shared ornate primitives from `scr_ui_ornate` | prompt/style tests and visual tour; gap: title-only pixel/draw-state assertions | remainder to `scr_title_view` | characterize |
 
 ## `scr_story_helpers` cluster map
 
@@ -263,7 +265,7 @@ state owner while the current shared-runtime cycle is retired.
 | Story state/reveal | `GameStoryStateCreate`, `GameStoryRuntimeEnsure`, `GameStoryIsActive`, `GameStoryStateClear`, `GameStoryTypewriterDelayForCharacter`, `GameStoryTextArrowFrameGet`, `GameStoryRevealReset`, `GameStoryRevealComplete`, `GameStoryRevealStep`, `GameStoryContinue`, `GameStoryBegin`, `GameStoryAdvance`, `GameStoryAdvanceInputPressed`, `GameStoryUpdate` | Local queue/reveal fields and runtime story/dialogue fields; fixed Step cadence and `current_time` arrow | strong reveal/advance tests; gap: runtime ensure direct contract and combined step trace | `scr_story_state`; runtime ensure may temporarily forward to `scr_run_state` | characterize |
 | Story flow | `GameStoryQueueRequest`, `GameFinalBossStoryFileGet`, `GameCharacterBossStoryFileGet`, `GameEndingStoryFileGet`, `GameStoryDefaultFileGet`, `GameStoryRoomComplete`, `GameStoryNextRoomGet`, `GameStoryTransitionRoomGet` | Chooses route files, toggles dialogue, saves ending result, returns room IDs | route, boss story, opening/ending transition tests; gap: complete exit/save trace | `scr_story_flow` | characterize with DV |
 | Text/layout and story view | `GameStoryPortraitRectGet`, `GameStoryPortraitColorGet`, `GameStoryDrawPortraitPlaceholder`, `GameStoryDrawPortrait`, `GameStoryDrawBackgroundSprite`, `GameStoryDrawBackground`, `GameStoryTextClampToWidth`, `GameStoryTextLinesCreate`, `GameStoryVisibleLinesCreate`, `GameStoryDrawBox`, `GameStoryDraw` | Draw state, portrait/background resources, two-line wrapping | wrapping/typewriter/visual-tour evidence; gap: render baseline | `scr_story_view` | characterize |
-| Shared ornate UI | `GameUiStoryFramePaletteCreate`, `GameUiDrawOrnamentDiamond`, `GameUiDrawPixelFiligreeCorner`, `GameUiDrawQuadraticThread`, `GameUiDrawFiligreeDivider`, `GameUiDrawVolumeGauge`, `GameUiDrawPixelHeart`, `GameUiDrawBossPhaseHearts`, `GameUiDrawOrnateFrame` | Shared by title, gameplay HUD, pause, story; draw-state side effects | focused palette, caller-state, layout-boundary, and draw-postcondition assertions plus visual tour; gaps: runner execution and approved stable captures/pixel evidence | `scr_ui_ornate` | characterization written; runner blocked |
+| Shared ornate UI | `GameUiDrawOutlinedText`, `GameUiDrawOutlinedTextExt`, `GameUiStoryFramePaletteCreate`, `GameUiDrawOrnamentDiamond`, `GameUiDrawPixelFiligreeCorner`, `GameUiDrawQuadraticThread`, `GameUiDrawFiligreeDivider`, `GameUiDrawVolumeGauge`, `GameUiDrawPixelHeart`, `GameUiDrawBossPhaseHearts`, `GameUiDrawOrnateFrame` | `scr_ui_ornate`; shared by title, gameplay HUD, pause, and story; preserves characterized draw-state side effects | 134-test hosted GMTL pass and eight reviewed milestone 1 captures; milestone 2 candidate validation pending | `scr_ui_ornate` | extracted |
 
 ## `scr_boss_patterns` cluster map
 

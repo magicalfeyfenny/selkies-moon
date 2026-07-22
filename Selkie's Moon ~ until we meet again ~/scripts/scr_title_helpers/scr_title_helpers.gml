@@ -819,36 +819,6 @@ function GameTitlePressStartSubtitleAnimCreate(_timer) {
     };
 }
 
-/// @func GameUiDrawOutlinedText(text, x, y, text_color, outline_color, alpha)
-/// Draws one line of UI text with a four-direction one-pixel outline.
-function GameUiDrawOutlinedText(_text, _x, _y, _text_color = c_white, _outline_color = c_black, _alpha = 1.0) {
-    draw_set_alpha(_alpha);
-    draw_set_color(_outline_color);
-    draw_text(_x - 1, _y, _text);
-    draw_text(_x + 1, _y, _text);
-    draw_text(_x, _y - 1, _text);
-    draw_text(_x, _y + 1, _text);
-
-    draw_set_color(_text_color);
-    draw_text(_x, _y, _text);
-    draw_set_alpha(1.0);
-}
-
-/// @func GameUiDrawOutlinedTextExt(text, x, y, sep, width, text_color, outline_color, alpha)
-/// Draws wrapped UI text with the same outline style as single-line text.
-function GameUiDrawOutlinedTextExt(_text, _x, _y, _sep, _width, _text_color = c_white, _outline_color = c_black, _alpha = 1.0) {
-    draw_set_alpha(_alpha);
-    draw_set_color(_outline_color);
-    draw_text_ext(_x - 1, _y, _text, _sep, _width);
-    draw_text_ext(_x + 1, _y, _text, _sep, _width);
-    draw_text_ext(_x, _y - 1, _text, _sep, _width);
-    draw_text_ext(_x, _y + 1, _text, _sep, _width);
-
-    draw_set_color(_text_color);
-    draw_text_ext(_x, _y, _text, _sep, _width);
-    draw_set_alpha(1.0);
-}
-
 /// @func GameTitleDrawPageHeading(text, y, color)
 /// Draws title-page headings in the same ornate face as cutscene nameplates.
 function GameTitleDrawPageHeading(_text, _y = 42, _color = c_white) {
