@@ -1,6 +1,9 @@
 name: Ornate UI visual tour
 
 on:
+  push:
+    branches:
+      - codex/ornate-ui-visual-tour-ci
   workflow_dispatch:
     inputs:
       candidate_sha:
@@ -12,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ornate-ui-visual-tour-${{ github.workflow }}-${{ inputs.candidate_sha }}
+  group: ornate-ui-visual-tour-${{ github.workflow }}-${{ inputs.candidate_sha || 'acdf8e529ffe68e38fb87580c73ca5cee2286f6d' }}
   cancel-in-progress: false
 
 jobs:
@@ -21,7 +24,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 35
     env:
-      CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+      CANDIDATE_SHA: ${{ inputs.candidate_sha || 'acdf8e529ffe68e38fb87580c73ca5cee2286f6d' }}
       WORKFLOW_SHA: ${{ github.sha }}
 
     steps:
@@ -42,7 +45,7 @@ jobs:
       - name: Check out exact candidate source
         uses: actions/checkout@v7.0.0
         with:
-          ref: ${{ inputs.candidate_sha }}
+          ref: ${{ env.CANDIDATE_SHA }}
           path: candidate
           fetch-depth: 1
           persist-credentials: false
@@ -138,7 +141,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: ornate-ui-visual-tour-evidence-${{ inputs.candidate_sha }}
+          name: ornate-ui-visual-tour-evidence-${{ steps.identity.outputs.candidate_sha }}
           path: |
             candidate/test-results/visual-tour-ci/logs/
             candidate/test-results/visual-tour-ci/visual-tour-manifest.json
