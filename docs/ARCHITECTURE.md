@@ -21,6 +21,13 @@ shapes belong in [`DATA_FORMATS.md`](DATA_FORMATS.md).
 
 For behavior-preserving structural refactors, use `$structural-decomposition` from `.agents/skills/`; additionally use `$determinism-validation` when deterministic state is involved and `$gamemaker-resource-change` when GameMaker resource metadata changes.
 
+The current oversized-owner audit, proposed module boundaries, characterization
+gaps, and fresh-thread milestones are in the
+[`STRUCTURAL_DECOMPOSITION_PLAN.md`](STRUCTURAL_DECOMPOSITION_PLAN.md) and
+[`MODULE_OWNERSHIP_MAP.md`](MODULE_OWNERSHIP_MAP.md). Those documents plan future
+ownership; the current owners in this guide remain authoritative until a
+validated extraction updates them.
+
 Paths in the table are relative to
 `Selkie's Moon ~ until we meet again ~/` unless they begin at repository root.
 Search within the routed owner before expanding scope.
