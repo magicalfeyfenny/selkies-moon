@@ -1,0 +1,6 @@
+interface:
+  display_name: "Structural Decomposition"
+  short_description: "Extract cohesive GameMaker modules safely"
+  default_prompt: "Use $structural-decomposition to plan a behavior-preserving extraction."
+policy:
+  allow_implicit_invocation: true

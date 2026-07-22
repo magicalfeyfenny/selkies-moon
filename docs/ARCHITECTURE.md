@@ -19,6 +19,8 @@ shapes belong in [`DATA_FORMATS.md`](DATA_FORMATS.md).
 | Tests, CI, local playtest | [Validation](VALIDATION.md) | `scripts/test_bootstrap`, `scripts/scr_test_helpers`, test tools, `.github/workflows/` | the selected validation tier itself |
 | Governance or documentation | [Project state](PROJECT_STATE.md), this guide | `AGENTS.md`, `docs/`, `tools/check_governance.py` | governance check and Markdown/path review |
 
+For behavior-preserving structural refactors, use `$structural-decomposition` from `.agents/skills/`; additionally use `$determinism-validation` when deterministic state is involved and `$gamemaker-resource-change` when GameMaker resource metadata changes.
+
 Paths in the table are relative to
 `Selkie's Moon ~ until we meet again ~/` unless they begin at repository root.
 Search within the routed owner before expanding scope.
