@@ -76,9 +76,10 @@ heroine. `GameGameplayMusicTrackGet` switches to the boss cue for intro, fight,
 outro, and boss-cleared states, so a stage loop never restarts over the victory
 transition.
 
-The Music Room exposes all fifteen production cue slots. Until a production
-master is installed, each slot has a short motif-correct audition loop generated
-by `tools/build_audio_assets.py`.
+The Music Room exposes all fifteen production cue slots. All slots currently use
+the validated production masters recorded by `loop_validation.json`; the short
+motif-correct audition generator remains available for production experiments
+but is not the current runtime source.
 
 ## Sound-effect language
 
@@ -115,7 +116,9 @@ Open each format-1 MIDI file in Logic Pro, retain all nine software-instrument
 tracks and arrangement markers, and save the editable project to the manifest's
 `logic_project` path. Instrument patches, articulation, automation, mixing, and
 sound design are production decisions made in that project; the MIDI remains
-the note-level source of truth.
+the note-level source of truth. Those manifest-named `.logicx` files are not
+present in this checkout even though the validated lossless masters and runtime
+encodes are present; see `PROJECT_STATE.md` for the current gap.
 
 For each cue, bounce exactly two uninterrupted cycles as stereo 24-bit PCM with
 normalization and audio-tail extension disabled. Then run:

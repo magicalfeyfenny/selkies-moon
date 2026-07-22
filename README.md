@@ -23,7 +23,8 @@ Gameplay:
 - Arrow keys or the D-pad/left stick move.
 - Z or controller A fires a volley when tapped and swings the bullet-cancelling sword when held.
 - X or controller B uses a bomb and cancels all bullets.
-- C or controller X focuses movement and autofires the selected ship's focused shot pattern.
+- C or controller X autofires using the current focus state.
+- Shift or controller LB/L1 focuses movement and changes to the focused shot pattern.
 - Escape, P, or controller Start opens the dedicated pause menu.
 
 The pause menu can resume play, change display settings, or quit the current attempt to the main menu. During practice, it also exposes live tuning and a restart-segment command.
@@ -32,12 +33,12 @@ The pause menu can resume play, change display settings, or quit the current att
 
 Practice Select on the main menu can launch any stage as a full stage, waves-only segment, or boss-only segment. Before starting, you can choose the ship and directly set shot power, rank, lives, bombs, cancel meter, and whether rank changes dynamically. Practice attempts are not written to score or clear records, and completed segments return to Practice Select with the setup retained.
 
-Rank is the 0-100 dynamic-difficulty value shown in the gameplay HUD. A normal run starts at the neutral rank of 50 and changes with performance. Higher rank increases enemy-wave frequency, enemy firing frequency, and enemy-bullet speed; it does not alter enemy health, player damage, or boss phase count. Practice can either lock rank to a chosen value or leave dynamic rank enabled for testing.
+Rank is the 0-50 dynamic-difficulty value shown in the gameplay HUD. A normal run starts at 0 and changes with performance. Higher rank increases enemy-wave frequency, enemy firing frequency, and enemy-bullet speed; it does not alter enemy health, player damage, or boss phase count. Practice can either lock rank to a chosen value or leave dynamic rank enabled for testing.
 
 You get 3 bombs and 3 lives.  
 Bombs do not recover between lives.
 
-The run now contains 10 stages. Each stage has a scrolling wave section, a boss encounter, and a stage-clear transition. Clearing stage 10 moves into the ending and then a credits sequence.
+The run contains five consolidated stages. Each stage has a scrolling wave section, a boss encounter, and a stage-clear transition. Clearing stage 5 moves into the ending and then a credits sequence.
 
 Playable ships:
 - Sunset / Moon: balanced wide shots, a long sword sweep, and a tighter focused shot.
@@ -52,7 +53,7 @@ Enemies are worth an amount of points based on the enemy type:
 
 Enemies can drop two distinct pickup classes:
 - $ score pickups appear on a steady defeat cadence and are always bonus points.
-- Point-blank defeats charge the PB Recharge gauge. Filling it creates one resource-only pickup, with a per-stage cap so resources remain valuable.
+- Defeats charge a hidden, stage-scaled resource cadence that creates one resource-only pickup, with a per-stage cap so resources remain valuable.
 - P: increases shot power up to 5
 - B: restores one bomb up to 6
 - L: restores one life up to 6
@@ -75,14 +76,17 @@ Open the .yyp file and run by pressing F5 or clicking the play button in the top
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md): runtime ownership, modules, object inheritance, and extension rules.
-- [Development guide](docs/DEVELOPMENT.md): project layout, conventions, tests, visual QA, and timeline generation.
+- [Project state](docs/PROJECT_STATE.md): compact current capabilities, validated facts, and known gaps.
+- [Architecture and task routing](docs/ARCHITECTURE.md): runtime ownership and the smallest source scope for each task.
+- [Development guide](docs/DEVELOPMENT.md): project layout, conventions, and the common change workflow.
 - [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md): input, stage flow, rank, weapons, enemies, bosses, pickups, pause, and story flow.
 - [Data formats](docs/DATA_FORMATS.md): story JSON, persistence schemas, boss phase descriptors, and practice requests.
+- [Validation](docs/VALIDATION.md): governance checks, GMTL, CI, visual QA, and YYC.
+- [Asset pipelines](docs/ASSET_PIPELINES.md): generated art, 3D, portrait, and audio ownership.
 
 All project-owned GML functions also carry `/// @func` API comments beside their implementation.
 
-Boss encounters demonstrate their complete seed set, then complete variant sets, and finish with a unique non-repeated signature attack. See [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md#bosses) for the 5/7/9/16-phase progression.
+Boss encounters demonstrate their complete seed set, then complete variant sets, and finish with a unique non-repeated signature attack. See [Gameplay systems](docs/GAMEPLAY_SYSTEMS.md#bosses) for the current encounter progression.
 
 ### Tests
 

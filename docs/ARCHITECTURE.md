@@ -1,12 +1,33 @@
-# Architecture
+# Architecture and Task Routing
 
-This document describes the runtime ownership and code boundaries of Selkie's Moon. Function-level contracts live beside the implementation as `/// @func` comments; this guide explains how those functions cooperate.
+This guide maps runtime ownership and directs a task to the smallest useful
+source scope. Function behavior belongs in project-owned `/// @func` contracts;
+gameplay detail belongs in [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md), and data
+shapes belong in [`DATA_FORMATS.md`](DATA_FORMATS.md).
+
+## Task routing
+
+| Task | Read | Primary source owners | Focused validation |
+| --- | --- | --- | --- |
+| Boot, save/config, migration, display | [Data formats](DATA_FORMATS.md#persistence-json) | `scripts/scr_setup`, `obj_app_init` | `test_bootstrap`: Game setup and persistence |
+| Input, remapping, title, practice setup | [Input](GAMEPLAY_SYSTEMS.md#input), [pause/practice](GAMEPLAY_SYSTEMS.md#pause-and-practice) | `scripts/scr_input_helpers`, `scripts/scr_title_helpers`, `obj_input_manager`, `obj_UI_title` | controller, title, pause, practice tests |
+| Run flow, rank, weapons, enemies, pickups | [Gameplay systems](GAMEPLAY_SYSTEMS.md) | `scripts/scr_gameplay_helpers`, `obj_scene_manager`, player/enemy/bullet objects | gameplay, practice, and rank tests |
+| Boss plans or patterns | [Bosses](GAMEPLAY_SYSTEMS.md#bosses), [phase schema](DATA_FORMATS.md#boss-phase-descriptors) | `scripts/scr_gameplay_helpers`, `scripts/scr_boss_patterns`, `obj_boss_parent`, `obj_boss_sunset` | boss-plan, phase, interpreter, and encounter tests |
+| Story or dialogue data | [Story JSON](DATA_FORMATS.md#story-json) | `scripts/scr_story_helpers`, `obj_UI_story`, `datafiles/` | story UI and Included File tests |
+| Audio routing or production | [Audio direction](AUDIO_DIRECTION.md), [asset pipelines](ASSET_PIPELINES.md#audio) | `scripts/scr_audio_helpers`, `sounds/`, audio tools and manifests | audio routing tests plus score/SFX validators |
+| 3D stages, generated art, portraits | [Asset pipelines](ASSET_PIPELINES.md) | `scripts/scr_stage_3d`, `obj_scene_manager`, named `tools/` generator and matching `art/` source manifest | deterministic generator check and visual QA |
+| Tests, CI, local playtest | [Validation](VALIDATION.md) | `scripts/test_bootstrap`, `scripts/scr_test_helpers`, test tools, `.github/workflows/` | the selected validation tier itself |
+| Governance or documentation | [Project state](PROJECT_STATE.md), this guide | `AGENTS.md`, `docs/`, `tools/check_governance.py` | governance check and Markdown/path review |
+
+Paths in the table are relative to
+`Selkie's Moon ~ until we meet again ~/` unless they begin at repository root.
+Search within the routed owner before expanding scope.
 
 ## Runtime flow
 
-~~~mermaid
+```mermaid
 flowchart LR
-    Boot["obj_app_init<br/>persistent bootstrap"] --> Title["rm_title"]
+    Boot["obj_app_init: persistent bootstrap"] --> Title["rm_title"]
     Title --> Opening["rm_opening"]
     Opening --> Game["rm_game"]
     Game -->|stages 1-4| Game
@@ -15,114 +36,117 @@ flowchart LR
     Credits --> Title
     Title -->|practice| Game
     Game -->|practice complete or abort| Title
-~~~
+```
 
-`obj_app_init` and `obj_input_manager` persist across rooms. Room-owned controllers and UI objects are recreated with their rooms. The bootstrap owns initialization, music synchronization, automated-test shutdown, and the visual QA tour.
+`obj_app_init` and `obj_input_manager` persist across rooms. Room-owned
+controllers and UI are recreated with their rooms. The bootstrap owns
+initialization, music synchronization, automated-test shutdown, and the visual
+tour.
 
-## Global state
+## Shared state
 
-Five global structs are the shared contracts between objects:
-
-| Global | Owner | Purpose |
+| Global | Owner | Contract |
 | --- | --- | --- |
-| `global.game_config` | `scr_setup` | Display dimensions, scale, fullscreen, target FPS, audio gains, and independent keyboard/gamepad bindings |
-| `global.game_save` | `scr_setup` | Per-ship high scores, starts, clears, and continues |
-| `global.game_runtime` | `scr_setup` and `scr_gameplay_helpers` | Current run, stage, player resources, rank, overlays, practice request, and story request |
-| `global.game_input` | `obj_input_manager` and `scr_input_helpers` | Device-neutral movement and verb edges |
-| `global.game_audio` | `scr_audio_helpers` | Current room track, Music Room preview ownership, and sound-effect cycling |
+| `global.game_config` | `scr_setup` | display, frame rate, audio gains, and keyboard/gamepad bindings |
+| `global.game_save` | `scr_setup` | per-ship score rows, starts, finishes, and continues |
+| `global.game_runtime` | `scr_setup`, `scr_gameplay_helpers` | current run, stage, resources, rank, overlays, practice, and story request |
+| `global.game_input` | `obj_input_manager`, `scr_input_helpers` | device-neutral movement and verb edges |
+| `global.game_audio` | `scr_audio_helpers` | room music, Music Room preview, and one-shot cycling |
 
-`GameRuntimeDataCreateDefault()` is the canonical runtime schema. `GameRuntimeGameplayEnsure()` fills fields introduced by newer builds without overwriting live values. Add new runtime fields to the default factory first; the compatibility pass will then inherit them automatically.
+`GameRuntimeDataCreateDefault()` is the runtime schema. Add runtime fields there
+first; `GameRuntimeGameplayEnsure()` fills missing fields without replacing live
+values. Persisted changes additionally require versioning, validation,
+migration, and tests.
 
-## Script modules
+## Script ownership
 
 | Script | Responsibility |
 | --- | --- |
-| `scr_setup` | Schema versions, default structs, save/config migration, score persistence, display application, and boot |
-| `scr_input_helpers` | Persistent keyboard/gamepad maps, remap labels and collision handling, device snapshots, input verbs, active-device selection, and menu cursor movement |
-| `scr_audio_helpers` | Room music routing, Music Room preview ownership, master/category gain application, and named sound-effect entry points |
-| `scr_gameplay_helpers` | Gameplay constants, practice/pause state, rank, stage flow, player rules, encounter descriptors, pickups, and enemy specifications |
-| `scr_boss_patterns` | Runtime interpretation of boss phase descriptors and shared bullet-spawn primitives |
-| `scr_story_helpers` | Story JSON loading, dialogue state, text layout, portrait/background rendering, and ornate UI primitives |
-| `scr_stage_3d` | Native vertex-buffer loading, modular camera paths, stage lighting/fog shader parameters, and background atmosphere |
-| `scr_title_helpers` | Title page state, character metadata, practice configuration UI, Music Room controls, and title drawing |
-| `scr_ui_crystal` | Clean-backdrop capture, GUI-to-surface mapping, and reusable crystal-pane shader orchestration |
-| `scr_test_helpers` | Test-launch isolation and the 26-frame visual QA tour |
-| `test_bootstrap` | GMTL regression suite |
-| `GMTL_*` | Vendored GameMaker Testing Library; do not refactor as project-owned code |
+| `scr_setup` | schemas, defaults, persistence, display application, and boot |
+| `scr_input_helpers` | bindings, device snapshots, input verbs, remapping, and menu motion |
+| `scr_audio_helpers` | music routing, preview ownership, gains, and named SFX entry points |
+| `scr_gameplay_helpers` | constants, run/practice/pause/rank, stages, players, encounters, pickups, and enemies |
+| `scr_boss_patterns` | boss descriptor interpretation and bullet primitives |
+| `scr_story_helpers` | story loading/state, text layout, portraits/backgrounds, and story UI primitives |
+| `scr_stage_3d` | stage buffers, camera paths, lighting/fog, and atmosphere |
+| `scr_title_helpers` | title pages, character/practice/music state, and drawing |
+| `scr_ui_crystal` | clean-backdrop capture, GUI mapping, and crystal-pane shaders |
+| `scr_test_helpers` | automation isolation and the visual tour |
+| `test_bootstrap` | project GMTL regression suite |
+| `GMTL_*` | vendored test library; not project-owned refactor scope |
 
-`tools/build_logic_score_midi.py` owns the editable production-score notes,
-arrangement, primary theme, and secondary leitmotifs. `tools/validate_logic_score.py`
-verifies that catalog before the MIDI sources enter Logic Pro; the saved Logic
-projects and lossless masters are the production assets. `tools/build_audio_assets.py`
-owns SFX and short motif-correct runtime audition loops only. The complete
-contract is documented in `AUDIO_DIRECTION.md`. After Logic loop validation,
-`tools/install_logic_masters.py` is the only supported path for replacing the
-fifteen runtime audition loops with high-quality streamed encodes of their
-lossless production masters.
-
-Every project-owned top-level function has a `/// @func` signature and a one-line contract. Keep object events orchestration-focused and move reusable rules into the owning script.
+Object events should coordinate these modules rather than duplicate their
+rules.
 
 ## Object ownership
 
 ### Application and UI
 
-- `obj_app_init`: persistent application lifecycle and ownership of the 640x360 GUI and clean crystal-backdrop surfaces.
+- `obj_app_init`: persistent lifecycle and ownership of the 640x360 GUI and
+  crystal-backdrop surfaces.
 - `obj_input_manager`: persistent input polling in Begin Step.
-- `obj_UI_title`: delegates title state and drawing to `scr_title_helpers`.
-- `obj_UI_story`: owns a local story queue and requests room transitions after dialogue.
-- `obj_UI_gameplay`: renders side gutters, resources, rank, boss segments, stage notices, and continue overlays.
-- `obj_UI_menu`: owns pause navigation. Resume is deferred to End Step so every gameplay object observes a complete frozen frame.
-- `obj_UI_credits`: caches final results, scrolls credits, then resets the runtime.
+- `obj_UI_title`: title state and drawing through `scr_title_helpers`.
+- `obj_UI_story`: local story queue and post-dialogue transitions.
+- `obj_UI_gameplay`: HUD, notices, boss segments, and continue overlay.
+- `obj_UI_menu`: pause navigation; resume is deferred to End Step so the frozen
+  frame is consistent.
+- `obj_UI_credits`: final-result cache, credits, then runtime reset.
 
 ### Gameplay
 
-- `obj_scene_manager`: owns the gameplay camera target, an independent presentation clock for the true-3D modular background, and stage mode (`scroll`, `boss_intro`, `boss_fight`, `boss_outro`, `stage_clear`). Its Draw Begin event restores every world/view/projection and depth state before normal 2D drawing begins.
-- `obj_player`: owns local action state; shared resources remain in `global.game_runtime`. Its normal Draw places the ship below enemy bullets, while Draw End isolates the visible hitbox above them.
-- `obj_player_shot`: carries a normalized shot specification into collision and rendering.
-- `obj_enemy_parent`: centralizes freeze, damage, defeat rewards, and movement.
-- `obj_enemy_variant`: resolves one of 20 stage-authored identities, then runs role movement and its redistributed attack family after the parent Step. Legacy turret/bee/mayfly objects are test fixtures, not live roster entries.
-- `obj_bullet_parent`: centralizes freeze, bomb cancellation, medal conversion, linear motion, and culling.
-- `obj_bullet_bead`, `obj_bullet_diamond`, `obj_bullet_blade`: specialize visuals or motion while retaining parent cancellation rules.
-- `obj_boss_parent`: owns phase transitions, health refills, destruction, score, and scene completion.
-- `obj_boss_sunset`: selects encounter identity, stays camera-relative, and delegates the active descriptor to `scr_boss_patterns`.
-- `obj_powerup` and `obj_medal`: move, collect, and apply rewards.
+- `obj_scene_manager`: camera, stage-mode state machine, wave director boundary,
+  boss seams, and isolated 3D rendering in Draw Begin.
+- `obj_player`: local action state and player rendering; shared resources remain
+  in `global.game_runtime`.
+- `obj_player_shot`: normalized shot specification, collision, and rendering.
+- `obj_enemy_parent`: freeze, damage, defeat rewards, and default movement.
+- `obj_enemy_variant`: stage-authored identity, movement role, and attack family.
+- `obj_bullet_parent`: freeze, bomb/sword cancellation, medal conversion, motion,
+  and culling; bullet children specialize after inherited guards.
+- `obj_boss_parent`: phase transitions, HP, destruction, score, and completion.
+- `obj_boss_sunset`: encounter identity, camera-relative placement, and pattern
+  delegation.
+- `obj_powerup`, `obj_medal`: movement, collection, and rewards.
 
-Child Step events that call `event_inherited()` must immediately stop when the parent sets `combat_step_blocked`. This preserves pause, destruction, cancellation, and defeat guards atomically.
+Combat child Step events that call `event_inherited()` must immediately stop
+when the parent sets `combat_step_blocked`. That guard preserves pause,
+destruction, cancellation, and defeat ordering.
 
-## Stage and encounter data flow
+## Stage and encounter boundaries
 
-`GameStageDirectorStep()` is the sole live wave source. It resolves one four-entry roster through `GameStageEnemyRosterCreate()`, spawns camera-relative waves above the visible field, and scales cadence with the legacy pattern-section mapping plus rank. The old GameMaker timeline is held permanently idle. `obj_scene_manager` stops the director when scrolling ends, but its 3D presentation clock continues and blends onto a second valid downward-looping camera route. The manager clears ordinary combat actors, queues boss dialogue, and creates either one boss or the stage-three dual encounter after the intro seam. A boss defeat may queue an outro; the frozen dialogue signal keeps the manager in `boss_outro` until it can enter the normal stage-clear seam without freezing the background route.
+`GameStageDirectorStep()` is the only live wave source. It reads the roster from
+`GameStageEnemyRosterCreate()` and stops at the scrolling boundary; the legacy
+GameMaker timeline stays idle. `obj_scene_manager` owns the transition through
+`scroll`, `boss_intro`, `boss_fight`, `boss_outro`, and `stage_clear`.
 
-Bosses use a two-layer design:
+Boss construction and execution are deliberately separate:
 
-1. `GameBossEncounterInfoCreate()` chooses identity and creates a `phase_plan`.
-2. `GameBossPhaseAttackStep()` interprets the current phase and creates bullets.
+1. `GameBossEncounterInfoCreate()` selects identity and constructs `phase_plan`.
+2. `GameBossPhaseAttackStep()` interprets the active descriptor through
+   `scr_boss_patterns`.
 
-Encounter plans fit each character's motif seeds to the consolidated structure: Shalmii has 3 phases, Aster 5, Mira and Aisha each have 3 personal phases, Caelia has 7, and the route-final opponent has 15. Mira's interpreters use casino odds, cards, dice, and roulette; Aisha's use spell circles, mirrored hexes, grimoires, and grand sorcery. When both sisters' personal plans are defeated, they reform for one synchronized `sisters_grand_illusion` phase with shared HP. Moon's final opponent uses rose patterns; Selkie's final opponent uses chakram patterns. Total endurance is normalized by `GameBossPhaseHpGet()` and incoming damage by `GameBossDamageScaleGet()`.
+Stage 3 additionally coordinates two personal boss objects and one synchronized
+shared finale. Unknown or empty descriptors fail closed and log a warning. The
+phase counts, motifs, and flow are described once in
+[`GAMEPLAY_SYSTEMS.md#bosses`](GAMEPLAY_SYSTEMS.md#bosses).
 
-`GameCharacterBossInfoCreate()` maps stages 1, 2, and 4 to Shalmii, Aster, and Caelia. Stage 3 uses `GameDualBossIdentityCreate()` and configures separate Mira and Aisha boss objects, health, personal phase plans, positions, and HUD bars. Each defeated sister becomes harmless while her sibling still fights; the second personal defeat replaces both plans with the shared finale and synchronizes damage across both objects. Stage 5 selects the route opponent. `GameCharacterBossStoryFileGet()` resolves route/seam files from this encounter registry; the combined Stage 3 dialogue identifies Mira and Aisha as sisters, while portraits remain data-driven through sprite names in JSON and can be replaced independently.
+## Persistence boundary
 
-`obj_UI_gameplay` reads the active descriptor directly from the boss identity and uses `phase_timer` to display a two-second phase-title banner. Formatting and fade calculations remain pure gameplay helpers; drawing stays in the GUI event and reuses the shared ornate story-frame theme.
+`game.sav` and `config.sav` are JSON payloads in GameMaker's save sandbox.
+Loading parses defensively, rejects and backs up future versions, migrates known
+older fields into defaults, and rewrites only after normalization. Automated
+runs use `automation-` filenames so tests do not touch player data.
 
-There is deliberately no legacy fallback attack. An empty or unknown phase descriptor fails closed and logs a warning, making invalid encounter data visible during development.
+## Extension checklist
 
-## Persistence
-
-`game.sav` and `config.sav` are JSON payloads stored through GameMaker's save sandbox. Schema versions are independent. Loading follows this order:
-
-1. read the text payload;
-2. parse JSON defensively;
-3. reject and back up future versions;
-4. migrate recognized older fields into a fresh default struct;
-5. rewrite only when normalization changed the payload.
-
-Automated runs use `automation-` filenames so tests never touch player data.
-
-## Extension rules
-
-- New persistent field: update its default factory, migration/validation, schema version, and tests.
-- New runtime-only field: update `GameRuntimeDataCreateDefault()` and tests.
-- New input action: add the verb to `GameInputVerbNamesCreate()`, `GameInputBindingsCreateDefault()`, `GameInputStateCreate()`, both device snapshots, the title remap labels, and `GameInputSnapshotApply()`.
-- New stage enemy: add configuration/spawn helpers and stop it through the parent inheritance contract.
-- New boss pattern: add a descriptor seed and one `shot_kind` interpreter case in the owning family function under `scr_boss_patterns`; preserve complete seed/variant sets and keep the appended finale unique.
-- New story asset: follow [DATA_FORMATS.md](DATA_FORMATS.md) and register the JSON under `IncludedFiles`.
+- Persistent field: default, version, validator, migration, and tests.
+- Runtime-only field: runtime default, compatibility ensure, and tests.
+- Input action: verb list, default bindings, state, device snapshots, labels,
+  application, persistence migration, and tests.
+- Stage enemy: roster/specification, spawn behavior, inherited stop contract,
+  and tests.
+- Boss pattern: descriptor seed, family interpreter case, uniqueness/signature
+  tests, and no fallback attack.
+- Story asset: follow `DATA_FORMATS.md` and register it under `IncludedFiles`.
+- New resource of any kind: implementation/binary, matching `.yy`, and `.yyp`
+  registration.
