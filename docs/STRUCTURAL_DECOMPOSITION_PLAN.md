@@ -171,7 +171,6 @@ Included File dependencies remain material and are listed in the module map.
 | Run transition matrix is incomplete | normal start, practice restart/return, abort, death/continue, ending, credits reset | focused tests cover normal start, practice, continue, game-over, and ending transitions | Add a table-driven trace for result-write/no-write behavior and runtime fields across every exit path. |
 | Exact frame sequence across scene/player/bullets is not captured | rank, Berserk, bombs, cancellation, medals, waves | focused unit/event tests cover individual behaviors | Record per-frame stage frame, rank counters, meter, bomb state, spawn/cancel/medal events, and entity counts through freeze/unfreeze boundaries. |
 | Dual-boss finale transition lacks a complete ordered trace | boss runtime | GMTL verifies both personal defeats unlock the shared finale | Record member enumeration order, both instances' HP/phase/timers/visibility, bullet count, medal markers, and scene completion through the finale seam. |
-| Shared ornate UI lacks runner-confirmed assertions, approved stable captures, and pixel baselines | shared ornate UI, title view, story view, gameplay HUD | 26-capture visual tour covers title, story, bosses, practice, and pause; focused tests now define palettes, caller-visible state/layout boundaries, and current alpha/color/alignment/font/filter postconditions; the project compiles with those assertions | Obtain passing GMTL summaries and save approved captures `01`, `05`, `06`, `16`, and `21`-`24` from an authorized runner, then compare dimensions and representative pixels or hashes where stable. Do not normalize the characterized ornament/divider color side effect during extraction. |
 | Story data failure behavior is only partly exercised | story data and flow | Included File loading, wrapping, reveal, and room-flow tests exist | Characterize missing, malformed, empty, array-root, and struct-root JSON without changing the current failure contract. |
 | Most boss family functions are covered through the dispatcher, not direct family contracts | boss pattern families | configured-shot-kind, representative geometry, and variance tests exist; only 2 of 17 functions have direct GMTL references | For each family move, assert recognized shot kinds, bullet type/count/order, key angles/speeds, boss state toggles, RNG draw count, unknown-value behavior, and one visual capture. |
 | Persistence helper coverage is integration-heavy | persistence transport/migration/results | strong load, migration, malformed/future-version, isolation, initialization, and non-qualifying-score tests | Add direct backup/rewrite/no-rewrite and qualifying-score alignment checks before changing ownership. Never write player filenames in tests. |
@@ -319,6 +318,8 @@ postconditions; any normalization belongs to a separate behavior-change task.
 | Boss pattern families | Cohesive current owner; defer until family geometry/RNG characterization | Milestones 40-48 |
 | Input/audio/stage 3D | Monitor; no extraction selected by this audit | Re-audit only when a bounded task demonstrates recurring mixed ownership |
 
-The repository is ready to begin milestone 1 characterization. It is not ready
-to begin RNG-sensitive extraction without the specified traces, and this audit
-does not authorize any production milestone.
+Milestone 1 is validated and the milestone 2 extraction is implemented in this
+candidate. After its required validation and review, the next planned thread is
+milestone 3 characterization. The repository is not ready for RNG-sensitive
+extraction without the specified traces, and this audit alone does not
+authorize milestone 3 or any later production milestone.
