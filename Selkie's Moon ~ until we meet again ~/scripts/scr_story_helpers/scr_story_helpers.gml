@@ -228,32 +228,12 @@ function GameStoryQueueRequest(_filename) {
     return true;
 }
 
-/// @func GameFinalBossStoryFileGet()
-/// Returns the stage 10 confrontation file for the selected route.
-function GameFinalBossStoryFileGet() {
-    if (GameRunShipIdGet() == SHIP_SELKIE) {
-        return "boss_intro_story_selkie_route.json";
-    }
-
-    return "boss_intro_story.json";
-}
-
-/// @func GameEndingStoryFileGet()
-/// Returns the ending file for the selected route.
-function GameEndingStoryFileGet() {
-    if (GameRunShipIdGet() == SHIP_SELKIE) {
-        return "ending_story_selkie_route.json";
-    }
-
-    return "ending_story.json";
-}
-
 /// @func GameStoryDefaultFileGet(room_id)
 /// Returns the default story file for a room that auto-starts dialogue.
 function GameStoryDefaultFileGet(_room_id) {
     switch (_room_id) {
         case rm_ending:
-            return GameEndingStoryFileGet();
+            return "ending_story.json";
 
         case rm_opening:
             return "opening_story.json";
@@ -268,6 +248,7 @@ function GameStoryRoomComplete(_room_id) {
     switch (_room_id) {
         case rm_ending:
             GameRunResultSave();
+            GameRuntimeReset();
             break;
     }
 }
@@ -277,7 +258,7 @@ function GameStoryRoomComplete(_room_id) {
 function GameStoryNextRoomGet(_room_id) {
     switch (_room_id) {
         case rm_ending:
-            return rm_credits;
+            return rm_title;
 
         case rm_opening:
             return rm_game;
@@ -294,7 +275,6 @@ function GameStoryTransitionRoomGet(_room_id, _was_dialogue_active, _is_dialogue
     }
 
     GameStoryRoomComplete(_room_id);
-    global.game_runtime.signals.dialogue = false;
     return GameStoryNextRoomGet(_room_id);
 }
 

@@ -15,6 +15,3 @@ if (!instance_exists(obj_input_manager)) {
 
 // Sync persistent music state immediately so a continuing session matches the current room.
 GameStageMusicSync();
-
-test_quit_frames = 0;
-test_quit_timeout_frames = 1800;

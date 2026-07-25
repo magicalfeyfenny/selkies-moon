@@ -59,11 +59,11 @@ function GameShouldQuitAfterTests() {
     var _has_marker = file_exists(GameTestsMarkerPathGet());
     var _has_test_flag = GameCommandLineHasFlag("--run-test") || GameCommandLineHasFlag("-runTest");
 
-    return _has_test_flag || _has_marker;
+    return _has_marker && _has_test_flag;
 }
 
 /// @func GameShouldRunTests()
 /// Returns whether this launch should boot into GMTL test mode.
 function GameShouldRunTests() {
-    return GameShouldQuitAfterTests();
+    return file_exists(GameTestsMarkerPathGet());
 }
