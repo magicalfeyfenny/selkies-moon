@@ -50,6 +50,17 @@ Five global structs are the shared contracts between objects:
 | `test_bootstrap` | GMTL regression suite |
 | `GMTL_*` | Vendored GameMaker Testing Library; do not refactor as project-owned code |
 
+## Structural-decomposition planning
+
+[Structural Decomposition Plan](STRUCTURAL_DECOMPOSITION_PLAN.md) and
+[Structural Module Ownership Map](MODULE_OWNERSHIP_MAP.md) record proposed
+future boundaries, characterization prerequisites, and extraction milestones.
+They do not change the current runtime owners in this document. Use the
+repository skills in `.agents/skills/structural-decomposition/`,
+`.agents/skills/determinism-validation/`, and
+`.agents/skills/gamemaker-resource-change/` for a bounded structural task when
+their stated triggers apply, alongside the current validation and review policy.
+
 Native Logic projects are the sole canonical score and SFX masters.
 `tools/build_logic_score_midi.py`, `tools/build_logic_sfx_suite.py`, and their
 manifests provide bootstrap and validation metadata; they do not compete with
