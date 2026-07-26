@@ -106,6 +106,8 @@ NON_MERGE_EVIDENCE_PATTERN = re.compile(r"\bRetained evidence:\s*[^\s]", re.DOTA
 NON_MERGE_DISPOSITION_PATTERN = re.compile(
     r"\b(?:Final disposition|Close or deletion conditions):\s*[^\s]", re.DOTALL
 )
+CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
+ARCHIVAL_DISPOSITION_PATTERN = re.compile(r"\barchiv(?:al|e)\b", re.IGNORECASE)
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 AGENT_ID_PATTERN = re.compile(r"[A-Za-z0-9/][A-Za-z0-9._:/@-]{1,127}")
 PLACEHOLDER_PATTERN = re.compile(
@@ -1017,6 +1019,22 @@ def _validate_lifecycle(
             "lifecycle: state whether this branch is intended to merge or not intended to merge"
         )
 
+    non_merge = _section_content(body, structure, "Non-merge record") or ""
+    final_disposition = _section_content(body, structure, "Rollback or final disposition") or ""
+    if is_merge and (
+        NON_MERGE_PURPOSE_PATTERN.search(non_merge) is not None
+        or NON_MERGE_SHA_PATTERN.search(non_merge) is not None
+        or NON_MERGE_EVIDENCE_PATTERN.search(non_merge) is not None
+        or NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is not None
+    ):
+        errors.append("lifecycle: merge-intended branch must not declare a non-merge record")
+    if is_merge and ARCHIVAL_DISPOSITION_PATTERN.search(final_disposition) is not None:
+        errors.append(
+            "lifecycle: merge-intended branch must not declare an archival-only final disposition"
+        )
+    if is_non_merge and CLOSES_ISSUE_PATTERN.search(primary) is not None:
+        errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
+
     exception = _section_content(body, structure, "Lifecycle exception") or ""
     legacy_declared = "legacy registration:" in exception.lower()
     if legacy_declared:
@@ -1059,7 +1077,6 @@ def _validate_lifecycle(
             "lifecycle: archival branch must state it is not intended to merge"
         )
     if is_non_merge:
-        non_merge = _section_content(body, structure, "Non-merge record") or ""
         if NON_MERGE_PURPOSE_PATTERN.search(non_merge) is None:
             errors.append("lifecycle: non-merge branch must state its purpose")
         candidate = NON_MERGE_SHA_PATTERN.search(non_merge)

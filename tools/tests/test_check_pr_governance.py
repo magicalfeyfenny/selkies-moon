@@ -254,10 +254,11 @@ class PullRequestGovernanceTests(unittest.TestCase):
         event, _contract_value, comments = _fixture()
         self.assertEqual(_validate(event, comments), [])
 
-    def test_lifecycle_accepts_merge_and_non_merge_validation_branches(self) -> None:
+    def test_lifecycle_accepts_merge_intended_validation_branch(self) -> None:
         event, _contract, comments = _fixture(head_ref="validation/46-durable-evidence")
         self.assertEqual(_validate(event, comments), [])
 
+    def test_lifecycle_accepts_non_merge_validation_and_codex_branches(self) -> None:
         event, contract, _comments = _fixture(head_ref="validation/46-candidate-evidence")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
@@ -272,8 +273,22 @@ class PullRequestGovernanceTests(unittest.TestCase):
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
 
+        event, contract, _comments = _fixture(head_ref="codex/46-candidate-evidence")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Merge intention",
+            "This codex branch is not intended to merge and retains its test evidence.",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Non-merge record",
+            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        self.assertEqual(_validate(event, comments), [])
+
     def test_lifecycle_accepts_documented_legacy_name_exception(self) -> None:
-        event, contract, _comments = _fixture(head_ref="frozen-candidate")
+        event, contract, _comments = _fixture(head_ref="validation/47-frozen-candidate")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
             "Primary issue",
@@ -282,7 +297,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Lifecycle exception",
-            f"Legacy registration: #47. Original branch identity: frozen-candidate. Original primary issue: #46. Immutable candidate SHA: {HEAD_SHA}. Retained evidence: historical logs remain attached. Intended disposition: retain until migration closes. Reason: frozen candidate retains its original identity.",
+            f"Legacy registration: #47. Original branch identity: validation/47-frozen-candidate. Original primary issue: #46. Immutable candidate SHA: {HEAD_SHA}. Retained evidence: historical logs remain attached. Intended disposition: retain until migration closes. Reason: frozen candidate retains its original identity.",
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
@@ -310,9 +325,16 @@ class PullRequestGovernanceTests(unittest.TestCase):
         errors = _validate(event, comments)
         self.assertTrue(any("name one primary issue" in error for error in errors), errors)
 
-        event, _contract_value, comments = _fixture(head_ref="codex/47-other-task")
+        event, _contract_value, comments = _fixture(head_ref="validation/47-other-task")
         errors = _validate(event, comments)
         self.assertIn("lifecycle: source branch issue number must match '## Primary issue'", errors)
+
+        event, _contract_value, comments = _fixture(head_ref="validation/other-task")
+        errors = _validate(event, comments)
+        self.assertIn(
+            "lifecycle: source branch must include its primary issue number; use codex/<issue>-<slug>",
+            errors,
+        )
 
     def test_lifecycle_rejects_merge_intended_archival_and_incomplete_legacy_metadata(self) -> None:
         event, _contract_value, comments = _fixture(head_ref="archival/46-evidence")
@@ -346,7 +368,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertIn("lifecycle: non-merge branch must state its exact candidate or workflow SHA", errors)
         self.assertIn("lifecycle: non-merge branch must state retained evidence", errors)
 
-    def test_lifecycle_rejects_contradictory_merge_intention_and_invalid_main_hotfix_name(self) -> None:
+    def test_lifecycle_rejects_contradictory_dispositions_and_invalid_main_hotfix_name(self) -> None:
         event, contract, _comments = _fixture(head_ref="validation/46-contradictory")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
@@ -359,6 +381,39 @@ class PullRequestGovernanceTests(unittest.TestCase):
             "lifecycle: state whether this branch is intended to merge or not intended to merge",
             errors,
         )
+
+        event, contract, _comments = _fixture(head_ref="validation/46-archival-disposition")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Rollback or final disposition",
+            "Final disposition: retain this archival candidate without merging.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertIn(
+            "lifecycle: merge-intended branch must not declare an archival-only final disposition",
+            errors,
+        )
+
+        event, contract, _comments = _fixture(head_ref="validation/46-non-merge-closes")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Primary issue",
+            "Closes #46 after retaining this candidate.",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Merge intention",
+            "This validation branch is not intended to merge and retains its test evidence.",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Non-merge record",
+            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertIn("lifecycle: non-merge branch must not use 'Closes #<issue>'", errors)
 
         for head_ref in ("hotfix/46-/nested", "hotfix/46-patch/extra"):
             with self.subTest(head_ref=head_ref):
