@@ -397,6 +397,15 @@ class PullRequestGovernanceTests(unittest.TestCase):
             errors,
         )
 
+        event, contract, _comments = _fixture(head_ref="validation/46-historical-context")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Rollback or final disposition",
+            "A normal revert restores the prior rule. After merge, archival documentation preserves historical context.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        self.assertEqual(_validate(event, comments), [])
+
         event, contract, _comments = _fixture(head_ref="validation/46-non-merge-closes")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
@@ -416,6 +425,25 @@ class PullRequestGovernanceTests(unittest.TestCase):
         _rebound, comments = _rebind_modified_body(event, contract, body)
         errors = _validate(event, comments)
         self.assertIn("lifecycle: non-merge branch must not use 'Closes #<issue>'", errors)
+
+        event, contract, _comments = _fixture(head_ref="validation/46-code-example")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Scope",
+            "This retained candidate documents a command example.\n\n```text\nCloses #46\n```",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Merge intention",
+            "This validation branch is not intended to merge and retains its test evidence.",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Non-merge record",
+            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        self.assertEqual(_validate(event, comments), [])
 
         for head_ref in ("hotfix/46-/nested", "hotfix/46-patch/extra"):
             with self.subTest(head_ref=head_ref):

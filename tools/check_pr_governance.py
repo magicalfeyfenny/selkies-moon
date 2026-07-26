@@ -108,7 +108,7 @@ NON_MERGE_DISPOSITION_PATTERN = re.compile(
 )
 CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
 NON_MERGE_FINAL_DISPOSITION_PATTERN = re.compile(
-    r"\b(?:archiv(?:al|e)|retain(?:ed)?\s+(?:this\s+)?(?:candidate|branch|evidence)\s+permanently|never\s+merge|without\s+merg(?:e|ing))\b",
+    r"\b(?:Final disposition|Close or deletion conditions):\s*(?:(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b[^\n]*|[^\n]*\b(?:never\s+merge|without\s+merg(?:e|ing))\b)",
     re.IGNORECASE,
 )
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
@@ -1036,7 +1036,7 @@ def _validate_lifecycle(
             "lifecycle: merge-intended branch must not declare a non-merge final disposition"
         )
     if is_non_merge and CLOSES_ISSUE_PATTERN.search(
-        _mask_html_comments_outside_code(body)
+        _mask_html_comments_outside_code(_mask_markdown_code(body))
     ) is not None:
         errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
 
