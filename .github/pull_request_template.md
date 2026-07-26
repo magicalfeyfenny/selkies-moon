@@ -4,9 +4,13 @@ plain-prose sentence. Lists, checkboxes, quotes, links, and examples may follow
 but do not satisfy the evidence gate by themselves.
 -->
 
+## Primary issue
+
+<!-- Name exactly one primary issue as #<number>. Use Closes #<number> only when merging should complete it. -->
+
 ## Intent
 
-<!-- State the outcome, root cause, why it is needed, and the issue/acceptance criteria. -->
+<!-- State the outcome and why the primary issue needs it. -->
 
 ## Scope
 
@@ -15,6 +19,14 @@ but do not satisfy the evidence gate by themselves.
 ## Non-goals
 
 <!-- State nearby work deliberately left out or deferred to a named issue. -->
+
+## Acceptance mapping
+
+<!-- Map each acceptance criterion to the scoped change or validation evidence. -->
+
+## Important files and ownership
+
+<!-- Name important files and any runtime, generated, or policy owner affected. -->
 
 ## Risk
 
@@ -30,9 +42,33 @@ but do not satisfy the evidence gate by themselves.
 
 <!-- Map each acceptance criterion to exact commands, checks, or inspected artifacts. Explain any unavailable signal. Include provenance plus inspected visual/audio evidence for affected assets. -->
 
-## Rollback
+## Review status
 
-<!-- Explain how to revert or disable the change safely. -->
+<!-- State the required review tier, current attestation status, and any remaining review work. -->
+
+## Remaining risks
+
+<!-- State unresolved risks, blockers, dependencies, or explicitly say none remain. -->
+
+## Merge intention
+
+<!-- State exactly whether this branch is intended to merge or not intended to merge. Validation-only and archival branches must say not intended to merge. -->
+
+## External-action authority
+
+<!-- State whether merge, release, deployment, or publication authority was granted. Review approval never grants it. -->
+
+## Rollback or final disposition
+
+<!-- Explain a safe rollback, or record retention, closure, or deletion conditions for a non-merge branch. -->
+
+## Non-merge record
+
+<!-- For a non-merge branch, state Purpose, Exact candidate or workflow SHA, Retained evidence, and Final disposition or close/deletion conditions. Otherwise state that this merge-intended branch has no non-merge record. -->
+
+## Lifecycle exception
+
+<!-- Say that no exception applies. A legacy branch must instead use primary issue #47 and name Legacy registration: #47, Original branch identity, Original primary issue or unknown, Immutable candidate SHA, Retained evidence, Intended disposition, and a Reason. -->
 
 ## Independent agent review
 

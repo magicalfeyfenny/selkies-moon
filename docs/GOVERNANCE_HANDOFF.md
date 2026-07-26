@@ -13,8 +13,9 @@ files. Within the repository, use this order:
 2. This handoff identifies current state and the owning documents.
 3. [Agent Review Policy](AGENT_REVIEW_POLICY.md) owns review roles, contracts,
    attestations, and exact-head merge evidence.
-4. [Branch and Release Policy](BRANCH_AND_RELEASE_POLICY.md) owns branch,
-   promotion, hotfix, tag, and history-rewrite authority.
+4. [Branch and Release Policy](BRANCH_AND_RELEASE_POLICY.md) owns the detailed
+   issue/branch/PR lifecycle plus branch, promotion, hotfix, tag, and
+   history-rewrite authority.
 5. [Development Guide](DEVELOPMENT.md) owns project layout and verification;
    [Architecture](ARCHITECTURE.md) maps runtime subsystems and extension rules.
 6. [Asset Pipeline](ASSET_PIPELINE.md) owns canonical BLEND, KRA, and Logic
@@ -48,7 +49,9 @@ is historical evidence and a status ledger. It is not live policy.
 
 ## Scoping, decisions, and handoffs
 
-Start one bounded issue or explicit acceptance contract per task. Put the
+Start one bounded issue or explicit acceptance contract per task. For every
+future non-default branch, use the lifecycle in [Branch and Release
+Policy](BRANCH_AND_RELEASE_POLICY.md); do not copy it into a task handoff. Put the
 outcome, scope, non-goals, risk, verification, rollback, and publish authority
 in the pull request. Record adjacent work as a named issue rather than silently
 expanding the change.

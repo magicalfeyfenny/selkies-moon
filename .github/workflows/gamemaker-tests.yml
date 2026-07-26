@@ -92,11 +92,39 @@ jobs:
         run: |
           set -euo pipefail
           live_pr="$RUNNER_TEMP/live-pr.json"
+          primary_issue_json="$RUNNER_TEMP/primary-issue.json"
           comment_pages="$RUNNER_TEMP/pr-comment-pages.json"
           review_event="$RUNNER_TEMP/pr-governance-event.json"
           review_comments="$RUNNER_TEMP/pr-governance-comments.json"
 
           gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" > "$live_pr"
+          primary_issue="$(
+          python3 -I - "$live_pr" <<'PY'
+          import json
+          import re
+          import sys
+
+          body = json.loads(open(sys.argv[1], encoding="utf-8").read()).get("body") or ""
+          match = re.search(
+              r"^## Primary issue[ \t]*\r?\n(?P<content>.*?)(?=^##[ \t]+|\Z)",
+              body,
+              re.MULTILINE | re.DOTALL,
+          )
+          issues = re.findall(r"(?<![A-Za-z0-9_.-])#([1-9][0-9]*)\b", match.group("content") if match else "")
+          if len(issues) != 1:
+              raise SystemExit("PR body must name exactly one primary issue as #<number> before issue lookup")
+          print(issues[0])
+          PY
+          )"
+          gh api "repos/$REPOSITORY/issues/$primary_issue" > "$primary_issue_json"
+          python3 -I - "$primary_issue_json" <<'PY'
+          import json
+          import sys
+
+          issue = json.loads(open(sys.argv[1], encoding="utf-8").read())
+          if issue.get("pull_request"):
+              raise SystemExit("primary issue must be a GitHub issue, not a pull request")
+          PY
           gh api --paginate --slurp \
             "repos/$REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
             > "$comment_pages"

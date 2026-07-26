@@ -30,6 +30,8 @@ REQUIRED_PATHS = (
     ROOT / "docs" / "VALIDATION.md",
     ROOT / "tools" / "check_governance.py",
     ROOT / "tools" / "check_repository_hygiene.py",
+    ROOT / ".github" / "pull_request_template.md",
+    ROOT / ".github" / "ISSUE_TEMPLATE" / "task-contract.md",
     WORKFLOW,
     ROOT / "tools" / "run_gmtl_tests.zsh",
     ROOT / "tools" / "run_gmtl_tests_ci.ps1",
@@ -65,24 +67,60 @@ def read(path: Path) -> str:
 agents = read(ROOT / "AGENTS.md")
 handoff = read(ROOT / "docs" / "GOVERNANCE_HANDOFF.md")
 review_policy = read(ROOT / "docs" / "AGENT_REVIEW_POLICY.md")
+branch_policy = read(ROOT / "docs" / "BRANCH_AND_RELEASE_POLICY.md")
 state = read(STATE)
 validation = read(ROOT / "docs" / "VALIDATION.md")
 gameplay = read(GAMEPLAY)
 tests = read(TESTS)
 test_helpers = read(TEST_HELPERS)
 workflow = read(WORKFLOW)
+issue_template = read(ROOT / ".github" / "ISSUE_TEMPLATE" / "task-contract.md")
+pr_template = read(ROOT / ".github" / "pull_request_template.md")
 
 # The root instructions deliberately route to the authoritative governance map
 # instead of copying its rules.
 require("docs/GOVERNANCE_HANDOFF.md" in agents, "AGENTS.md does not route to Governance Handoff")
 require("Agent Review Policy" in handoff, "Governance Handoff does not route to Agent Review Policy")
 require("Branch and Release Policy" in handoff, "Governance Handoff does not route to Branch and Release Policy")
+require("issue/branch/PR lifecycle" in agents, "AGENTS.md does not route to the branch lifecycle")
+require("issue/branch/PR lifecycle" in handoff, "Governance Handoff does not route to the branch lifecycle")
+require(
+    branch_policy.count("This is the authoritative repository policy for the lifecycle") == 1,
+    "Branch and Release Policy must be the single authoritative lifecycle policy",
+)
 require("Asset Pipeline" in handoff, "Governance Handoff does not route to Asset Pipeline")
 require("Exact-head validation" in review_policy, "Agent Review Policy no longer documents exact-head review")
 require("ASSET_PIPELINE.md" in state, "PROJECT_STATE.md does not use the current Asset Pipeline name")
 require("not repository policy" in read(ROOT / "docs" / "HANDOFF_TEMPLATE.md"), "HANDOFF_TEMPLATE.md does not preserve policy authority")
 require("Required CI" in validation, "VALIDATION.md does not document exact-head Required CI evidence")
 require("visual-tour" in validation, "VALIDATION.md does not document visual validation")
+for heading in (
+    "Objective",
+    "Acceptance criteria",
+    "Non-goals",
+    "Expected validation",
+    "Known risks and blockers",
+    "External-action authority",
+    "Dependencies",
+    "Relevant repository documents or milestones",
+):
+    require(f"## {heading}" in issue_template, f"issue template is missing '## {heading}'")
+for heading in (
+    "Primary issue",
+    "Scope",
+    "Acceptance mapping",
+    "Important files and ownership",
+    "Validation",
+    "Review status",
+    "Remaining risks",
+    "Merge intention",
+    "External-action authority",
+    "Rollback or final disposition",
+    "Non-merge record",
+    "Lifecycle exception",
+):
+    require(f"## {heading}" in pr_template, f"PR template is missing '## {heading}'")
+require("pr-contract:v1" in pr_template, "PR template no longer preserves pr-contract:v1")
 require(
     re.search(r"^\s*python3 tools/check_governance\.py\s*$", workflow, re.MULTILINE) is not None,
     "GitHub Actions does not run the governance check",

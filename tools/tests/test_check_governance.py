@@ -25,21 +25,28 @@ class GovernanceCheckTests(unittest.TestCase):
         tests = game / "scripts" / "test_bootstrap"
         helpers = game / "scripts" / "scr_test_helpers"
         workflow = root / ".github" / "workflows"
+        templates = root / ".github" / "ISSUE_TEMPLATE"
 
-        for path in (docs, tools, gameplay, tests, helpers, workflow):
+        for path in (docs, tools, gameplay, tests, helpers, workflow, templates):
             path.mkdir(parents=True, exist_ok=True)
         shutil.copy2(CHECKER, tools / "check_governance.py")
 
-        (root / "AGENTS.md").write_text("[Handoff](docs/GOVERNANCE_HANDOFF.md)\n", encoding="utf-8")
+        (root / "AGENTS.md").write_text(
+            "[Handoff](docs/GOVERNANCE_HANDOFF.md)\nissue/branch/PR lifecycle\n",
+            encoding="utf-8",
+        )
         (root / "README.md").write_text("# Fixture\n", encoding="utf-8")
         (docs / "GOVERNANCE_HANDOFF.md").write_text(
-            "Agent Review Policy\nBranch and Release Policy\nAsset Pipeline\n",
+            "Agent Review Policy\nBranch and Release Policy\nAsset Pipeline\nissue/branch/PR lifecycle\n",
             encoding="utf-8",
         )
         (docs / "AGENT_REVIEW_POLICY.md").write_text("Exact-head validation\n", encoding="utf-8")
         (docs / "ARCHITECTURE.md").write_text("# Architecture\n", encoding="utf-8")
         (docs / "ASSET_PIPELINE.md").write_text("# Asset Pipeline\n", encoding="utf-8")
-        (docs / "BRANCH_AND_RELEASE_POLICY.md").write_text("# Branch Policy\n", encoding="utf-8")
+        (docs / "BRANCH_AND_RELEASE_POLICY.md").write_text(
+            "This is the authoritative repository policy for the lifecycle\n",
+            encoding="utf-8",
+        )
         (docs / "HANDOFF_TEMPLATE.md").write_text("This is not repository policy.\n", encoding="utf-8")
         (docs / "PROJECT_STATE.md").write_text(
             "\n".join(
@@ -58,6 +65,27 @@ class GovernanceCheckTests(unittest.TestCase):
             encoding="utf-8",
         )
         (docs / "VALIDATION.md").write_text("Required CI\nvisual-tour\n", encoding="utf-8")
+        (root / ".github" / "pull_request_template.md").write_text(
+            "\n".join(
+                f"## {heading}" for heading in (
+                    "Primary issue", "Scope", "Acceptance mapping", "Important files and ownership",
+                    "Validation", "Review status", "Remaining risks", "Merge intention",
+                    "External-action authority", "Rollback or final disposition", "Non-merge record",
+                    "Lifecycle exception",
+                )
+            ) + "\n<!-- pr-contract:v1 -->\n",
+            encoding="utf-8",
+        )
+        (templates / "task-contract.md").write_text(
+            "\n".join(
+                f"## {heading}" for heading in (
+                    "Objective", "Acceptance criteria", "Non-goals", "Expected validation",
+                    "Known risks and blockers", "External-action authority", "Dependencies",
+                    "Relevant repository documents or milestones",
+                )
+            ) + "\n",
+            encoding="utf-8",
+        )
         (game / "Selkies Moon.yyp").write_text("{}\n", encoding="utf-8")
         (gameplay / "scr_gameplay_helpers.gml").write_text(
             "\n".join(

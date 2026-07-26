@@ -16,12 +16,21 @@ from typing import Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_SECTIONS = (
+    "Primary issue",
     "Intent",
     "Scope",
     "Non-goals",
+    "Acceptance mapping",
+    "Important files and ownership",
     "Risk",
     "Validation",
-    "Rollback",
+    "Review status",
+    "Remaining risks",
+    "Merge intention",
+    "External-action authority",
+    "Rollback or final disposition",
+    "Non-merge record",
+    "Lifecycle exception",
     "Independent agent review",
 )
 RISK_ORDER = {
@@ -80,6 +89,23 @@ CONTROL_VALUES = {
 }
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+PRIMARY_ISSUE_PATTERN = re.compile(r"(?<![A-Za-z0-9_.-])#([1-9][0-9]*)\b")
+BRANCH_ISSUE_PATTERN = re.compile(r"(?:^|[-_/])([1-9][0-9]*)(?=$|[-_/])")
+LEGACY_REGISTRATION_PATTERN = re.compile(r"\bLegacy registration:\s*#47\b")
+LEGACY_CANDIDATE_PATTERN = re.compile(r"\bImmutable candidate SHA:\s*([0-9a-f]{40})\b")
+LEGACY_REASON_PATTERN = re.compile(r"\bReason:\s*[^\s]", re.DOTALL)
+LEGACY_IDENTITY_PATTERN = re.compile(r"\bOriginal branch identity:\s*[^\s]", re.DOTALL)
+LEGACY_PRIMARY_ISSUE_PATTERN = re.compile(
+    r"\bOriginal primary issue:\s*(?:#[1-9][0-9]*|unknown)\b"
+)
+LEGACY_EVIDENCE_PATTERN = re.compile(r"\bRetained evidence:\s*[^\s]", re.DOTALL)
+LEGACY_DISPOSITION_PATTERN = re.compile(r"\bIntended disposition:\s*[^\s]", re.DOTALL)
+NON_MERGE_PURPOSE_PATTERN = re.compile(r"\bPurpose:\s*[^\s]", re.DOTALL)
+NON_MERGE_SHA_PATTERN = re.compile(r"\bExact candidate or workflow SHA:\s*([0-9a-f]{40})\b")
+NON_MERGE_EVIDENCE_PATTERN = re.compile(r"\bRetained evidence:\s*[^\s]", re.DOTALL)
+NON_MERGE_DISPOSITION_PATTERN = re.compile(
+    r"\b(?:Final disposition|Close or deletion conditions):\s*[^\s]", re.DOTALL
+)
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 AGENT_ID_PATTERN = re.compile(r"[A-Za-z0-9/][A-Za-z0-9._:/@-]{1,127}")
 PLACEHOLDER_PATTERN = re.compile(
@@ -955,9 +981,94 @@ def _valid_agent_id(value: object) -> bool:
 def _main_source_allowed(head_branch: str) -> bool:
     return (
         head_branch == "dev"
-        or bool(re.fullmatch(r"release/v[0-9]+\.[0-9]+\.[0-9]+", head_branch))
-        or bool(re.fullmatch(r"hotfix/[A-Za-z0-9._/-]+", head_branch))
+        or bool(re.fullmatch(r"release/[1-9][0-9]*-v[0-9]+\.[0-9]+\.[0-9]+", head_branch))
+        or bool(
+            re.fullmatch(
+                r"hotfix/[1-9][0-9]*-[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?",
+                head_branch,
+            )
+        )
     )
+
+
+def _validate_lifecycle(
+    body: str,
+    structure: str,
+    context: dict[str, object],
+    errors: list[str],
+) -> None:
+    """Validate local branch/issue metadata without relying on live GitHub state."""
+    primary = _section_content(body, structure, "Primary issue") or ""
+    primary_issues = PRIMARY_ISSUE_PATTERN.findall(primary)
+    if not primary_issues:
+        errors.append("lifecycle: name one primary issue as #<number> in '## Primary issue'")
+        return
+    if len(primary_issues) != 1:
+        errors.append("lifecycle: '## Primary issue' must name exactly one #<number>")
+        return
+    primary_issue = primary_issues[0]
+
+    merge_intention = _section_content(body, structure, "Merge intention") or ""
+    merge_words = merge_intention.lower()
+    is_non_merge = "not intended to merge" in merge_words
+    is_merge = "is intended to merge" in merge_words
+    if is_non_merge == is_merge:
+        errors.append(
+            "lifecycle: state whether this branch is intended to merge or not intended to merge"
+        )
+
+    exception = _section_content(body, structure, "Lifecycle exception") or ""
+    legacy_declared = "legacy registration:" in exception.lower()
+    if legacy_declared:
+        if primary_issue != "47":
+            errors.append("lifecycle: only primary issue #47 may declare a legacy registration")
+        registration = LEGACY_REGISTRATION_PATTERN.search(exception)
+        candidate = LEGACY_CANDIDATE_PATTERN.search(exception)
+        if registration is None:
+            errors.append("lifecycle: legacy exception must declare 'Legacy registration: #47'")
+        if candidate is None:
+            errors.append("lifecycle: legacy exception must declare its immutable candidate SHA")
+        elif candidate.group(1) != context["head_sha"]:
+            errors.append("lifecycle: legacy immutable candidate SHA must equal the PR head SHA")
+        if LEGACY_REASON_PATTERN.search(exception) is None:
+            errors.append("lifecycle: legacy exception must state a reason")
+        if LEGACY_IDENTITY_PATTERN.search(exception) is None:
+            errors.append("lifecycle: legacy exception must state the original branch identity")
+        if LEGACY_PRIMARY_ISSUE_PATTERN.search(exception) is None:
+            errors.append("lifecycle: legacy exception must state the original primary issue or unknown")
+        if LEGACY_EVIDENCE_PATTERN.search(exception) is None:
+            errors.append("lifecycle: legacy exception must state retained evidence")
+        if LEGACY_DISPOSITION_PATTERN.search(exception) is None:
+            errors.append("lifecycle: legacy exception must state intended disposition")
+        return
+
+    head_ref = context.get("head_ref")
+    if head_ref in {"dev", "main"}:
+        return
+    if not isinstance(head_ref, str):
+        return
+    branch_issue = BRANCH_ISSUE_PATTERN.search(head_ref)
+    if branch_issue is None:
+        errors.append(
+            "lifecycle: source branch must include its primary issue number; use codex/<issue>-<slug>"
+        )
+    elif branch_issue.group(1) != primary_issue:
+        errors.append("lifecycle: source branch issue number must match '## Primary issue'")
+    if head_ref.startswith(("validation/", "archival/", "archive/")) and not is_non_merge:
+        errors.append(
+            "lifecycle: validation-only or archival branch must state it is not intended to merge"
+        )
+    if is_non_merge:
+        non_merge = _section_content(body, structure, "Non-merge record") or ""
+        if NON_MERGE_PURPOSE_PATTERN.search(non_merge) is None:
+            errors.append("lifecycle: non-merge branch must state its purpose")
+        candidate = NON_MERGE_SHA_PATTERN.search(non_merge)
+        if candidate is None:
+            errors.append("lifecycle: non-merge branch must state its exact candidate or workflow SHA")
+        if NON_MERGE_EVIDENCE_PATTERN.search(non_merge) is None:
+            errors.append("lifecycle: non-merge branch must state retained evidence")
+        if NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is None:
+            errors.append("lifecycle: non-merge branch must state final disposition or close/deletion conditions")
 
 
 def _event_context(event: object, errors: list[str]) -> dict[str, object] | None:
@@ -1072,7 +1183,7 @@ def _validate_contract(
     if base_ref == "main":
         head_ref = context["head_ref"]
         if not isinstance(head_ref, str) or not _main_source_allowed(head_ref):
-            errors.append("branch: PRs into main must come from dev, release/vX.Y.Z, or hotfix/*")
+            errors.append("branch: PRs into main must come from dev, release/<issue>-vX.Y.Z, or hotfix/<issue>-<slug>")
         if context["head_repository"] != context["repository"]:
             errors.append("branch: main-promotion candidates must come from the same repository")
         if contract.get("candidate_sha") != context["head_sha"]:
@@ -1298,6 +1409,8 @@ def validate_pull_request(
             )
         elif not visible.strip() or not _has_substantive_visible_text(visible):
             errors.append(f"body: section '## {section}' has no reviewable content")
+
+    _validate_lifecycle(body, structure, context, errors)
 
     paths = list(changed_paths)
     valid_paths: list[str] = []

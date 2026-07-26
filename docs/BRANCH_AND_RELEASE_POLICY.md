@@ -6,6 +6,66 @@ with certainty; do not claim that the historical `main` branch matches a
 published binary without separate evidence. The first release made under this
 policy establishes the verified baseline.
 
+## Issue, branch, and pull-request lifecycle
+
+This is the authoritative repository policy for the lifecycle of every future
+non-default branch. `dev` and `main`, the declared integration/default
+branches, are exempt. Create one primary GitHub issue before creating a branch;
+that issue is the authoritative bounded task contract. Each non-default branch
+has exactly one primary issue and exactly one primary pull request, and a
+primary issue is never reused for a second branch.
+
+Use `codex/<issue-number>-<short-slug>` where practical. `validation/`,
+`hotfix/`, and `release/` are approved prefixes, but their branch names still
+include the primary issue number; a release stabilization branch is
+`release/<issue-number>-vX.Y.Z`. Push after the first coherent commit and open
+a linked draft PR shortly afterward. Keep the PR body current as candidate,
+risk, scope, and evidence change. Make it ready only after its acceptance
+criteria, validation, and required review are complete. Open a separate issue
+for follow-up work rather than silently expanding scope.
+
+The primary issue includes these concise sections: objective, acceptance
+criteria, non-goals, expected validation, known risks and blockers,
+external-action authority, dependencies, and relevant repository documents or
+milestones. The PR records its primary issue, scope and non-goals,
+acceptance-criteria mapping, important files or ownership changes, validation
+evidence, review status, remaining risks, merge intention, external-action
+authority, and rollback or final disposition. Use `Closes #<issue>` only when
+merging should complete that primary issue.
+
+The PR checker verifies branch/issue syntax deterministically, and the
+authorized GitHub workflow verifies that the named primary issue exists. The
+requirement that an issue predate branch creation remains a documented rule:
+it cannot be reconstructed reliably after the fact without a brittle history
+claim.
+
+For an already approved bounded task, standing authority covers creating its
+primary issue, its issue-numbered branch, a push, a linked draft PR, and
+validation or review evidence. It does not cover merging, closing incomplete
+work as complete, force-pushing or rewriting history, deleting branches,
+tagging, releasing, deploying, publishing binaries, changing repository
+visibility or access, or expanding scope. Each requires separate explicit
+authority. Review approval establishes readiness only; it never grants merge,
+release, deployment, or publication authority.
+
+### Non-merge, validation, and legacy branches
+
+Validation-only, CI/tooling, documentation, archival, and intentionally
+non-mergeable branches use the same issue and PR lifecycle. Their contract
+records purpose, exact candidate or workflow SHA, whether the branch is
+intended to merge, retained logs/artifacts/validation evidence, and the
+conditions for closing or deleting it. Do not add a process-only commit to an
+immutable candidate merely to satisfy this policy.
+
+Issue #47 owns legacy registration. Its traceability-first exception records
+the original branch identity, primary issue where known, exact immutable
+candidate SHA, retained evidence, intended disposition, and why normal naming
+or PR linkage is unavailable. It must not rename immutable branches, rebase or
+amend frozen candidates, force-push, manufacture meaningless commits or PRs,
+invalidate exact identities, or delete branches without separate authority.
+This policy does not inventory, register, alter, close, or delete legacy
+branches; perform that migration only through #47.
+
 ## Branch roles
 
 | Branch | Role |
@@ -13,12 +73,13 @@ policy establishes the verified baseline.
 | `main` | Source tree for the currently published binary release. It is not a general integration branch and must not move ahead of the published release. |
 | `dev` | Normal integration branch and base for ongoing development. Completed work merges here before release promotion. |
 | Feature/work branches | Short-lived, remotely backed branches for bounded changes. They normally start from `dev` and merge into `dev` through a pull request. |
-| `release/vX.Y.Z` | Optional stabilization branch cut from a frozen `dev` candidate when release-only fixes are needed. Every such fix must also return to `dev`. |
-| `hotfix/*` | Exceptional branch cut from the current release tag or `main` for an urgent patch to the published release. |
+| `release/<issue>-vX.Y.Z` | Optional stabilization branch cut from a frozen `dev` candidate when release-only fixes are needed. Every such fix must also return to `dev`. |
+| `hotfix/<issue>-<short-slug>` | Exceptional branch cut from the current release tag or `main` for an urgent patch to the published release. |
 
 Do not commit ordinary work directly to `main` or `dev`. Push the work branch,
-open a pull request into `dev`, run the required checks, and merge only the
-reviewed scope. Delete the work branch when it is no longer useful.
+open a pull request into `dev`, run the required checks, and merge only when
+separately authorized. Record the final issue, PR, and branch disposition;
+delete a branch only with separate authority.
 
 ## Delegated pull-request review
 
@@ -30,7 +91,7 @@ correctness, validation, and release-governance reviews tied to the exact PR
 contract, base commit, and candidate commit. See [Agent Review Policy](AGENT_REVIEW_POLICY.md).
 
 Review readiness and merge authority are separate. An active task that
-authorizes implementing and publishing a bounded change may authorize the
+explicitly authorizes merging a named bounded change may authorize the
 orchestrator to merge its passing PR into `dev` without another manual review.
 The head must contain the exact current base. After the final attestation, the
 orchestrator reruns the newest exact pull-request-event workflow and re-fetches
@@ -39,14 +100,15 @@ attestation change requires another rerun. Manual-dispatch checks are not merge
 evidence. Automatic invalidation after comment or base mutation is part of
 issue #17's remote-enforcement rollout.
 Advancing `main` still requires an explicit promotion or release request for
-the named frozen candidate. Tagging and publishing binaries are separate
-actions and are not implied by review completion.
+the named frozen candidate. Tagging, deploying, and publishing binaries are
+separate actions and are not implied by review completion.
 
 ## Releasing from `dev`
 
 1. Select and freeze an exact candidate from `dev`. Update version, credits,
-   changelog, and release notes before freezing it. Use `release/vX.Y.Z` if the
-   candidate needs stabilization while other development continues.
+   changelog, and release notes before freezing it. Use
+   `release/<issue>-vX.Y.Z` if the candidate needs stabilization while other
+   development continues.
 2. Run the complete release gates and build every distributable binary from
    that exact source. Stage uploads as drafts or otherwise keep them
    unpublished while verification is incomplete.
