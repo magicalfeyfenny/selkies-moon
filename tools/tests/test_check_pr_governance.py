@@ -423,6 +423,19 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 _rebound, comments = _rebind_modified_body(event, contract, body)
                 self.assertEqual(_validate(event, comments), [])
 
+        event, contract, _comments = _fixture(head_ref="validation/46-post-merge-bypass")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Rollback or final disposition",
+            "Final disposition: retain this candidate permanently without merging. After merge, preserve the audit log.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertIn(
+            "lifecycle: merge-intended branch must not declare a non-merge final disposition",
+            errors,
+        )
+
         event, contract, _comments = _fixture(head_ref="validation/46-non-merge-closes")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),

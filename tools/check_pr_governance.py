@@ -107,8 +107,11 @@ NON_MERGE_DISPOSITION_PATTERN = re.compile(
     r"\b(?:Final disposition|Close or deletion conditions):\s*[^\s]", re.DOTALL
 )
 CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
+FINAL_DISPOSITION_DECLARATION_PATTERN = re.compile(
+    r"\b(?:Final disposition|Close or deletion conditions):\s*", re.IGNORECASE
+)
 NON_MERGE_FINAL_DISPOSITION_PATTERN = re.compile(
-    r"\b(?:Final disposition|Close or deletion conditions):\s*(?:(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b[^\n]*|[^\n]*\b(?:never\s+merge|without\s+merg(?:e|ing))\b)",
+    r"\b(?:(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b|never\s+merge|without\s+merg(?:e|ing))",
     re.IGNORECASE,
 )
 POST_MERGE_DISPOSITION_PATTERN = re.compile(
@@ -1000,6 +1003,19 @@ def _main_source_allowed(head_branch: str) -> bool:
     )
 
 
+def _has_non_merge_final_disposition(value: str) -> bool:
+    """Detect a non-merge outcome without mistaking post-merge housekeeping for one."""
+    declaration = FINAL_DISPOSITION_DECLARATION_PATTERN.search(value)
+    if declaration is None:
+        return False
+    clauses = re.split(r"(?<=[.!?;])\s+", value[declaration.end() :])
+    return any(
+        NON_MERGE_FINAL_DISPOSITION_PATTERN.search(clause) is not None
+        and POST_MERGE_DISPOSITION_PATTERN.search(clause) is None
+        for clause in clauses
+    )
+
+
 def _validate_lifecycle(
     body: str,
     structure: str,
@@ -1035,11 +1051,7 @@ def _validate_lifecycle(
         or NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is not None
     ):
         errors.append("lifecycle: merge-intended branch must not declare a non-merge record")
-    if (
-        is_merge
-        and NON_MERGE_FINAL_DISPOSITION_PATTERN.search(final_disposition) is not None
-        and POST_MERGE_DISPOSITION_PATTERN.search(final_disposition) is None
-    ):
+    if is_merge and _has_non_merge_final_disposition(final_disposition):
         errors.append(
             "lifecycle: merge-intended branch must not declare a non-merge final disposition"
         )
