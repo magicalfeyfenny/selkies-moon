@@ -111,6 +111,10 @@ NON_MERGE_FINAL_DISPOSITION_PATTERN = re.compile(
     r"\b(?:Final disposition|Close or deletion conditions):\s*(?:(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b[^\n]*|[^\n]*\b(?:never\s+merge|without\s+merg(?:e|ing))\b)",
     re.IGNORECASE,
 )
+POST_MERGE_DISPOSITION_PATTERN = re.compile(
+    r"\b(?:after|upon|once)\s+(?:(?:this|the)\s+)?(?:pull request|branch|candidate)?\s*merg(?:e|es|ed|ing)\b",
+    re.IGNORECASE,
+)
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 AGENT_ID_PATTERN = re.compile(r"[A-Za-z0-9/][A-Za-z0-9._:/@-]{1,127}")
 PLACEHOLDER_PATTERN = re.compile(
@@ -1031,7 +1035,11 @@ def _validate_lifecycle(
         or NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is not None
     ):
         errors.append("lifecycle: merge-intended branch must not declare a non-merge record")
-    if is_merge and NON_MERGE_FINAL_DISPOSITION_PATTERN.search(final_disposition) is not None:
+    if (
+        is_merge
+        and NON_MERGE_FINAL_DISPOSITION_PATTERN.search(final_disposition) is not None
+        and POST_MERGE_DISPOSITION_PATTERN.search(final_disposition) is None
+    ):
         errors.append(
             "lifecycle: merge-intended branch must not declare a non-merge final disposition"
         )

@@ -406,6 +406,23 @@ class PullRequestGovernanceTests(unittest.TestCase):
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
 
+        for disposition in (
+            "Final disposition: archive the evidence after merge.",
+            "Final disposition: retain the candidate after merge for audit evidence.",
+            "Final disposition: close this branch after merge.",
+        ):
+            with self.subTest(disposition=disposition):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-post-merge-disposition"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Rollback or final disposition",
+                    disposition,
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertEqual(_validate(event, comments), [])
+
         event, contract, _comments = _fixture(head_ref="validation/46-non-merge-closes")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
