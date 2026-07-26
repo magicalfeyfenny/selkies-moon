@@ -22,6 +22,11 @@ class RepositoryHygieneUnitTests(unittest.TestCase):
             "docs/BRANCH_AND_RELEASE_POLICY.md",
             "docs/DEVELOPMENT.md",
             "docs/GOVERNANCE_HANDOFF.md",
+            "docs/HANDOFF_TEMPLATE.md",
+            "docs/PROJECT_STATE.md",
+            "docs/VALIDATION.md",
+            "tools/check_governance.py",
+            "tools/tests/test_check_governance.py",
         }
         self.assertLessEqual(expected, hygiene.CONTROL_PATHS)
 

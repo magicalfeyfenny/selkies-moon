@@ -49,6 +49,7 @@ jobs:
           VERIFY_LFS_REMOTE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           python3 -m unittest discover -s tools/tests -p 'test_*.py'
+          python3 tools/check_governance.py
           if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
             args=(--base "$BASE_SHA")
             if [[ "$VERIFY_LFS_REMOTE" == "true" ]]; then
