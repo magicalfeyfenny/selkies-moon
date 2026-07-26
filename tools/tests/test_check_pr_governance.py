@@ -261,6 +261,11 @@ class PullRequestGovernanceTests(unittest.TestCase):
             "docs/ASSET_PIPELINE.md",
             "docs/DEVELOPMENT.md",
             "docs/GOVERNANCE_HANDOFF.md",
+            "docs/HANDOFF_TEMPLATE.md",
+            "docs/PROJECT_STATE.md",
+            "docs/VALIDATION.md",
+            "tools/check_governance.py",
+            "tools/tests/test_check_governance.py",
             "art/font_sources/not_jam_old_style/Licence.txt",
             "docs/SECURITY.md",
             "Selkie's Moon ~ until we meet again ~/options/windows/options_windows.yy",
@@ -271,6 +276,16 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 event, _contract_value, comments = _fixture()
                 errors = _validate(event, comments, [path])
                 self.assertTrue(any("lower than computed risk" in error for error in errors), errors)
+
+    def test_repository_foundation_controls_are_high_risk(self) -> None:
+        paths = [
+            "docs/HANDOFF_TEMPLATE.md",
+            "docs/PROJECT_STATE.md",
+            "docs/VALIDATION.md",
+            "tools/check_governance.py",
+            "tools/tests/test_check_governance.py",
+        ]
+        self.assertEqual(governance.minimum_risk("dev", paths), "high")
 
     def test_non_document_text_defaults_to_standard_risk(self) -> None:
         path = "Selkie's Moon ~ until we meet again ~/datafiles/shipping-dialogue.txt"

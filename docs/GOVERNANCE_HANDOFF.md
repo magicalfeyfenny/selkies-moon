@@ -63,6 +63,7 @@ do not turn it into a general development log.
 After staging one clean intended snapshot, run from the repository root:
 
 ```zsh
+python3 tools/check_governance.py
 python3 tools/check_repository_hygiene.py
 python3 -m unittest discover -s tools/tests -p 'test_*.py'
 git diff --cached --check
