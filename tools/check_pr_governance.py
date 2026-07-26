@@ -110,15 +110,28 @@ CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
 FINAL_DISPOSITION_DECLARATION_PATTERN = re.compile(
     r"\b(?:Final disposition|Close or deletion conditions):\s*", re.IGNORECASE
 )
-NON_MERGE_FINAL_DISPOSITION_PATTERN = re.compile(
-    r"\b(?:(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b|never\s+merge|without\s+merg(?:e|ing))",
+NON_MERGE_HOUSEKEEPING_PATTERN = re.compile(
+    r"\b(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b",
     re.IGNORECASE,
 )
-EXPLICIT_NON_MERGE_STATEMENT_PATTERN = re.compile(
-    r"\b(?:never\s+merge|without\s+merg(?:e|ing))\b", re.IGNORECASE
+FUTURE_NON_MERGE_OUTCOME_PATTERN = re.compile(
+    r"\b(?:will|would|shall|should|can|could|may)\s+(?:not|never)\s+(?:be\s+)?merg(?:e|ed)\b",
+    re.IGNORECASE,
 )
+STATE_NON_MERGE_OUTCOME_PATTERN = re.compile(
+    r"\b(?:is|are|was|were)\s+(?:not|never)\s+(?:being\s+)?merged\b",
+    re.IGNORECASE,
+)
+NEVER_MERGE_PATTERN = re.compile(r"\bnever\s+merg(?:e|es|ed|ing)\b", re.IGNORECASE)
+NON_MERGE_COMPARISON_PATTERN = re.compile(
+    r"\b(?:instead\s+of|rather\s+than|without)\s+(?:being\s+|be\s+)?merg(?:e|ing|ed)\b",
+    re.IGNORECASE,
+)
+DO_NOT_MERGE_PATTERN = re.compile(r"\b(?:do|does|did)\s+not\s+merge\b", re.IGNORECASE)
 POST_MERGE_DISPOSITION_PATTERN = re.compile(
-    r"\b(?:after|upon|once)\s+(?:(?:this|the)\s+)?(?:pull request|branch|candidate)?\s*merg(?:e|es|ed|ing)\b",
+    r"\b(?:after|upon|once|following)\s+"
+    r"(?:(?:(?:this|the|a)\s+)?(?:pull\s+request|pr|branch|candidate)\s+)?"
+    r"(?:(?:successfully\s+)?merg(?:e|es|ed|ing)|(?:successful\s+)?integration)\b",
     re.IGNORECASE,
 )
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
@@ -1013,23 +1026,36 @@ def _has_non_merge_final_disposition(value: str) -> bool:
         return False
     clauses = re.split(r"(?<=[.!?;])\s+", value[declaration.end() :])
     return any(
-        EXPLICIT_NON_MERGE_STATEMENT_PATTERN.search(clause) is not None
+        _has_direct_non_merge_outcome(clause)
         or (
-            NON_MERGE_FINAL_DISPOSITION_PATTERN.search(clause) is not None
+            NON_MERGE_HOUSEKEEPING_PATTERN.search(clause) is not None
             and POST_MERGE_DISPOSITION_PATTERN.search(clause) is None
         )
         for clause in clauses
     )
 
 
+def _has_direct_non_merge_outcome(clause: str) -> bool:
+    """Recognize only explicit grammatical statements that reject merging."""
+    return any(
+        pattern.search(clause) is not None
+        for pattern in (
+            FUTURE_NON_MERGE_OUTCOME_PATTERN,
+            STATE_NON_MERGE_OUTCOME_PATTERN,
+            NEVER_MERGE_PATTERN,
+            NON_MERGE_COMPARISON_PATTERN,
+            DO_NOT_MERGE_PATTERN,
+        )
+    )
+
+
 def _validate_lifecycle(
-    body: str,
-    structure: str,
+    reviewable_prose: str,
     context: dict[str, object],
     errors: list[str],
 ) -> None:
     """Validate local branch/issue metadata without relying on live GitHub state."""
-    primary = _section_content(body, structure, "Primary issue") or ""
+    primary = _section_content(reviewable_prose, reviewable_prose, "Primary issue") or ""
     primary_issues = PRIMARY_ISSUE_PATTERN.findall(primary)
     if not primary_issues:
         errors.append("lifecycle: name one primary issue as #<number> in '## Primary issue'")
@@ -1039,7 +1065,9 @@ def _validate_lifecycle(
         return
     primary_issue = primary_issues[0]
 
-    merge_intention = _section_content(body, structure, "Merge intention") or ""
+    merge_intention = (
+        _section_content(reviewable_prose, reviewable_prose, "Merge intention") or ""
+    )
     merge_words = merge_intention.lower()
     is_non_merge = "not intended to merge" in merge_words
     is_merge = "is intended to merge" in merge_words
@@ -1048,8 +1076,15 @@ def _validate_lifecycle(
             "lifecycle: state whether this branch is intended to merge or not intended to merge"
         )
 
-    non_merge = _section_content(body, structure, "Non-merge record") or ""
-    final_disposition = _section_content(body, structure, "Rollback or final disposition") or ""
+    non_merge = (
+        _section_content(reviewable_prose, reviewable_prose, "Non-merge record") or ""
+    )
+    final_disposition = (
+        _section_content(
+            reviewable_prose, reviewable_prose, "Rollback or final disposition"
+        )
+        or ""
+    )
     if is_merge and (
         NON_MERGE_PURPOSE_PATTERN.search(non_merge) is not None
         or NON_MERGE_SHA_PATTERN.search(non_merge) is not None
@@ -1061,12 +1096,12 @@ def _validate_lifecycle(
         errors.append(
             "lifecycle: merge-intended branch must not declare a non-merge final disposition"
         )
-    if is_non_merge and CLOSES_ISSUE_PATTERN.search(
-        _mask_html_comments_outside_code(_mask_markdown_code(body))
-    ) is not None:
+    if is_non_merge and CLOSES_ISSUE_PATTERN.search(reviewable_prose) is not None:
         errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
 
-    exception = _section_content(body, structure, "Lifecycle exception") or ""
+    exception = (
+        _section_content(reviewable_prose, reviewable_prose, "Lifecycle exception") or ""
+    )
     legacy_declared = "legacy registration:" in exception.lower()
     if legacy_declared:
         if primary_issue != "47":
@@ -1458,7 +1493,7 @@ def validate_pull_request(
         elif not visible.strip() or not _has_substantive_visible_text(visible):
             errors.append(f"body: section '## {section}' has no reviewable content")
 
-    _validate_lifecycle(body, structure, context, errors)
+    _validate_lifecycle(structure, context, errors)
 
     paths = list(changed_paths)
     valid_paths: list[str] = []
