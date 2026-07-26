@@ -91,25 +91,15 @@ SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 PRIMARY_ISSUE_PATTERN = re.compile(r"(?<![A-Za-z0-9_.-])#([1-9][0-9]*)\b")
 BRANCH_ISSUE_PATTERN = re.compile(r"(?:^|[-_/])([1-9][0-9]*)(?=$|[-_/])")
-LEGACY_REGISTRATION_PATTERN = re.compile(r"\bLegacy registration:\s*#47\b")
-LEGACY_CANDIDATE_PATTERN = re.compile(r"\bImmutable candidate SHA:\s*([0-9a-f]{40})\b")
-LEGACY_REASON_PATTERN = re.compile(r"\bReason:\s*[^\s]", re.DOTALL)
-LEGACY_IDENTITY_PATTERN = re.compile(r"\bOriginal branch identity:\s*[^\s]", re.DOTALL)
-LEGACY_PRIMARY_ISSUE_PATTERN = re.compile(
-    r"\bOriginal primary issue:\s*(?:#[1-9][0-9]*|unknown)\b"
+LIFECYCLE_FIELD_PATTERN = re.compile(
+    r"\b(?P<label>"
+    r"Legacy registration|Immutable candidate SHA|Reason|Original branch identity|"
+    r"Original primary issue|Retained evidence|Intended disposition|Purpose|"
+    r"Exact candidate or workflow SHA|Final disposition|Close or deletion conditions"
+    r"):"
 )
-LEGACY_EVIDENCE_PATTERN = re.compile(r"\bRetained evidence:\s*[^\s]", re.DOTALL)
-LEGACY_DISPOSITION_PATTERN = re.compile(r"\bIntended disposition:\s*[^\s]", re.DOTALL)
-NON_MERGE_PURPOSE_PATTERN = re.compile(r"\bPurpose:\s*[^\s]", re.DOTALL)
-NON_MERGE_SHA_PATTERN = re.compile(r"\bExact candidate or workflow SHA:\s*([0-9a-f]{40})\b")
-NON_MERGE_EVIDENCE_PATTERN = re.compile(r"\bRetained evidence:\s*[^\s]", re.DOTALL)
-NON_MERGE_DISPOSITION_PATTERN = re.compile(
-    r"\b(?:Final disposition|Close or deletion conditions):\s*[^\s]", re.DOTALL
-)
+EXACT_SHA_VALUE_PATTERN = re.compile(r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])")
 CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
-FINAL_DISPOSITION_DECLARATION_PATTERN = re.compile(
-    r"\b(?:Final disposition|Close or deletion conditions):\s*", re.IGNORECASE
-)
 NON_MERGE_HOUSEKEEPING_PATTERN = re.compile(
     r"\b(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b",
     re.IGNORECASE,
@@ -129,9 +119,37 @@ NON_MERGE_COMPARISON_PATTERN = re.compile(
 )
 DO_NOT_MERGE_PATTERN = re.compile(r"\b(?:do|does|did)\s+not\s+merge\b", re.IGNORECASE)
 POST_MERGE_DISPOSITION_PATTERN = re.compile(
-    r"\b(?:after|upon|once|following)\s+"
-    r"(?:(?:(?:this|the|a)\s+)?(?:pull\s+request|pr|branch|candidate)\s+)?"
-    r"(?:(?:successfully\s+)?merg(?:e|es|ed|ing)|(?:successful\s+)?integration)\b",
+    r"\b(?:"
+    r"after\s+(?:a\s+)?(?:successful\s+)?(?:merge|integration)|"
+    r"after\s+this\s+pull\s+request\s+merges|"
+    r"once\s+(?:successfully\s+)?merged|"
+    r"upon\s+(?:successful\s+)?(?:merge|integration)|"
+    r"following\s+successful\s+integration"
+    r")\b",
+    re.IGNORECASE,
+)
+LIFECYCLE_ACTION_BOUNDARY_PATTERN = re.compile(
+    r"[.!?;]|\b(?:but|then|although)\b", re.IGNORECASE
+)
+CANDIDATE_SUBJECT_PATTERN = r"(?:this|the)\s+(?:candidate|branch|pull\s+request|pr)"
+CANDIDATE_FUTURE_NON_MERGE_PATTERN = re.compile(
+    rf"\b{CANDIDATE_SUBJECT_PATTERN}\s+"
+    r"(?:will|would|shall|should|can|could|may)\s+(?:not|never)\s+(?:be\s+)?merg(?:e|ed)\b",
+    re.IGNORECASE,
+)
+CANDIDATE_STATE_NON_MERGE_PATTERN = re.compile(
+    rf"\b{CANDIDATE_SUBJECT_PATTERN}\s+"
+    r"(?:is|are|was|were)\s+(?:not|never)\s+(?:being\s+)?merged\b",
+    re.IGNORECASE,
+)
+CANDIDATE_DO_NOT_MERGE_PATTERN = re.compile(
+    rf"\b(?:do|does|did)\s+not\s+merge\s+{CANDIDATE_SUBJECT_PATTERN}\b",
+    re.IGNORECASE,
+)
+CANDIDATE_NON_MERGE_COMPARISON_PATTERN = re.compile(
+    rf"\b(?:retain|preserve|keep)\s+{CANDIDATE_SUBJECT_PATTERN}\b"
+    r"[^.!?;]*?\b(?:instead\s+of|rather\s+than|without)\s+"
+    r"(?:being\s+|be\s+)?merg(?:e|ing|ed)\b",
     re.IGNORECASE,
 )
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
@@ -1019,20 +1037,66 @@ def _main_source_allowed(head_branch: str) -> bool:
     )
 
 
+def _parse_lifecycle_fields(value: str) -> dict[str, list[str]]:
+    """Return visible lifecycle field values without allowing cross-line borrowing.
+
+    The input is already canonical reviewable prose, so hidden Markdown has been
+    replaced with whitespace. Each field is therefore parsed from one physical
+    line and ends at the next recognized lifecycle label on that line.
+    """
+    fields: dict[str, list[str]] = {}
+    for line in value.splitlines():
+        matches = list(LIFECYCLE_FIELD_PATTERN.finditer(line))
+        for index, match in enumerate(matches):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(line)
+            field_value = line[match.end() : end].strip()
+            values = fields.setdefault(match.group("label").lower(), [])
+            if field_value:
+                values.append(field_value)
+    return fields
+
+
+def _field_values(fields: dict[str, list[str]], label: str) -> list[str]:
+    return fields.get(label.lower(), [])
+
+
+def _has_exact_sha_field(fields: dict[str, list[str]], label: str) -> str | None:
+    for value in _field_values(fields, label):
+        match = EXACT_SHA_VALUE_PATTERN.search(value)
+        if match is not None:
+            return match.group(0)
+    return None
+
+
+def _action_scope(value: str, position: int) -> str:
+    """Return the local coordinated action clause containing ``position``."""
+    start = 0
+    end = len(value)
+    for match in LIFECYCLE_ACTION_BOUNDARY_PATTERN.finditer(value):
+        if match.end() <= position:
+            start = match.end()
+        elif match.start() >= position:
+            end = match.start()
+            break
+    return value[start:end]
+
+
 def _has_non_merge_final_disposition(value: str) -> bool:
-    """Detect a non-merge outcome without mistaking post-merge housekeeping for one."""
-    declaration = FINAL_DISPOSITION_DECLARATION_PATTERN.search(value)
-    if declaration is None:
-        return False
-    clauses = re.split(r"(?<=[.!?;])\s+", value[declaration.end() :])
-    return any(
-        _has_direct_non_merge_outcome(clause)
-        or (
-            NON_MERGE_HOUSEKEEPING_PATTERN.search(clause) is not None
-            and POST_MERGE_DISPOSITION_PATTERN.search(clause) is None
-        )
-        for clause in clauses
+    """Detect a non-merge outcome with post-merge wording scoped to each action."""
+    fields = _parse_lifecycle_fields(value)
+    dispositions = (
+        _field_values(fields, "Final disposition")
+        + _field_values(fields, "Close or deletion conditions")
     )
+    for disposition in dispositions:
+        if _has_direct_non_merge_outcome(disposition):
+            return True
+        for action in NON_MERGE_HOUSEKEEPING_PATTERN.finditer(disposition):
+            if POST_MERGE_DISPOSITION_PATTERN.search(
+                _action_scope(disposition, action.start())
+            ) is None:
+                return True
+    return False
 
 
 def _has_direct_non_merge_outcome(clause: str) -> bool:
@@ -1045,6 +1109,19 @@ def _has_direct_non_merge_outcome(clause: str) -> bool:
             NEVER_MERGE_PATTERN,
             NON_MERGE_COMPARISON_PATTERN,
             DO_NOT_MERGE_PATTERN,
+        )
+    )
+
+
+def _has_candidate_non_merge_contradiction(value: str) -> bool:
+    """Detect direct non-merge claims about this PR candidate, not documentation."""
+    return any(
+        pattern.search(value) is not None
+        for pattern in (
+            CANDIDATE_FUTURE_NON_MERGE_PATTERN,
+            CANDIDATE_STATE_NON_MERGE_PATTERN,
+            CANDIDATE_DO_NOT_MERGE_PATTERN,
+            CANDIDATE_NON_MERGE_COMPARISON_PATTERN,
         )
     )
 
@@ -1085,16 +1162,22 @@ def _validate_lifecycle(
         )
         or ""
     )
+    non_merge_fields = _parse_lifecycle_fields(non_merge)
     if is_merge and (
-        NON_MERGE_PURPOSE_PATTERN.search(non_merge) is not None
-        or NON_MERGE_SHA_PATTERN.search(non_merge) is not None
-        or NON_MERGE_EVIDENCE_PATTERN.search(non_merge) is not None
-        or NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is not None
+        _field_values(non_merge_fields, "Purpose")
+        or _field_values(non_merge_fields, "Exact candidate or workflow SHA")
+        or _field_values(non_merge_fields, "Retained evidence")
+        or _field_values(non_merge_fields, "Final disposition")
+        or _field_values(non_merge_fields, "Close or deletion conditions")
     ):
         errors.append("lifecycle: merge-intended branch must not declare a non-merge record")
     if is_merge and _has_non_merge_final_disposition(final_disposition):
         errors.append(
             "lifecycle: merge-intended branch must not declare a non-merge final disposition"
+        )
+    if is_merge and _has_candidate_non_merge_contradiction(reviewable_prose):
+        errors.append(
+            "lifecycle: merge-intended branch must not make a candidate-specific non-merge contradiction"
         )
     if is_non_merge and CLOSES_ISSUE_PATTERN.search(reviewable_prose) is not None:
         errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
@@ -1102,27 +1185,31 @@ def _validate_lifecycle(
     exception = (
         _section_content(reviewable_prose, reviewable_prose, "Lifecycle exception") or ""
     )
-    legacy_declared = "legacy registration:" in exception.lower()
+    legacy_fields = _parse_lifecycle_fields(exception)
+    legacy_declared = "legacy registration" in legacy_fields
     if legacy_declared:
         if primary_issue != "47":
             errors.append("lifecycle: only primary issue #47 may declare a legacy registration")
-        registration = LEGACY_REGISTRATION_PATTERN.search(exception)
-        candidate = LEGACY_CANDIDATE_PATTERN.search(exception)
-        if registration is None:
+        registrations = _field_values(legacy_fields, "Legacy registration")
+        candidate = _has_exact_sha_field(legacy_fields, "Immutable candidate SHA")
+        if not any(re.search(r"(?<![0-9])#47\b", value) for value in registrations):
             errors.append("lifecycle: legacy exception must declare 'Legacy registration: #47'")
         if candidate is None:
             errors.append("lifecycle: legacy exception must declare its immutable candidate SHA")
-        elif candidate.group(1) != context["head_sha"]:
+        elif candidate != context["head_sha"]:
             errors.append("lifecycle: legacy immutable candidate SHA must equal the PR head SHA")
-        if LEGACY_REASON_PATTERN.search(exception) is None:
+        if not _field_values(legacy_fields, "Reason"):
             errors.append("lifecycle: legacy exception must state a reason")
-        if LEGACY_IDENTITY_PATTERN.search(exception) is None:
+        if not _field_values(legacy_fields, "Original branch identity"):
             errors.append("lifecycle: legacy exception must state the original branch identity")
-        if LEGACY_PRIMARY_ISSUE_PATTERN.search(exception) is None:
+        if not any(
+            re.fullmatch(r"(?:#[1-9][0-9]*|unknown)\.?", value)
+            for value in _field_values(legacy_fields, "Original primary issue")
+        ):
             errors.append("lifecycle: legacy exception must state the original primary issue or unknown")
-        if LEGACY_EVIDENCE_PATTERN.search(exception) is None:
+        if not _field_values(legacy_fields, "Retained evidence"):
             errors.append("lifecycle: legacy exception must state retained evidence")
-        if LEGACY_DISPOSITION_PATTERN.search(exception) is None:
+        if not _field_values(legacy_fields, "Intended disposition"):
             errors.append("lifecycle: legacy exception must state intended disposition")
         return
 
@@ -1143,14 +1230,17 @@ def _validate_lifecycle(
             "lifecycle: archival branch must state it is not intended to merge"
         )
     if is_non_merge:
-        if NON_MERGE_PURPOSE_PATTERN.search(non_merge) is None:
+        if not _field_values(non_merge_fields, "Purpose"):
             errors.append("lifecycle: non-merge branch must state its purpose")
-        candidate = NON_MERGE_SHA_PATTERN.search(non_merge)
+        candidate = _has_exact_sha_field(non_merge_fields, "Exact candidate or workflow SHA")
         if candidate is None:
             errors.append("lifecycle: non-merge branch must state its exact candidate or workflow SHA")
-        if NON_MERGE_EVIDENCE_PATTERN.search(non_merge) is None:
+        if not _field_values(non_merge_fields, "Retained evidence"):
             errors.append("lifecycle: non-merge branch must state retained evidence")
-        if NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is None:
+        if not (
+            _field_values(non_merge_fields, "Final disposition")
+            or _field_values(non_merge_fields, "Close or deletion conditions")
+        ):
             errors.append("lifecycle: non-merge branch must state final disposition or close/deletion conditions")
 
 

@@ -288,6 +288,10 @@ def _non_merge_record(
     return "\n\n".join(record)
 
 
+def _field_with_hidden_value(label: str, value: str, form: str) -> str:
+    return f"{label}:\n{_hidden_lifecycle_prose(value, form)}"
+
+
 class PullRequestGovernanceTests(unittest.TestCase):
     def test_valid_standard_contract_and_two_comment_reviews_pass(self) -> None:
         event, _contract_value, comments = _fixture()
@@ -591,6 +595,132 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 for expected_error in missing_errors.values():
                     self.assertIn(expected_error, errors)
 
+    def test_lifecycle_fields_are_line_bounded_when_values_are_hidden(self) -> None:
+        required_fields = (
+            ("Purpose", "preserve validation evidence.", "lifecycle: non-merge branch must state its purpose"),
+            (
+                "Exact candidate or workflow SHA",
+                HEAD_SHA,
+                "lifecycle: non-merge branch must state its exact candidate or workflow SHA",
+            ),
+            (
+                "Retained evidence",
+                "hosted logs remain available.",
+                "lifecycle: non-merge branch must state retained evidence",
+            ),
+            (
+                "Final disposition",
+                "close after issue review.",
+                "lifecycle: non-merge branch must state final disposition or close/deletion conditions",
+            ),
+        )
+        for form in ("fenced", "inline", "indented", "comment"):
+            for hidden_index, (label, value, expected_error) in enumerate(required_fields):
+                with self.subTest(form=form, label=label):
+                    record = []
+                    for index, (other_label, other_value, _error) in enumerate(required_fields):
+                        if index == hidden_index:
+                            record.append(_field_with_hidden_value(other_label, other_value, form))
+                        else:
+                            record.append(f"{other_label}: {other_value}")
+                    event, contract, _comments = _fixture(
+                        head_ref="validation/46-line-bounded-fields"
+                    )
+                    body = _replace_required_section_content(
+                        str(event["pull_request"]["body"]),
+                        "Merge intention",
+                        "This validation branch is not intended to merge and retains test evidence.",
+                    )
+                    body = _replace_required_section_content(
+                        body, "Non-merge record", "\n".join(record)
+                    )
+                    _rebound, comments = _rebind_modified_body(event, contract, body)
+                    self.assertIn(expected_error, _validate(event, comments))
+
+            with self.subTest(form=form, labels="all-visible-values-hidden"):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-all-hidden-values"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Merge intention",
+                    "This validation branch is not intended to merge and retains test evidence.",
+                )
+                body = _replace_required_section_content(
+                    body,
+                    "Non-merge record",
+                    "\n".join(
+                        _field_with_hidden_value(label, value, form)
+                        for label, value, _error in required_fields
+                    ),
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                errors = _validate(event, comments)
+                for _label, _value, expected_error in required_fields:
+                    self.assertIn(expected_error, errors)
+
+            with self.subTest(form=form, label="Close or deletion conditions"):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-hidden-close-conditions"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Merge intention",
+                    "This validation branch is not intended to merge and retains test evidence.",
+                )
+                body = _replace_required_section_content(
+                    body,
+                    "Non-merge record",
+                    "\n".join(
+                        (
+                            "Purpose: preserve validation evidence.",
+                            f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                            "Retained evidence: hosted logs remain available.",
+                            _field_with_hidden_value(
+                                "Close or deletion conditions", "close after issue review.", form
+                            ),
+                        )
+                    ),
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertIn(
+                    "lifecycle: non-merge branch must state final disposition or close/deletion conditions",
+                    _validate(event, comments),
+                )
+
+    def test_lifecycle_legacy_fields_are_line_bounded_when_values_are_hidden(self) -> None:
+        required_fields = (
+            ("Legacy registration", "#47", "lifecycle: legacy exception must declare 'Legacy registration: #47'"),
+            ("Immutable candidate SHA", HEAD_SHA, "lifecycle: legacy exception must declare its immutable candidate SHA"),
+            ("Reason", "frozen candidate retains its original identity.", "lifecycle: legacy exception must state a reason"),
+            ("Original branch identity", "validation/legacy-candidate", "lifecycle: legacy exception must state the original branch identity"),
+            ("Original primary issue", "#54", "lifecycle: legacy exception must state the original primary issue or unknown"),
+            ("Retained evidence", "historical logs remain attached.", "lifecycle: legacy exception must state retained evidence"),
+            ("Intended disposition", "retain until migration closes.", "lifecycle: legacy exception must state intended disposition"),
+        )
+        for form in ("fenced", "inline", "indented", "comment"):
+            for hidden_index, (label, value, expected_error) in enumerate(required_fields):
+                with self.subTest(form=form, label=label):
+                    exception = []
+                    for index, (other_label, other_value, _error) in enumerate(required_fields):
+                        if index == hidden_index:
+                            exception.append(_field_with_hidden_value(other_label, other_value, form))
+                        else:
+                            exception.append(f"{other_label}: {other_value}")
+                    event, contract, _comments = _fixture(
+                        head_ref="validation/legacy-candidate-acdf8e5"
+                    )
+                    body = _replace_required_section_content(
+                        str(event["pull_request"]["body"]),
+                        "Primary issue",
+                        "Primary issue #47 registers this frozen legacy candidate.",
+                    )
+                    body = _replace_required_section_content(
+                        body, "Lifecycle exception", "\n".join(exception)
+                    )
+                    _rebound, comments = _rebind_modified_body(event, contract, body)
+                    self.assertIn(expected_error, _validate(event, comments))
+
     def test_lifecycle_ignores_hidden_non_merge_examples(self) -> None:
         for form in ("fenced", "inline", "indented", "comment"):
             with self.subTest(form=form):
@@ -688,11 +818,54 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     _validate(event, comments),
                 )
 
+    def test_lifecycle_rejects_candidate_specific_contradictions_outside_disposition(self) -> None:
+        contradictions = (
+            ("Scope", "This candidate will never be merged."),
+            ("Remaining risks", "This branch will not be merged."),
+            ("External-action authority", "The pull request should not be merged."),
+            ("Independent agent review", "Do not merge this candidate."),
+            ("Scope", "Retain this branch instead of merging it."),
+            ("Remaining risks", "Preserve the candidate without merging."),
+            ("External-action authority", "This candidate is not being merged."),
+        )
+        expected_error = (
+            "lifecycle: merge-intended branch must not make a candidate-specific non-merge contradiction"
+        )
+        for section, contradiction in contradictions:
+            with self.subTest(section=section, contradiction=contradiction):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-visible-contradiction"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]), section, contradiction
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertIn(expected_error, _validate(event, comments))
+
+        for form in ("fenced", "inline", "indented", "comment"):
+            with self.subTest(form=form):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-hidden-contradiction"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Scope",
+                    "This scope retains ordinary parser documentation.\n\n"
+                    "The checker recognizes the phrase `will never be merged`.\n\n"
+                    + _hidden_lifecycle_prose("This candidate will never be merged.", form),
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertEqual(_validate(event, comments), [])
+
     def test_lifecycle_accepts_post_merge_cleanup_language(self) -> None:
         dispositions = (
+            "Final disposition: After a successful merge, delete the branch with separate authority.",
             "Final disposition: After successful integration, delete the branch with separate authority.",
             "Final disposition: After this pull request merges, retain the evidence.",
-            "Final disposition: Once merged, close the temporary tracking record.",
+            "Final disposition: Once successfully merged, close the temporary tracking branch.",
+            "Final disposition: Upon successful integration, archive the logs.",
+            "Final disposition: Following successful integration, retain the evidence.",
+            "Final disposition: Archive the evidence after merge.",
         )
         for disposition in dispositions:
             with self.subTest(disposition=disposition):
@@ -706,6 +879,30 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 )
                 _rebound, comments = _rebind_modified_body(event, contract, body)
                 self.assertEqual(_validate(event, comments), [])
+
+    def test_lifecycle_post_merge_qualification_cannot_legalize_an_earlier_action(self) -> None:
+        dispositions = (
+            "Final disposition: Delete this branch instead of merging it; after merge, preserve the logs.",
+            "Final disposition: Retain this candidate without merging, then archive evidence after merge.",
+            "Final disposition: This candidate will never be merged, but logs may be retained after integration.",
+            "Final disposition: Do not merge this branch. After a successful merge, delete temporary records.",
+            "Final disposition: Retain this candidate without merging. Archive evidence after merge.",
+        )
+        for disposition in dispositions:
+            with self.subTest(disposition=disposition):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-post-merge-scope"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Rollback or final disposition",
+                    disposition,
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertIn(
+                    "lifecycle: merge-intended branch must not declare a non-merge final disposition",
+                    _validate(event, comments),
+                )
 
     def test_low_documentation_change_requires_only_correctness(self) -> None:
         for path in ("README.md", "docs/GAMEPLAY.md"):
