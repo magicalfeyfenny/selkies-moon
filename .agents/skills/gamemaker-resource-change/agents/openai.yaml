@@ -1,0 +1,6 @@
+interface:
+  display_name: "GameMaker Resource Change"
+  short_description: "Safely maintain GameMaker resource metadata"
+  default_prompt: "Use $gamemaker-resource-change to add and register this GameMaker resource."
+policy:
+  allow_implicit_invocation: true
