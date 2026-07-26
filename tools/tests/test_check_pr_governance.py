@@ -436,6 +436,26 @@ class PullRequestGovernanceTests(unittest.TestCase):
             errors,
         )
 
+        for disposition in (
+            "Final disposition: retain this candidate permanently without merging, then archive evidence after merge.",
+            "Final disposition: retain this candidate permanently without merging but archive evidence after merge.",
+        ):
+            with self.subTest(disposition=disposition):
+                event, contract, _comments = _fixture(
+                    head_ref="validation/46-mixed-disposition"
+                )
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Rollback or final disposition",
+                    disposition,
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                errors = _validate(event, comments)
+                self.assertIn(
+                    "lifecycle: merge-intended branch must not declare a non-merge final disposition",
+                    errors,
+                )
+
         event, contract, _comments = _fixture(head_ref="validation/46-non-merge-closes")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),

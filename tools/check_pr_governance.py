@@ -114,6 +114,9 @@ NON_MERGE_FINAL_DISPOSITION_PATTERN = re.compile(
     r"\b(?:(?:retain|archive|archival|close|delete)\s+(?:this\s+|the\s+)?(?:candidate|branch|evidence)\b|never\s+merge|without\s+merg(?:e|ing))",
     re.IGNORECASE,
 )
+EXPLICIT_NON_MERGE_STATEMENT_PATTERN = re.compile(
+    r"\b(?:never\s+merge|without\s+merg(?:e|ing))\b", re.IGNORECASE
+)
 POST_MERGE_DISPOSITION_PATTERN = re.compile(
     r"\b(?:after|upon|once)\s+(?:(?:this|the)\s+)?(?:pull request|branch|candidate)?\s*merg(?:e|es|ed|ing)\b",
     re.IGNORECASE,
@@ -1010,8 +1013,11 @@ def _has_non_merge_final_disposition(value: str) -> bool:
         return False
     clauses = re.split(r"(?<=[.!?;])\s+", value[declaration.end() :])
     return any(
-        NON_MERGE_FINAL_DISPOSITION_PATTERN.search(clause) is not None
-        and POST_MERGE_DISPOSITION_PATTERN.search(clause) is None
+        EXPLICIT_NON_MERGE_STATEMENT_PATTERN.search(clause) is not None
+        or (
+            NON_MERGE_FINAL_DISPOSITION_PATTERN.search(clause) is not None
+            and POST_MERGE_DISPOSITION_PATTERN.search(clause) is None
+        )
         for clause in clauses
     )
 
