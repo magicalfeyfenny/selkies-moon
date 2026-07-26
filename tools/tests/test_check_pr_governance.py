@@ -254,7 +254,10 @@ class PullRequestGovernanceTests(unittest.TestCase):
         event, _contract_value, comments = _fixture()
         self.assertEqual(_validate(event, comments), [])
 
-    def test_lifecycle_accepts_issue_numbered_and_non_merge_validation_branches(self) -> None:
+    def test_lifecycle_accepts_merge_and_non_merge_validation_branches(self) -> None:
+        event, _contract, comments = _fixture(head_ref="validation/46-durable-evidence")
+        self.assertEqual(_validate(event, comments), [])
+
         event, contract, _comments = _fixture(head_ref="validation/46-candidate-evidence")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
@@ -311,11 +314,11 @@ class PullRequestGovernanceTests(unittest.TestCase):
         errors = _validate(event, comments)
         self.assertIn("lifecycle: source branch issue number must match '## Primary issue'", errors)
 
-    def test_lifecycle_rejects_ambiguous_validation_and_incomplete_legacy_metadata(self) -> None:
-        event, _contract_value, comments = _fixture(head_ref="validation/46-evidence")
+    def test_lifecycle_rejects_merge_intended_archival_and_incomplete_legacy_metadata(self) -> None:
+        event, _contract_value, comments = _fixture(head_ref="archival/46-evidence")
         errors = _validate(event, comments)
         self.assertIn(
-            "lifecycle: validation-only or archival branch must state it is not intended to merge",
+            "lifecycle: archival branch must state it is not intended to merge",
             errors,
         )
 

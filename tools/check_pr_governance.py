@@ -1054,9 +1054,9 @@ def _validate_lifecycle(
         )
     elif branch_issue.group(1) != primary_issue:
         errors.append("lifecycle: source branch issue number must match '## Primary issue'")
-    if head_ref.startswith(("validation/", "archival/", "archive/")) and not is_non_merge:
+    if head_ref.startswith(("archival/", "archive/")) and not is_non_merge:
         errors.append(
-            "lifecycle: validation-only or archival branch must state it is not intended to merge"
+            "lifecycle: archival branch must state it is not intended to merge"
         )
     if is_non_merge:
         non_merge = _section_content(body, structure, "Non-merge record") or ""
