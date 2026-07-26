@@ -22,7 +22,7 @@ second place to tune gameplay:
   default pressure point for compatibility and practice calculations.
 - Boss stage phase counts: `3,5,3+3+shared,7,15`. Stage 3 gives Mira and Aisha
   three personal phases each before their synchronized shared finale.
-- GMTL tests declared: `126`.
+- GMTL tests declared: `132`.
 - Visual-tour captures declared: `26`.
 
 `scr_gameplay_helpers` owns the gameplay constants and encounter descriptors;

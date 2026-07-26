@@ -276,16 +276,32 @@ the known local runner as part of characterization. If no authorized runner can
 produce the captures, record the visual portion as unverified and stop before
 extraction rather than treating compilation or test construction as a pass.
 
-This is a proposed characterization task, not a test implementation in this
-planning change. It must obtain the review evidence appropriate to its final
-changed paths before any later extraction is considered.
+The clean characterization boundary is complete: the focused GMTL section
+records normal and selected palettes, title and options ordering and limits,
+opening-story portrait and empty-text layout, final-boss HUD anchors and
+heart-state boundaries, pause page ordering and selection boundaries, and
+caller-visible draw-state postconditions. In particular,
+`GameUiDrawOrnamentDiamond` restores alpha while leaving its requested color,
+and `GameUiDrawFiligreeDivider` therefore leaves the palette jewel color. This
+existing side effect is recorded, not normalized.
+
+Current production ownership remains `scr_title_helpers`, `scr_story_helpers`,
+and `scr_gameplay_helpers`; `scr_ui_ornate` is only a proposed future owner.
+The current runner passed all 132 declared GMTL tests, including this section.
+The selected visual-tour captures `01_title_main_menu`, `05_title_options`,
+`06_opening_story`, `16_final_boss`, `21_pause_main`, `22_pause_settings`,
+`23_pause_practice_tuning`, and `24_pause_quit_confirm` were also reviewed.
+
+A separately governed, bounded extraction may now begin. It must preserve
+these contracts and must not treat this characterization as authorization for
+any other decomposition milestone.
 
 ## Migration status
 
 | Area | Status | Next action |
 | --- | --- | --- |
 | Audit and routing | Complete | Use this plan and the module map for every structural thread |
-| Shared ornate UI | Characterization required | Milestone 1 |
+| Shared ornate UI | Characterization complete; 132-test GMTL pass and selected visual evidence reviewed | One separately governed bounded extraction may begin |
 | Stage rules | Characterization required | Milestone 3 after shared UI extraction |
 | Boss plans | Existing focused coverage is likely sufficient; determinism checkpoint still required at extraction | Milestone 5 |
 | Rank | Existing focused coverage is strong; frozen-frame checkpoint required | Milestone 6 |
@@ -299,7 +315,7 @@ changed paths before any later extraction is considered.
 | Boss pattern families | Cohesive current owner; defer until family geometry/RNG characterization | Milestones 40-48 |
 | Input/audio/stage 3D | Monitor; no extraction selected by this audit | Re-audit only when a bounded task demonstrates recurring mixed ownership |
 
-The plan permits a bounded milestone-1 characterization task. It does not
-permit shared-UI extraction until that task supplies the stated focused and
-visual evidence. RNG-sensitive extraction remains blocked on the specified
-traces, and this audit authorizes no production milestone.
+This task supplied the stated focused and visual evidence. One separately
+governed shared-UI extraction may now begin; it is not authorized by this plan
+alone. RNG-sensitive extraction remains blocked on the specified traces, and
+this audit authorizes no other production milestone.
