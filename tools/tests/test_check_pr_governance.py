@@ -288,7 +288,9 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertEqual(_validate(event, comments), [])
 
     def test_lifecycle_accepts_documented_legacy_name_exception(self) -> None:
-        event, contract, _comments = _fixture(head_ref="validation/47-frozen-candidate")
+        event, contract, _comments = _fixture(
+            head_ref="validation/ornate-ui-characterization-acdf8e5"
+        )
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
             "Primary issue",
@@ -297,7 +299,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Lifecycle exception",
-            f"Legacy registration: #47. Original branch identity: validation/47-frozen-candidate. Original primary issue: #46. Immutable candidate SHA: {HEAD_SHA}. Retained evidence: historical logs remain attached. Intended disposition: retain until migration closes. Reason: frozen candidate retains its original identity.",
+            f"Legacy registration: #47. Original branch identity: validation/ornate-ui-characterization-acdf8e5. Original primary issue: #54. Immutable candidate SHA: {HEAD_SHA}. Retained evidence: historical logs remain attached. Intended disposition: retain until migration closes. Reason: frozen candidate retains its original identity.",
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
@@ -386,20 +388,20 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
             "Rollback or final disposition",
-            "Final disposition: retain this archival candidate without merging.",
+            "Final disposition: retain this candidate permanently as evidence; it will never merge.",
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         errors = _validate(event, comments)
         self.assertIn(
-            "lifecycle: merge-intended branch must not declare an archival-only final disposition",
+            "lifecycle: merge-intended branch must not declare a non-merge final disposition",
             errors,
         )
 
         event, contract, _comments = _fixture(head_ref="validation/46-non-merge-closes")
         body = _replace_required_section_content(
             str(event["pull_request"]["body"]),
-            "Primary issue",
-            "Closes #46 after retaining this candidate.",
+            "Scope",
+            "This candidate retains the current evidence. Closes #46 when this pull request merges.",
         )
         body = _replace_required_section_content(
             body,

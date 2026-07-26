@@ -107,7 +107,10 @@ NON_MERGE_DISPOSITION_PATTERN = re.compile(
     r"\b(?:Final disposition|Close or deletion conditions):\s*[^\s]", re.DOTALL
 )
 CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
-ARCHIVAL_DISPOSITION_PATTERN = re.compile(r"\barchiv(?:al|e)\b", re.IGNORECASE)
+NON_MERGE_FINAL_DISPOSITION_PATTERN = re.compile(
+    r"\b(?:archiv(?:al|e)|retain(?:ed)?\s+(?:this\s+)?(?:candidate|branch|evidence)\s+permanently|never\s+merge|without\s+merg(?:e|ing))\b",
+    re.IGNORECASE,
+)
 REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 AGENT_ID_PATTERN = re.compile(r"[A-Za-z0-9/][A-Za-z0-9._:/@-]{1,127}")
 PLACEHOLDER_PATTERN = re.compile(
@@ -1028,11 +1031,13 @@ def _validate_lifecycle(
         or NON_MERGE_DISPOSITION_PATTERN.search(non_merge) is not None
     ):
         errors.append("lifecycle: merge-intended branch must not declare a non-merge record")
-    if is_merge and ARCHIVAL_DISPOSITION_PATTERN.search(final_disposition) is not None:
+    if is_merge and NON_MERGE_FINAL_DISPOSITION_PATTERN.search(final_disposition) is not None:
         errors.append(
-            "lifecycle: merge-intended branch must not declare an archival-only final disposition"
+            "lifecycle: merge-intended branch must not declare a non-merge final disposition"
         )
-    if is_non_merge and CLOSES_ISSUE_PATTERN.search(primary) is not None:
+    if is_non_merge and CLOSES_ISSUE_PATTERN.search(
+        _mask_html_comments_outside_code(body)
+    ) is not None:
         errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
 
     exception = _section_content(body, structure, "Lifecycle exception") or ""
