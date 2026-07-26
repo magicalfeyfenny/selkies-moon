@@ -13,12 +13,11 @@ Codex may create fresh-context review agents, collect their findings, post
 review attestations, and treat a unanimous passing result as review approval.
 No separate confirmation from Fenny is required for those review actions.
 
-Review approval establishes readiness, not new authority. The orchestrating
-agent may merge an approved pull request into `dev` when the active task already
-authorizes implementing and publishing that bounded change. A passing review of
-a pull request into `main` does not by itself authorize advancing the published
-release branch, creating a tag, or publishing binaries. Those actions require
-an explicit promotion or release task for the named candidate.
+Review approval establishes readiness, not new authority. It never authorizes
+merge, release, deployment, publication, tagging, history rewrite, deletion,
+or scope expansion. Those boundaries and the issue/branch/PR lifecycle belong
+to [Branch and Release Policy](BRANCH_AND_RELEASE_POLICY.md); an explicitly
+authorized merge is still a separate action.
 
 All spawned agents currently use the repository owner's GitHub identity. Their
 independence is fresh-context and role-based, not account-level. Record their
@@ -60,8 +59,8 @@ allowed; declaring lower than the path-derived class fails the check.
 | `high` | CI, governance, dependencies, migrations, save/schema changes, canonical asset ownership, packaging, privacy/licensing/security, destructive cleanup, or broad cross-system work | `correctness`, `validation`, `governance` |
 | `main-promotion` | Every pull request targeting `main` | `correctness`, `validation`, `release-governance` |
 
-Pull requests into `main` must come from `dev`, an exact `release/vX.Y.Z`
-branch, or a nonempty `hotfix/*` branch. Ordinary feature branches target
+Pull requests into `main` must come from `dev`, an exact `release/<issue>-vX.Y.Z`
+branch, or an exact `hotfix/<issue>-<short-slug>` branch. Ordinary feature branches target
 `dev`. A main-promotion contract identifies the exact candidate commit and Git
 tree so the promotion cannot quietly change the tested source.
 

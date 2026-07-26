@@ -34,7 +34,7 @@ def _roles_for(risk: str) -> list[str]:
 def _contract(
     *,
     base_ref: str = "dev",
-    head_ref: str = "codex/governance",
+    head_ref: str = "codex/46-governance",
     risk: str = "standard",
 ) -> dict[str, object]:
     value: dict[str, object] = {
@@ -65,12 +65,21 @@ def _contract(
 def _body(contract: dict[str, object], *, raw_contract: str | None = None) -> str:
     payload = raw_contract if raw_contract is not None else json.dumps(contract, indent=2)
     sections = [
+        "## Primary issue\n\nPrimary issue #46 defines this bounded governance task.",
         "## Intent\n\nDeliver one bounded governance change.",
         "## Scope\n\nAdd a machine-checked contract and review evidence.",
         "## Non-goals\n\nDo not publish a release.",
+        "## Acceptance mapping\n\nThe checker and templates implement every stated lifecycle requirement.",
+        "## Important files and ownership\n\nGovernance documentation and the PR checker own these changes.",
         f"## Risk\n\nDeclared risk: {contract.get('risk', 'unknown')}.",
         "## Validation\n\nRun the governance unit tests and repository checks.",
-        "## Rollback\n\nRevert the governance commit.",
+        "## Review status\n\nRequired independent reviewers will attest to this exact candidate.",
+        "## Remaining risks\n\nRemote issue existence remains verified by GitHub workflow context when available.",
+        "## Merge intention\n\nThis branch is intended to merge after required validation and review.",
+        "## External-action authority\n\nNo merge, release, deployment, or publication authority is granted by this PR.",
+        "## Rollback or final disposition\n\nRevert the governance commit or record the retained branch disposition.",
+        "## Non-merge record\n\nThis merge-intended branch has no non-merge record.",
+        "## Lifecycle exception\n\nNo lifecycle exception applies to this issue-numbered branch.",
         (
             "## Independent agent review\n\n"
             "Attestations are supplied in PR comments and bind this exact contract.\n\n"
@@ -82,12 +91,21 @@ def _body(contract: dict[str, object], *, raw_contract: str | None = None) -> st
 
 def _hidden_body(contract: dict[str, object]) -> str:
     sections = [
+        "## Primary issue\n\nPrimary issue #46 defines this bounded governance task.",
         "## Intent\n\nDeliver one bounded governance change.",
         "## Scope\n\nAdd a machine-checked contract and review evidence.",
         "## Non-goals\n\nDo not publish a release.",
+        "## Acceptance mapping\n\nThe checker and templates implement every stated lifecycle requirement.",
+        "## Important files and ownership\n\nGovernance documentation and the PR checker own these changes.",
         f"## Risk\n\nDeclared risk: {contract.get('risk', 'unknown')}.",
         "## Validation\n\nRun the governance unit tests and repository checks.",
-        "## Rollback\n\nRevert the governance commit.",
+        "## Review status\n\nRequired independent reviewers will attest to this exact candidate.",
+        "## Remaining risks\n\nRemote issue existence remains verified by GitHub workflow context when available.",
+        "## Merge intention\n\nThis branch is intended to merge after required validation and review.",
+        "## External-action authority\n\nNo merge, release, deployment, or publication authority is granted by this PR.",
+        "## Rollback or final disposition\n\nRevert the governance commit or record the retained branch disposition.",
+        "## Non-merge record\n\nThis merge-intended branch has no non-merge record.",
+        "## Lifecycle exception\n\nNo lifecycle exception applies to this issue-numbered branch.",
         "## Independent agent review\n\nAttestations bind this exact contract.",
     ]
     hidden_sections = "\n\n".join(f"<!--\n{section}\n-->" for section in sections)
@@ -140,7 +158,7 @@ def _comment(
 def _fixture(
     *,
     base_ref: str = "dev",
-    head_ref: str = "codex/governance",
+    head_ref: str = "codex/46-governance",
     risk: str = "standard",
     head_repository: str = REPOSITORY,
 ) -> tuple[dict[str, object], dict[str, object], list[dict[str, object]]]:
@@ -235,6 +253,119 @@ class PullRequestGovernanceTests(unittest.TestCase):
     def test_valid_standard_contract_and_two_comment_reviews_pass(self) -> None:
         event, _contract_value, comments = _fixture()
         self.assertEqual(_validate(event, comments), [])
+
+    def test_lifecycle_accepts_issue_numbered_and_non_merge_validation_branches(self) -> None:
+        event, contract, _comments = _fixture(head_ref="validation/46-candidate-evidence")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Merge intention",
+            "This validation branch is not intended to merge and retains its test evidence.",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Non-merge record",
+            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        self.assertEqual(_validate(event, comments), [])
+
+    def test_lifecycle_accepts_documented_legacy_name_exception(self) -> None:
+        event, contract, _comments = _fixture(head_ref="frozen-candidate")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Primary issue",
+            "Primary issue #47 registers this frozen legacy candidate.",
+        )
+        body = _replace_required_section_content(
+            body,
+            "Lifecycle exception",
+            f"Legacy registration: #47. Original branch identity: frozen-candidate. Original primary issue: #46. Immutable candidate SHA: {HEAD_SHA}. Retained evidence: historical logs remain attached. Intended disposition: retain until migration closes. Reason: frozen candidate retains its original identity.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        self.assertEqual(_validate(event, comments), [])
+
+    def test_lifecycle_rejects_missing_branch_issue_or_primary_issue(self) -> None:
+        event, _contract_value, comments = _fixture(head_ref="codex/lifecycle")
+        errors = _validate(event, comments)
+        self.assertIn("lifecycle: source branch must include its primary issue number; use codex/<issue>-<slug>", errors)
+
+        event, _contract_value, comments = _fixture()
+        event["pull_request"]["body"] = event["pull_request"]["body"].replace(  # type: ignore[index]
+            "## Primary issue", "## Removed primary issue"
+        )
+        errors = _validate(event, comments)
+        self.assertTrue(any("name one primary issue" in error for error in errors), errors)
+
+    def test_lifecycle_rejects_malformed_or_mismatched_issue_metadata(self) -> None:
+        event, contract, _comments = _fixture()
+        malformed = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Primary issue",
+            "Primary issue 46 defines this bounded governance task.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, malformed)
+        errors = _validate(event, comments)
+        self.assertTrue(any("name one primary issue" in error for error in errors), errors)
+
+        event, _contract_value, comments = _fixture(head_ref="codex/47-other-task")
+        errors = _validate(event, comments)
+        self.assertIn("lifecycle: source branch issue number must match '## Primary issue'", errors)
+
+    def test_lifecycle_rejects_ambiguous_validation_and_incomplete_legacy_metadata(self) -> None:
+        event, _contract_value, comments = _fixture(head_ref="validation/46-evidence")
+        errors = _validate(event, comments)
+        self.assertIn(
+            "lifecycle: validation-only or archival branch must state it is not intended to merge",
+            errors,
+        )
+
+        event, contract, _comments = _fixture(head_ref="frozen-candidate")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Lifecycle exception",
+            "Legacy registration: #47 documents this preserved candidate.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertIn("lifecycle: legacy exception must declare its immutable candidate SHA", errors)
+        self.assertIn("lifecycle: legacy exception must state a reason", errors)
+        self.assertIn("lifecycle: only primary issue #47 may declare a legacy registration", errors)
+
+    def test_lifecycle_rejects_non_merge_branch_without_complete_retention_record(self) -> None:
+        event, contract, _comments = _fixture(head_ref="documentation/46-retained-notes")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Merge intention",
+            "This documentation branch is not intended to merge and remains retained for reference.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertIn("lifecycle: non-merge branch must state its exact candidate or workflow SHA", errors)
+        self.assertIn("lifecycle: non-merge branch must state retained evidence", errors)
+
+    def test_lifecycle_rejects_contradictory_merge_intention_and_invalid_main_hotfix_name(self) -> None:
+        event, contract, _comments = _fixture(head_ref="validation/46-contradictory")
+        body = _replace_required_section_content(
+            str(event["pull_request"]["body"]),
+            "Merge intention",
+            "This branch is intended to merge but is not intended to merge after validation.",
+        )
+        _rebound, comments = _rebind_modified_body(event, contract, body)
+        errors = _validate(event, comments)
+        self.assertIn(
+            "lifecycle: state whether this branch is intended to merge or not intended to merge",
+            errors,
+        )
+
+        for head_ref in ("hotfix/46-/nested", "hotfix/46-patch/extra"):
+            with self.subTest(head_ref=head_ref):
+                event, _contract_value, comments = _fixture(
+                    base_ref="main", head_ref=head_ref, risk="main-promotion"
+                )
+                errors = _validate(
+                    event, comments, ["README.md"], candidate_tree=TREE_SHA, base_is_ancestor=True
+                )
+                self.assertTrue(any("PRs into main" in error for error in errors), errors)
 
     def test_low_documentation_change_requires_only_correctness(self) -> None:
         for path in ("README.md", "docs/GAMEPLAY.md"):
@@ -1016,10 +1147,10 @@ class PullRequestGovernanceTests(unittest.TestCase):
     def test_required_body_sections_and_comment_attestations_cannot_be_omitted(self) -> None:
         event, _contract_value, comments = _fixture()
         event["pull_request"]["body"] = event["pull_request"]["body"].replace(  # type: ignore[index]
-            "## Rollback", "## Removed"
+            "## Rollback or final disposition", "## Removed"
         )
         errors = _validate(event, comments)
-        self.assertTrue(any("## Rollback" in error for error in errors), errors)
+        self.assertTrue(any("## Rollback or final disposition" in error for error in errors), errors)
 
         event, _contract_value, _comments = _fixture()
         errors = _validate(event, [])
@@ -1180,7 +1311,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
             body = _replace_required_section_content(
                 body,
                 section,
-                definition_forms[index],
+                definition_forms[index % len(definition_forms)],
             )
         rebound, _comments = _rebind_modified_body(event, contract, body)
         comments = []
@@ -1458,7 +1589,8 @@ class PullRequestGovernanceTests(unittest.TestCase):
             "```text\nabcdefghijklmnopqrst\n```",
         )
         body = str(event["pull_request"]["body"])
-        for section, padding in zip(governance.REQUIRED_SECTIONS, section_padding):
+        for index, section in enumerate(governance.REQUIRED_SECTIONS):
+            padding = section_padding[index % len(section_padding)]
             body = _replace_required_section_content(body, section, padding)
         rebound, _comments = _rebind_modified_body(event, contract, body)
 
@@ -1560,6 +1692,8 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertIn("EXPECTED_BASE_SHA", governance_job)
         self.assertIn("EXPECTED_BASE_REF", governance_job)
         self.assertIn("EXPECTED_HEAD_REF", governance_job)
+        self.assertIn('gh api "repos/$REPOSITORY/issues/$primary_issue"', governance_job)
+        self.assertIn("primary issue must be a GitHub issue, not a pull request", governance_job)
         self.assertIn('live["base"]["sha"] != expected_base', governance_job)
         self.assertIn('live["base"]["ref"] != expected_base_ref', governance_job)
         self.assertIn('live["head"]["ref"] != expected_head_ref', governance_job)

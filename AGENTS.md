@@ -3,7 +3,8 @@
 Start with [Governance Handoff](docs/GOVERNANCE_HANDOFF.md) for the authority
 map, current governance state, verification commands, and open enforcement gap.
 
-- Base ordinary bounded work on `dev`; `main` is release-pinned. Follow
+- Base ordinary bounded work on `dev`; `main` is release-pinned. Before any
+  future non-default branch, follow the issue/branch/PR lifecycle in
   [Branch and Release Policy](docs/BRANCH_AND_RELEASE_POLICY.md).
 - Use one issue or acceptance contract per task. Record non-goals, evidence,
   rollback, and deferred work in the issue and pull request.
