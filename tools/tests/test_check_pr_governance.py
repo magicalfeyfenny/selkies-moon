@@ -36,11 +36,12 @@ def _contract(
     base_ref: str = "dev",
     head_ref: str = "codex/46-governance",
     risk: str = "standard",
+    pr_number: int = PR_NUMBER,
 ) -> dict[str, object]:
     value: dict[str, object] = {
         "version": 1,
         "repository": REPOSITORY,
-        "pr_number": PR_NUMBER,
+        "pr_number": pr_number,
         "head_sha": HEAD_SHA,
         "base_sha": BASE_SHA,
         "base_ref": base_ref,
@@ -161,10 +162,16 @@ def _fixture(
     head_ref: str = "codex/46-governance",
     risk: str = "standard",
     head_repository: str = REPOSITORY,
+    pr_number: int = PR_NUMBER,
 ) -> tuple[dict[str, object], dict[str, object], list[dict[str, object]]]:
-    contract = _contract(base_ref=base_ref, head_ref=head_ref, risk=risk)
+    contract = _contract(
+        base_ref=base_ref,
+        head_ref=head_ref,
+        risk=risk,
+        pr_number=pr_number,
+    )
     event: dict[str, object] = {
-        "number": PR_NUMBER,
+        "number": pr_number,
         "repository": {"full_name": REPOSITORY},
         "pull_request": {
             "body": _body(contract),
@@ -290,6 +297,23 @@ def _non_merge_record(
 
 def _field_with_hidden_value(label: str, value: str, form: str) -> str:
     return f"{label}:\n{_hidden_lifecycle_prose(value, form)}"
+
+
+def _validate_lifecycle_sections(
+    replacements: dict[str, str],
+    *,
+    head_ref: str = "validation/46-lifecycle-regression",
+    pr_number: int = PR_NUMBER,
+) -> list[str]:
+    event, contract, _comments = _fixture(
+        head_ref=head_ref,
+        pr_number=pr_number,
+    )
+    body = str(event["pull_request"]["body"])
+    for section, content in replacements.items():
+        body = _replace_required_section_content(body, section, content)
+    _rebound, comments = _rebind_modified_body(event, contract, body)
+    return _validate(event, comments)
 
 
 class PullRequestGovernanceTests(unittest.TestCase):
@@ -903,6 +927,425 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     "lifecycle: merge-intended branch must not declare a non-merge final disposition",
                     _validate(event, comments),
                 )
+
+    def test_lifecycle_primary_issue_requires_one_raw_reference(self) -> None:
+        valid = (
+            "Closes #46 upon merge.",
+            "The bounded task closes (#46) after merge.",
+            "Closes #46 upon merge; malformed neighbors #046 and repo#46 do not count.",
+        )
+        for content in valid:
+            with self.subTest(valid=content):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Primary issue": content}),
+                    [],
+                )
+
+        invalid = (
+            (
+                "zero",
+                "The primary issue number is intentionally absent from this sentence.",
+                "lifecycle: name one primary issue as #<number> in '## Primary issue'",
+            ),
+            (
+                "two",
+                "Issues #46 and #47 both appear as raw references here.",
+                "lifecycle: '## Primary issue' must name exactly one #<number>",
+            ),
+            (
+                "descriptive plus closes",
+                "The bounded correction is tracked by #46. Closes #46 upon merge.",
+                "lifecycle: '## Primary issue' must name exactly one #<number>",
+            ),
+        )
+        for name, content, expected in invalid:
+            with self.subTest(invalid=name):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Primary issue": content}),
+                )
+
+        malformed = (
+            "issue 46",
+            "#046",
+            "# 46",
+            "word#46",
+            "repo#46",
+            "##46",
+            "#46word",
+            "#46_suffix",
+            "#46-neighbor",
+            "#46.7",
+            "#46#47",
+        )
+        for token in malformed:
+            with self.subTest(malformed=token):
+                content = f"The malformed neighboring token {token} is not a raw issue reference."
+                self.assertIn(
+                    "lifecycle: name one primary issue as #<number> in '## Primary issue'",
+                    _validate_lifecycle_sections({"Primary issue": content}),
+                )
+
+    def test_lifecycle_exact_sha_fields_use_full_hex_token_boundaries(self) -> None:
+        labels = ("Immutable candidate SHA", "Exact candidate or workflow SHA")
+        valid_values = (
+            HEAD_SHA,
+            f" {HEAD_SHA} ",
+            f"({HEAD_SHA})",
+            f"[{HEAD_SHA}]",
+            f"g{HEAD_SHA}z",
+            f"G{HEAD_SHA}Z",
+            f"_{HEAD_SHA}-",
+            f"={HEAD_SHA},",
+        )
+        invalid_values = (
+            "a" * 39,
+            "A" * 40,
+            "a" * 41,
+            "b" + HEAD_SHA,
+            HEAD_SHA + "c",
+            "A" + HEAD_SHA,
+            HEAD_SHA + "F",
+            "0" + HEAD_SHA,
+            HEAD_SHA + "9",
+            "a" + HEAD_SHA + "b",
+            "A" + HEAD_SHA + "F",
+            "0" + HEAD_SHA + "9",
+        )
+        for label in labels:
+            for value in valid_values:
+                with self.subTest(label=label, valid=value):
+                    fields = governance._parse_lifecycle_fields(f"{label}: {value}")
+                    self.assertEqual(
+                        governance._has_exact_sha_field(fields, label),
+                        HEAD_SHA,
+                    )
+            for value in invalid_values:
+                with self.subTest(label=label, invalid=value):
+                    fields = governance._parse_lifecycle_fields(f"{label}: {value}")
+                    self.assertIsNone(governance._has_exact_sha_field(fields, label))
+
+        for name, value in (
+            ("uppercase prefix", "A" + HEAD_SHA),
+            ("uppercase suffix", HEAD_SHA + "F"),
+            ("uppercase both sides", "A" + HEAD_SHA + "F"),
+            ("numeric both sides", "0" + HEAD_SHA + "9"),
+        ):
+            with self.subTest(non_merge=name):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains deterministic evidence."
+                        ),
+                        "Non-merge record": "\n".join(
+                            (
+                                "Purpose: preserve validation evidence.",
+                                f"Exact candidate or workflow SHA: {value}.",
+                                "Retained evidence: hosted logs remain available.",
+                                "Final disposition: close after issue review.",
+                            )
+                        ),
+                    }
+                )
+                self.assertIn(
+                    "lifecycle: non-merge branch must state its exact candidate or workflow SHA",
+                    errors,
+                )
+
+            with self.subTest(legacy=name):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Primary issue": (
+                            "Primary issue #47 registers this frozen legacy candidate."
+                        ),
+                        "Lifecycle exception": "\n".join(
+                            (
+                                "Legacy registration: #47.",
+                                "Original branch identity: validation/frozen-candidate.",
+                                "Original primary issue: #54.",
+                                f"Immutable candidate SHA: {value}.",
+                                "Retained evidence: historical logs remain attached.",
+                                "Intended disposition: retain until migration closes.",
+                                "Reason: frozen history retains its original identity.",
+                            )
+                        ),
+                    },
+                    head_ref="validation/frozen-candidate",
+                )
+                self.assertIn(
+                    "lifecycle: legacy exception must declare its immutable candidate SHA",
+                    errors,
+                )
+
+    def test_lifecycle_rejects_bounded_candidate_contradiction_grammar(self) -> None:
+        expected = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        contradictions = (
+            ("punctuation", "This candidate, emphatically, will never be merged."),
+            (
+                "singular pronoun",
+                "This candidate remains the subject here. It will never be merged.",
+            ),
+            (
+                "plural pronoun",
+                "These changes are the current candidate. They should not be merged.",
+            ),
+            ("plural subject", "These candidate branches will never be merged."),
+            ("won't", "This pull request won't be merged."),
+            ("shouldn't", "This PR shouldn't merge."),
+            ("can't", "These changes can't be merged."),
+            ("isn't", "This branch isn't being merged."),
+            ("must not active", "The PR must not merge."),
+            ("must not passive", "The current branch must not be merged."),
+            ("do-not imperative", "Do-not-merge this branch after validation."),
+            ("never-merge imperative", "Never-merge this PR after validation."),
+            ("passive prohibition", "This PR is prohibited from merging."),
+            ("gerund prohibition", "Merging this PR is forbidden by this contract."),
+            (
+                "rather than",
+                "Retain this branch rather than merging it into the target.",
+            ),
+            (
+                "instead of",
+                "Archive this candidate instead of merging it into dev.",
+            ),
+            ("without", "Close this PR without merging it into dev."),
+            ("retain replacement", "Retain this candidate as the final outcome."),
+            ("archive replacement", "Archive this branch as the final outcome."),
+            ("preserve replacement", "Preserve these changes as the final outcome."),
+            ("close replacement", "Close this pull request as the final outcome."),
+            ("delete replacement", "Delete the current branch as the final outcome."),
+        )
+        for name, contradiction in contradictions:
+            with self.subTest(name=name):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        numbered_errors = _validate_lifecycle_sections(
+            {"Scope": "Pull request #65 should not be merged."},
+            pr_number=65,
+        )
+        self.assertIn(expected, numbered_errors)
+
+        head_ref = "codex/46-exact-candidate"
+        self.assertIn(
+            expected,
+            _validate_lifecycle_sections(
+                {"Scope": f"{head_ref} will never be merged."},
+                head_ref=head_ref,
+            ),
+        )
+
+        safe_controls = (
+            "The historical branch will not be merged.",
+            "Pull request #66 should not be merged.",
+            "Do not merge unrelated changes into this candidate.",
+            "This branch must not merge unrelated changes.",
+            "This branch must not merge until validation finishes.",
+            "After this pull request merges, archive the branch.",
+        )
+        for content in safe_controls:
+            with self.subTest(safe=content):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {"Scope": content},
+                        pr_number=65,
+                    ),
+                    [],
+                )
+
+    def test_lifecycle_distinguishes_descriptive_and_operative_clauses(self) -> None:
+        descriptive = (
+            'The checker rejects the example "This branch must not merge."',
+            "The checker rejects the example “This branch must not merge.”",
+            "The checker rejects the example 'This branch must not merge.'",
+            "The checker rejects statements saying this candidate will never be merged.",
+            "This policy detects and rejects the contradiction that this branch will not be merged.",
+            "The validation rule rejects instructions such as do not merge this candidate.",
+            "This test case describes when the current branch must not merge.",
+            (
+                "This parser example remains descriptive prose.\n\n"
+                "> This branch must not merge."
+            ),
+            (
+                "This parser example remains descriptive prose.\n\n"
+                "`This branch must not merge.`"
+            ),
+            (
+                "This parser example remains descriptive prose.\n\n"
+                "```text\nThis branch must not merge.\n```"
+            ),
+        )
+        for content in descriptive:
+            with self.subTest(descriptive=content):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": content}),
+                    [],
+                )
+
+        expected = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        mixed = (
+            (
+                "descriptive then sentence",
+                (
+                    "The checker rejects the sentence "
+                    '"This branch must not merge." This PR must not merge.'
+                ),
+            ),
+            (
+                "descriptive then semicolon",
+                (
+                    "The policy describes the rejected phrase "
+                    '"this branch must not merge"; this PR must not merge.'
+                ),
+            ),
+            (
+                "descriptive then coordinated clause",
+                (
+                    "The checker rejects the phrase "
+                    '"this branch must not merge", but this PR must not merge.'
+                ),
+            ),
+            (
+                "operative then descriptive",
+                (
+                    "This PR must not merge. The checker later explains the "
+                    'rejected phrase "this branch must not merge."'
+                ),
+            ),
+        )
+        for name, content in mixed:
+            with self.subTest(mixed=name):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": content}),
+                )
+
+    def test_lifecycle_post_merge_qualification_binds_one_action_and_object(self) -> None:
+        accepted = (
+            "Final disposition: After this pull request merges, archive the branch.",
+            "Final disposition: Archive the branch after this pull request merges.",
+            "Final disposition: After merge, delete the source branch.",
+            "Final disposition: Close the temporary tracking branch after merge.",
+            "Final disposition: After successful integration, preserve these changes.",
+            "Final disposition: Retain this candidate upon successful merge.",
+            "Final disposition: Archive the historical evidence after merge.",
+            "Final disposition: Preserve the other modified objects for audit.",
+        )
+        for disposition in accepted:
+            with self.subTest(accepted=disposition):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {"Rollback or final disposition": disposition}
+                    ),
+                    [],
+                )
+
+        rejected = (
+            "Final disposition: Do not merge this branch, then archive it after merge.",
+            (
+                "Final disposition: Retain this candidate, and after merge "
+                "delete the historical branch."
+            ),
+            (
+                "Final disposition: Archive the historical evidence after merge; "
+                "this PR must not merge."
+            ),
+            (
+                "Final disposition: Delete this branch, preserve the logs after merge."
+            ),
+            (
+                "Final disposition: Delete this branch, and after merge, "
+                "retain the evidence."
+            ),
+            (
+                "Final disposition: Delete the source branch now. "
+                "After merge, retain the evidence."
+            ),
+            (
+                "Final disposition: Close the temporary tracking branch now. "
+                "After merge, retain the evidence."
+            ),
+            (
+                "Final disposition: After merge, archive the evidence, "
+                "then delete this branch."
+            ),
+            (
+                "Final disposition: Archive the historical branch after merge, "
+                "but retain this candidate."
+            ),
+            (
+                "Final disposition: After the historical branch merges, "
+                "archive this branch."
+            ),
+        )
+        expected = (
+            "lifecycle: merge-intended branch must not declare a "
+            "non-merge final disposition"
+        )
+        for disposition in rejected:
+            with self.subTest(rejected=disposition):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections(
+                        {"Rollback or final disposition": disposition}
+                    ),
+                )
+
+    def test_lifecycle_legacy_registration_requires_exact_field_binding(self) -> None:
+        def legacy_errors(registration: str) -> list[str]:
+            return _validate_lifecycle_sections(
+                {
+                    "Primary issue": (
+                        "Primary issue #47 registers this frozen legacy candidate."
+                    ),
+                    "Lifecycle exception": "\n".join(
+                        (
+                            f"Legacy registration: {registration}",
+                            "Original branch identity: validation/frozen-candidate.",
+                            "Original primary issue: #54.",
+                            f"Immutable candidate SHA: {HEAD_SHA}.",
+                            "Retained evidence: historical logs remain attached.",
+                            "Intended disposition: retain until migration closes.",
+                            "Reason: frozen history retains its original identity.",
+                        )
+                    ),
+                },
+                head_ref="validation/frozen-candidate",
+            )
+
+        for value in ("#47", "#47.", "#47!", "#47?", "  #47  ", "\t#47.\t"):
+            with self.subTest(valid=value):
+                self.assertEqual(legacy_errors(value), [])
+
+        invalid = (
+            "#48 is wrong; see #47.",
+            "#48, superseded by #47.",
+            "See #47.",
+            "#47 and #48.",
+            "The incidental registration appears later as #47.",
+            "#47 followed by extra operative text.",
+            "#47,",
+            "#47;",
+            "#47:",
+            "(#47)",
+            "#047",
+            "#47a",
+            "x#47",
+            "#47. Legacy registration: #47.",
+        )
+        expected = "lifecycle: legacy exception must declare 'Legacy registration: #47'"
+        for value in invalid:
+            with self.subTest(invalid=value):
+                self.assertIn(expected, legacy_errors(value))
 
     def test_low_documentation_change_requires_only_correctness(self) -> None:
         for path in ("README.md", "docs/GAMEPLAY.md"):
