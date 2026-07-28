@@ -335,7 +335,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Non-merge record",
-            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+            _non_merge_record(),
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
@@ -349,7 +349,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Non-merge record",
-            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+            _non_merge_record(),
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
@@ -366,7 +366,20 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Lifecycle exception",
-            f"Legacy registration: #47. Original branch identity: validation/ornate-ui-characterization-acdf8e5. Original primary issue: #54. Immutable candidate SHA: {HEAD_SHA}. Retained evidence: historical logs remain attached. Intended disposition: retain until migration closes. Reason: frozen candidate retains its original identity.",
+            "\n".join(
+                (
+                    "Legacy registration: #47.",
+                    (
+                        "Original branch identity: "
+                        "validation/ornate-ui-characterization-acdf8e5."
+                    ),
+                    "Original primary issue: #54.",
+                    f"Immutable candidate SHA: {HEAD_SHA}.",
+                    "Retained evidence: historical logs remain attached.",
+                    "Intended disposition: retain until migration closes.",
+                    "Reason: frozen candidate retains its original identity.",
+                )
+            ),
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
@@ -537,7 +550,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Non-merge record",
-            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+            _non_merge_record(),
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         errors = _validate(event, comments)
@@ -557,7 +570,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
         body = _replace_required_section_content(
             body,
             "Non-merge record",
-            f"Purpose: preserve validation evidence. Exact candidate or workflow SHA: {HEAD_SHA}. Retained evidence: hosted logs remain available. Final disposition: close after issue review.",
+            _non_merge_record(),
         )
         _rebound, comments = _rebind_modified_body(event, contract, body)
         self.assertEqual(_validate(event, comments), [])
@@ -1228,6 +1241,381 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     expected,
                     _validate_lifecycle_sections({"Scope": content}),
                 )
+
+    def test_lifecycle_rejects_fresh_review_non_merge_predicates(self) -> None:
+        expected = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        contradictions = (
+            "This branch doesn't merge.",
+            "Must not merge this PR.",
+            "This PR is prohibited from being merged.",
+            "This PR is not intended to merge.",
+            "This branch must remain unmerged.",
+            "This PR does not merge.",
+            "This candidate is designated non-merge.",
+            "We must not merge this PR.",
+            "Maintainers must not merge this pull request.",
+            "We won't merge this PR.",
+            "Reviewers cannot merge this candidate.",
+            "The orchestrator should not merge this branch.",
+            "We mustn't merge these changes.",
+            "This PR must remain unmerged.",
+            "This PR is non-mergeable.",
+            "This PR isn't intended to merge.",
+            "This branch is not intended for merge.",
+            "This candidate is intended not to merge.",
+            "Do not merge these changes.",
+            "This candidate remains unmerged.",
+            "This candidate became unmerged.",
+            "This branch is unmergeable.",
+            "This PR is nonmergeable.",
+            "This candidate is forbidden from being merged.",
+            "This branch is barred from being merged.",
+            "This PR is disallowed from being merged.",
+            "This candidate is prevented from being merged.",
+            "Maintainers are barred from merging this branch.",
+            "These changes should remain unmerged.",
+            "This branch cannot be merged.",
+            "This PR must not merge and evidence remains until validation.",
+        )
+        for contradiction in contradictions:
+            with self.subTest(contradiction=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+    def test_lifecycle_fresh_review_discourse_boundaries_remain_operative(self) -> None:
+        expected = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        fresh_findings = (
+            (
+                "The checker rejects statements saying this candidate will never "
+                "be merged, while this pull request must not merge."
+            ),
+            (
+                'The checker rejects the example "This branch must not merge", '
+                "so this pull request must not merge."
+            ),
+            (
+                "The checker rejects historical contradictions while this PR "
+                "must not merge."
+            ),
+            (
+                "The policy describes prior wording, whereas this PR must not "
+                "merge."
+            ),
+        )
+        for content in fresh_findings:
+            with self.subTest(content=content):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": content}),
+                )
+
+        markers = (
+            "while",
+            "whereas",
+            "so",
+            "therefore",
+            "thus",
+            "consequently",
+            "because",
+            "although",
+            "though",
+            "but",
+            "however",
+            "yet",
+            "then",
+            "nevertheless",
+            "nonetheless",
+        )
+        for marker in markers:
+            with self.subTest(marker=marker):
+                content = (
+                    "The checker rejects historical contradictions "
+                    f"{marker} this PR must not merge."
+                )
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": content}),
+                )
+
+    def test_lifecycle_rejects_fresh_review_field_borrowing(self) -> None:
+        missing_non_merge = (
+            "lifecycle: non-merge branch must state its purpose",
+            "lifecycle: non-merge branch must state its exact candidate or workflow SHA",
+            "lifecycle: non-merge branch must state retained evidence",
+            (
+                "lifecycle: non-merge branch must state final disposition or "
+                "close/deletion conditions"
+            ),
+        )
+        quoted_record = (
+            'The checker documents this example: "Purpose: preserve evidence. '
+            f"Exact candidate or workflow SHA: {HEAD_SHA}. "
+            "Retained evidence: logs remain attached. "
+            'Final disposition: close after review."'
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "preserves evidence."
+                ),
+                "Non-merge record": quoted_record,
+            }
+        )
+        for expected in missing_non_merge:
+            self.assertIn(expected, errors)
+
+        prefixed_record = (
+            "This unrestricted prose says Purpose: preserve logs. "
+            f"Exact candidate or workflow SHA: {HEAD_SHA}. "
+            "Retained evidence: hosted logs. Final disposition: close later."
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This branch is not intended to merge and retains evidence."
+                ),
+                "Non-merge record": prefixed_record,
+            }
+        )
+        for expected in missing_non_merge:
+            self.assertIn(expected, errors)
+
+        quoted_legacy = (
+            'The policy documents the example "Legacy registration: #47 '
+            "Original branch identity: validation/frozen-candidate. "
+            "Original primary issue: #54. "
+            f"Immutable candidate SHA: {HEAD_SHA}. "
+            "Retained evidence: historical logs remain attached. "
+            "Intended disposition: retain until migration closes. "
+            'Reason: frozen identity remains."'
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Primary issue": (
+                    "Primary issue #47 registers this frozen legacy candidate."
+                ),
+                "Lifecycle exception": quoted_legacy,
+            },
+            head_ref="validation/frozen-candidate",
+        )
+        self.assertIn(
+            "lifecycle: legacy exception must declare 'Legacy registration: #47'",
+            errors,
+        )
+
+        explanatory_legacy = "\n".join(
+            (
+                "This explanation merely mentions Legacy registration: #47",
+                "Original branch identity: validation/frozen-candidate.",
+                "Original primary issue: #54.",
+                f"Immutable candidate SHA: {HEAD_SHA}.",
+                "Retained evidence: historical logs remain attached.",
+                "Intended disposition: retain until migration closes.",
+                "Reason: frozen identity remains.",
+            )
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Primary issue": (
+                    "Primary issue #47 registers this frozen legacy candidate."
+                ),
+                "Lifecycle exception": explanatory_legacy,
+            },
+            head_ref="validation/frozen-candidate",
+        )
+        self.assertIn(
+            "lifecycle: legacy exception must declare 'Legacy registration: #47'",
+            errors,
+        )
+
+    def test_lifecycle_accepts_fresh_review_quoted_examples(self) -> None:
+        merge_intention = (
+            "This branch is intended to merge after review. "
+            'The checker rejects the example "This branch is not intended '
+            'to merge."'
+        )
+        self.assertEqual(
+            _validate_lifecycle_sections({"Merge intention": merge_intention}),
+            [],
+        )
+
+        descriptive_non_merge = (
+            'The checker rejects "This branch is not intended to merge."',
+            "The test covers “This PR is non-mergeable.”",
+            'The policy forbids the wording "Must not merge this PR."',
+            (
+                "This scope records a documented parser failure.\n\n"
+                "Documentation explains why "
+                "`This candidate must remain unmerged` fails."
+            ),
+            (
+                "The parser documents a fenced failure.\n\n"
+                "```text\nThis branch is prohibited from being merged.\n```"
+            ),
+        )
+        for content in descriptive_non_merge:
+            with self.subTest(content=content):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": content}),
+                    [],
+                )
+
+        errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    'The checker rejects the example "Closes #46." for '
+                    "non-merge branches."
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "preserves evidence."
+                ),
+                "Non-merge record": _non_merge_record(),
+            }
+        )
+        self.assertEqual(errors, [])
+
+        expected_contradiction = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        self.assertIn(
+            expected_contradiction,
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "The policy documents `non-mergeable`, whereas this "
+                        "candidate is non-mergeable."
+                    )
+                }
+            ),
+        )
+
+        errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    'The test covers "Closes #46"; this non-merge candidate '
+                    "Closes #64."
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "preserves evidence."
+                ),
+                "Non-merge record": _non_merge_record(),
+            }
+        )
+        self.assertIn(
+            "lifecycle: non-merge branch must not use 'Closes #<issue>'",
+            errors,
+        )
+
+    def test_lifecycle_field_labels_require_column_zero_physical_lines(self) -> None:
+        values = {
+            "Legacy registration": "#47.",
+            "Immutable candidate SHA": f"{HEAD_SHA}.",
+            "Reason": "frozen identity remains.",
+            "Original branch identity": "validation/frozen-candidate.",
+            "Original primary issue": "#54.",
+            "Retained evidence": "hosted logs remain attached.",
+            "Intended disposition": "retain until migration closes.",
+            "Purpose": "preserve validation evidence.",
+            "Exact candidate or workflow SHA": f"{HEAD_SHA}.",
+            "Final disposition": "close after issue review.",
+            "Close or deletion conditions": "close after issue review.",
+        }
+        canonical = "\n".join(
+            f"{label}: {value}" for label, value in values.items()
+        )
+        parsed = governance._parse_lifecycle_fields(canonical)
+        self.assertEqual(set(parsed), {label.lower() for label in values})
+
+        for label, value in values.items():
+            attacks = (
+                f"This explanation merely mentions {label}: {value}",
+                f"({label}: {value})",
+                f"Example: {label}: {value}",
+                f"Policy description: {label}: {value}",
+                f'The test documents "{label}: {value}"',
+                f"The test documents “{label}: {value}”",
+                f"`{label}: {value}`",
+                f"```text\n{label}: {value}\n```",
+                f"> {label}: {value}",
+                f" {label}: {value}",
+            )
+            for attack in attacks:
+                with self.subTest(label=label, attack=attack):
+                    reviewable = governance._reviewable_markdown_structure(attack)
+                    fields = governance._parse_lifecycle_fields(reviewable)
+                    self.assertNotIn(label.lower(), fields)
+
+        complete_records = (
+            (
+                "non-merge",
+                _non_merge_record(),
+                governance.NON_MERGE_FIELD_LABELS,
+                {
+                    "purpose",
+                    "exact candidate or workflow sha",
+                    "retained evidence",
+                    "final disposition",
+                },
+            ),
+            (
+                "legacy",
+                "\n".join(
+                    (
+                        "Legacy registration: #47.",
+                        "Original branch identity: validation/frozen-candidate.",
+                        "Original primary issue: #54.",
+                        f"Immutable candidate SHA: {HEAD_SHA}.",
+                        "Retained evidence: historical logs remain attached.",
+                        "Intended disposition: retain until migration closes.",
+                        "Reason: frozen identity remains.",
+                    )
+                ),
+                governance.LEGACY_FIELD_LABELS,
+                {
+                    "legacy registration",
+                    "original branch identity",
+                    "original primary issue",
+                    "immutable candidate sha",
+                    "retained evidence",
+                    "intended disposition",
+                    "reason",
+                },
+            ),
+        )
+        for name, record, allowed_labels, required_keys in complete_records:
+            one_line = " ".join(record.splitlines())
+            attacks = (
+                f'The checker documents "{record}"',
+                f"The checker documents “{record}”",
+                f"``{record}``",
+                f"```text\n{record}\n```",
+                "\n".join(f"> {line}" for line in record.splitlines()),
+                f"An example would contain {one_line}",
+                f"The test case describes {one_line}",
+                f"The policy explains {one_line}",
+                f"({one_line})",
+                one_line,
+            )
+            for attack in attacks:
+                with self.subTest(record=name, attack=attack):
+                    reviewable = governance._reviewable_markdown_structure(attack)
+                    fields = governance._parse_lifecycle_fields(
+                        reviewable,
+                        allowed_labels=allowed_labels,
+                    )
+                    self.assertFalse(required_keys.issubset(fields))
 
     def test_lifecycle_post_merge_qualification_binds_one_action_and_object(self) -> None:
         accepted = (

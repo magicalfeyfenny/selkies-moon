@@ -94,37 +94,92 @@ PRIMARY_ISSUE_PATTERN = re.compile(
     r"(?![A-Za-z0-9_#]|[./-][A-Za-z0-9])"
 )
 BRANCH_ISSUE_PATTERN = re.compile(r"(?:^|[-_/])([1-9][0-9]*)(?=$|[-_/])")
-LIFECYCLE_FIELD_PATTERN = re.compile(
-    r"\b(?P<label>"
+LIFECYCLE_FIELD_LABEL_PATTERN = re.compile(
+    r"(?P<label>"
     r"Legacy registration|Immutable candidate SHA|Reason|Original branch identity|"
     r"Original primary issue|Retained evidence|Intended disposition|Purpose|"
     r"Exact candidate or workflow SHA|Final disposition|Close or deletion conditions"
     r"):"
+)
+LIFECYCLE_FIELD_PATTERN = re.compile(
+    LIFECYCLE_FIELD_LABEL_PATTERN.pattern + r"[ \t]*(?P<value>.*?)[ \t]*"
+)
+NON_MERGE_FIELD_LABELS = frozenset(
+    {
+        "Purpose",
+        "Exact candidate or workflow SHA",
+        "Retained evidence",
+        "Final disposition",
+        "Close or deletion conditions",
+    }
+)
+LEGACY_FIELD_LABELS = frozenset(
+    {
+        "Legacy registration",
+        "Original branch identity",
+        "Original primary issue",
+        "Immutable candidate SHA",
+        "Retained evidence",
+        "Intended disposition",
+        "Reason",
+    }
+)
+FINAL_DISPOSITION_FIELD_LABELS = frozenset(
+    {"Final disposition", "Close or deletion conditions"}
 )
 EXACT_SHA_VALUE_PATTERN = re.compile(
     r"(?<![0-9A-Fa-f])[0-9a-f]{40}(?![0-9A-Fa-f])"
 )
 LEGACY_REGISTRATION_VALUE_PATTERN = re.compile(r"#47[.!?]?")
 CLOSES_ISSUE_PATTERN = re.compile(r"\bCloses\s+#[1-9][0-9]*\b", re.IGNORECASE)
-LIFECYCLE_NON_MERGE_PREDICATE_PATTERN = re.compile(
-    r"\b(?:"
-    r"(?:must|shall|should|will|would|can|could|may)\s+(?:not|never)\s+"
-    r"(?:(?:be|being)\s+)?merg(?:e|ed|ing)|"
-    r"(?:mustn't|shouldn't|won't|wouldn't|can't|couldn't|isn't|aren't)\s+"
-    r"(?:(?:be|being|to\s+be)\s+)?merg(?:e|ed|ing)|"
-    r"cannot\s+(?:be\s+)?merg(?:e|ed|ing)|"
-    r"(?:is|are|was|were)\s+(?:not|never)\s+"
-    r"(?:(?:being|to\s+be)\s+)?merg(?:e|ed|ing)|"
-    r"(?:is|are)\s+(?:forbidden|prohibited|barred)\s+from\s+merging"
-    r")\b",
+MERGE_INTENTION_PATTERN = re.compile(r"\bis\s+intended\s+to\s+merge\b", re.IGNORECASE)
+NON_MERGE_INTENTION_PATTERN = re.compile(
+    r"\b(?:is\s+not\s+intended\s+to\s+merge|is\s+intended\s+not\s+to\s+merge)\b",
     re.IGNORECASE,
 )
-LIFECYCLE_NON_MERGE_IMPERATIVE_PATTERN = re.compile(
+LIFECYCLE_NEGATED_MERGE_ACTION_PATTERN = re.compile(
     r"\b(?:"
+    r"(?:must|shall|should|will|would|can|could|may)\s+(?:not|never)\s+merge|"
+    r"(?:mustn't|shouldn't|won't|wouldn't|can't|couldn't)\s+merge|"
+    r"cannot\s+merge|"
     r"do(?:es)?(?:\s+|-)+not(?:\s+|-)+merge|"
     r"don't\s+merge|doesn't\s+merge|"
     r"never(?:\s+|-)+merge"
     r")\b",
+    re.IGNORECASE,
+)
+LIFECYCLE_NON_MERGE_STATE_PATTERN = re.compile(
+    r"\b(?:"
+    r"(?:must|shall|should|will|would|can|could|may)\s+(?:not|never)\s+"
+    r"(?:be\s+)?merged|"
+    r"(?:mustn't|shouldn't|won't|wouldn't|can't|couldn't)\s+"
+    r"(?:be\s+)?merged|"
+    r"cannot\s+be\s+merged|"
+    r"(?:is|are|was|were)\s+(?:not|never)\s+"
+    r"(?:(?:being|to\s+be)\s+)?merged|"
+    r"(?:isn't|aren't|wasn't|weren't)\s+"
+    r"(?:(?:being|to\s+be)\s+)?merged|"
+    r"(?:is|are|was|were)\s+not\s+intended\s+"
+    r"(?:to\s+merge|for\s+(?:a\s+)?merge|for\s+merging)|"
+    r"(?:isn't|aren't|wasn't|weren't)\s+intended\s+"
+    r"(?:to\s+merge|for\s+(?:a\s+)?merge|for\s+merging)|"
+    r"(?:is|are|was|were)\s+intended\s+(?:not|never)\s+to\s+merge|"
+    r"(?:(?:must|shall|should|will|would|can|could|may)\s+)?"
+    r"(?:remain|remains|remained|become|becomes|became|stay|stays|stayed)\s+"
+    r"unmerged|"
+    r"(?:is|are|was|were|remains?|becomes?)\s+"
+    r"(?:unmerged|unmergeable|non[\s-]?mergeable|non[\s-]?merging)|"
+    r"(?:is|are|was|were)\s+"
+    r"(?:designated|classified|declared|marked)\s+(?:as\s+)?"
+    r"(?:non[\s-]?merge|unmerged|unmergeable|non[\s-]?mergeable)|"
+    r"(?:is|are|was|were)\s+(?:forbidden|prohibited|barred|disallowed|prevented)"
+    r"\s+from\s+being\s+merged"
+    r")\b",
+    re.IGNORECASE,
+)
+LIFECYCLE_PROHIBITED_MERGE_ACTION_PATTERN = re.compile(
+    r"\b(?:is|are|was|were)\s+"
+    r"(?:forbidden|prohibited|barred|disallowed|prevented)\s+from\s+merging\b",
     re.IGNORECASE,
 )
 LIFECYCLE_REPLACEMENT_COMPARISON_PATTERN = re.compile(
@@ -157,12 +212,13 @@ POST_MERGE_QUALIFIER_PATTERN = re.compile(
     r")\b",
     re.IGNORECASE,
 )
-LIFECYCLE_HARD_BOUNDARY_PATTERN = re.compile(r"[.!?;:\n]")
+LIFECYCLE_HARD_BOUNDARY_PATTERN = re.compile(r"[.!?;\n]")
 LIFECYCLE_COORDINATION_BOUNDARY_PATTERN = re.compile(
-    r"(?:,\s*)?\b(?:but|however|yet|then|although)\b|"
+    r"(?:,\s*)?\b(?:while|whereas|so|therefore|thus|consequently|because|"
+    r"although|though|but|however|yet|then|nevertheless|nonetheless)\b|"
     r",\s*\band\b|"
     r"\band\b(?=\s+(?:this|the|current|these|it|they|after|once|upon|"
-    r"following|do|never|retain|archive|preserve|close|delete|keep)\b)",
+    r"following|do|never|must|retain|archive|preserve|close|delete|keep)\b)",
     re.IGNORECASE,
 )
 LIFECYCLE_DESCRIPTIVE_FRAME_PATTERN = re.compile(
@@ -179,7 +235,8 @@ LIFECYCLE_DESCRIPTIVE_FRAME_PATTERN = re.compile(
     re.IGNORECASE,
 )
 LIFECYCLE_QUOTATION_PATTERN = re.compile(
-    r'"[^"\n]*"|“[^”\n]*”|(?<![A-Za-z0-9])\'[^\'\n]+\'(?![A-Za-z0-9])'
+    r'"[^"]{0,4000}"|“[^”]{0,4000}”|'
+    r"(?<![A-Za-z0-9])'[^'\n]{1,1000}'(?![A-Za-z0-9])"
 )
 OTHER_CANDIDATE_REFERENCE_PATTERN = re.compile(
     r"\b(?:(?:this|that|the|a|an)\s+)?"
@@ -1079,22 +1136,55 @@ def _main_source_allowed(head_branch: str) -> bool:
     )
 
 
-def _parse_lifecycle_fields(value: str) -> dict[str, list[str]]:
-    """Return visible lifecycle field values without allowing cross-line borrowing.
+def _parse_lifecycle_fields(
+    value: str,
+    allowed_labels: frozenset[str] | None = None,
+) -> dict[str, list[str]]:
+    """Return canonical column-zero lifecycle fields from reviewable prose.
 
-    The input is already canonical reviewable prose, so hidden Markdown has been
-    replaced with whitespace. Each field is therefore parsed from one physical
-    line and ends at the next recognized lifecycle label on that line.
+    Quoted and blockquoted examples are masked before structural recognition.
+    Acceptance paths provide an allowed-label set and require exactly one field
+    on each physical line. Without an allowed-label set, this helper retains
+    bounded same-line tokenization for diagnostics, but still requires the first
+    exact canonical label at column zero. Explanatory prefixes, parentheticals,
+    and later label-like substrings therefore cannot lend metadata to a record.
     """
     fields: dict[str, list[str]] = {}
-    for line in value.splitlines():
-        matches = list(LIFECYCLE_FIELD_PATTERN.finditer(line))
-        for index, match in enumerate(matches):
-            end = matches[index + 1].start() if index + 1 < len(matches) else len(line)
-            field_value = line[match.end() : end].strip()
-            values = fields.setdefault(match.group("label").lower(), [])
-            if field_value:
-                values.append(field_value)
+    operative = _operative_lifecycle_prose(value)
+    original_lines = value.splitlines()
+    operative_lines = operative.splitlines()
+    for original, visible in zip(original_lines, operative_lines):
+        if allowed_labels is None:
+            matches = list(LIFECYCLE_FIELD_LABEL_PATTERN.finditer(visible))
+            if not matches or matches[0].start() != 0:
+                continue
+            if not original.startswith(f"{matches[0].group('label')}:"):
+                continue
+            for index, label_match in enumerate(matches):
+                end = (
+                    matches[index + 1].start()
+                    if index + 1 < len(matches)
+                    else len(original)
+                )
+                field_value = original[label_match.end() : end].strip()
+                if field_value:
+                    fields.setdefault(
+                        label_match.group("label").lower(),
+                        [],
+                    ).append(field_value)
+            continue
+        match = LIFECYCLE_FIELD_PATTERN.fullmatch(visible)
+        if match is None:
+            continue
+        label = match.group("label")
+        if allowed_labels is not None and label not in allowed_labels:
+            continue
+        prefix = f"{label}:"
+        if not original.startswith(prefix):
+            continue
+        field_value = original[len(prefix) :].strip()
+        if field_value:
+            fields.setdefault(label.lower(), []).append(field_value)
     return fields
 
 
@@ -1179,7 +1269,7 @@ def _local_clause_bounds(value: str, position: int) -> tuple[int, int]:
     start = _paragraph_start(value, position)
     end = len(value)
     for pattern in (
-        re.compile(r"[.!?;\n]"),
+        LIFECYCLE_HARD_BOUNDARY_PATTERN,
         LIFECYCLE_COORDINATION_BOUNDARY_PATTERN,
     ):
         for match in pattern.finditer(value, start):
@@ -1201,6 +1291,29 @@ def _is_descriptive_occurrence(value: str, position: int) -> bool:
             prefix,
             re.IGNORECASE,
         )
+    )
+
+
+def _lifecycle_intentions(value: str) -> tuple[bool, bool]:
+    """Return operative merge and non-merge intention declarations."""
+    operative = _operative_lifecycle_prose(value)
+    merge = any(
+        not _is_descriptive_occurrence(operative, match.start())
+        for match in MERGE_INTENTION_PATTERN.finditer(operative)
+    )
+    non_merge = any(
+        not _is_descriptive_occurrence(operative, match.start())
+        for match in NON_MERGE_INTENTION_PATTERN.finditer(operative)
+    )
+    return merge, non_merge
+
+
+def _has_operative_closes(value: str) -> bool:
+    """Return whether visible operative prose contains a closure keyword."""
+    operative = _operative_lifecycle_prose(value)
+    return any(
+        not _is_descriptive_occurrence(operative, match.start())
+        for match in CLOSES_ISSUE_PATTERN.finditer(operative)
     )
 
 
@@ -1382,28 +1495,45 @@ def _has_candidate_non_merge_contradiction(
     operative = _operative_lifecycle_prose(value)
     current_pattern = _current_candidate_reference_pattern(context)
 
-    for predicate in LIFECYCLE_NON_MERGE_PREDICATE_PATTERN.finditer(operative):
-        if _is_descriptive_occurrence(operative, predicate.start()):
+    for action in LIFECYCLE_NEGATED_MERGE_ACTION_PATTERN.finditer(operative):
+        if _is_descriptive_occurrence(operative, action.start()):
             continue
-        _clause_start, clause_end = _local_clause_bounds(operative, predicate.start())
-        tail = operative[predicate.end() : clause_end]
+        _clause_start, clause_end = _local_clause_bounds(operative, action.start())
+        tail = operative[action.end() : clause_end]
         if re.match(r"\s+(?:until|unless|before)\b", tail, re.IGNORECASE):
             continue
-        if predicate.group(0).lower().rstrip().endswith(("merge", "merging")):
-            if LIFECYCLE_OTHER_MERGE_OBJECT_PATTERN.match(tail):
-                continue
-        if _current_subject_before(operative, predicate.start(), current_pattern):
+        current_subject = _current_subject_before(
+            operative, action.start(), current_pattern
+        )
+        if current_subject and LIFECYCLE_OTHER_MERGE_OBJECT_PATTERN.match(tail):
+            current_subject = False
+        if current_subject or _current_object_after(
+            operative, action.end(), current_pattern
+        ):
             return True
 
-    for imperative in LIFECYCLE_NON_MERGE_IMPERATIVE_PATTERN.finditer(operative):
-        if _is_descriptive_occurrence(operative, imperative.start()):
+    for state in LIFECYCLE_NON_MERGE_STATE_PATTERN.finditer(operative):
+        if _is_descriptive_occurrence(operative, state.start()):
             continue
-        if _current_object_after(operative, imperative.end(), current_pattern):
+        _clause_start, clause_end = _local_clause_bounds(operative, state.start())
+        tail = operative[state.end() : clause_end]
+        if re.match(r"\s+(?:until|unless|before)\b", tail, re.IGNORECASE):
+            continue
+        if _current_subject_before(operative, state.start(), current_pattern):
+            return True
+
+    for prohibition in LIFECYCLE_PROHIBITED_MERGE_ACTION_PATTERN.finditer(operative):
+        if _is_descriptive_occurrence(operative, prohibition.start()):
+            continue
+        if _current_subject_before(
+            operative, prohibition.start(), current_pattern
+        ) or _current_object_after(operative, prohibition.end(), current_pattern):
             return True
 
     gerund_pattern = re.compile(
         rf"\bmerging\s+{current_pattern.pattern}\s+"
-        r"(?:is|remains)\s+(?:forbidden|prohibited|disallowed|not\s+allowed)\b",
+        r"(?:is|remains)\s+"
+        r"(?:forbidden|prohibited|barred|disallowed|prevented|not\s+allowed)\b",
         re.IGNORECASE,
     )
     for gerund in gerund_pattern.finditer(operative):
@@ -1433,7 +1563,10 @@ def _has_non_merge_final_disposition(
     context: dict[str, object],
 ) -> bool:
     """Detect a non-merge outcome with one-to-one post-merge action scoping."""
-    fields = _parse_lifecycle_fields(value)
+    fields = _parse_lifecycle_fields(
+        value,
+        allowed_labels=FINAL_DISPOSITION_FIELD_LABELS,
+    )
     dispositions = (
         _field_values(fields, "Final disposition")
         + _field_values(fields, "Close or deletion conditions")
@@ -1467,9 +1600,7 @@ def _validate_lifecycle(
     merge_intention = (
         _section_content(reviewable_prose, reviewable_prose, "Merge intention") or ""
     )
-    merge_words = merge_intention.lower()
-    is_non_merge = "not intended to merge" in merge_words
-    is_merge = "is intended to merge" in merge_words
+    is_merge, is_non_merge = _lifecycle_intentions(merge_intention)
     if is_non_merge == is_merge:
         errors.append(
             "lifecycle: state whether this branch is intended to merge or not intended to merge"
@@ -1484,7 +1615,10 @@ def _validate_lifecycle(
         )
         or ""
     )
-    non_merge_fields = _parse_lifecycle_fields(non_merge)
+    non_merge_fields = _parse_lifecycle_fields(
+        non_merge,
+        allowed_labels=NON_MERGE_FIELD_LABELS,
+    )
     if is_merge and (
         _field_values(non_merge_fields, "Purpose")
         or _field_values(non_merge_fields, "Exact candidate or workflow SHA")
@@ -1501,14 +1635,23 @@ def _validate_lifecycle(
         errors.append(
             "lifecycle: merge-intended branch must not make a candidate-specific non-merge contradiction"
         )
-    if is_non_merge and CLOSES_ISSUE_PATTERN.search(reviewable_prose) is not None:
+    if is_non_merge and _has_operative_closes(reviewable_prose):
         errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
 
     exception = (
         _section_content(reviewable_prose, reviewable_prose, "Lifecycle exception") or ""
     )
-    legacy_fields = _parse_lifecycle_fields(exception)
-    legacy_declared = "legacy registration" in legacy_fields
+    legacy_fields = _parse_lifecycle_fields(
+        exception,
+        allowed_labels=LEGACY_FIELD_LABELS,
+    )
+    head_ref = context.get("head_ref")
+    legacy_declared = bool(legacy_fields) or (
+        primary_issue == "47"
+        and isinstance(head_ref, str)
+        and head_ref not in {"dev", "main"}
+        and BRANCH_ISSUE_PATTERN.search(head_ref) is None
+    )
     if legacy_declared:
         if primary_issue != "47":
             errors.append("lifecycle: only primary issue #47 may declare a legacy registration")
@@ -1537,7 +1680,6 @@ def _validate_lifecycle(
             errors.append("lifecycle: legacy exception must state intended disposition")
         return
 
-    head_ref = context.get("head_ref")
     if head_ref in {"dev", "main"}:
         return
     if not isinstance(head_ref, str):
