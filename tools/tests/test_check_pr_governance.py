@@ -1518,6 +1518,276 @@ class PullRequestGovernanceTests(unittest.TestCase):
             errors,
         )
 
+    def test_lifecycle_rejects_duplicate_non_merge_fields(self) -> None:
+        values = {
+            "Purpose": "preserve validation evidence.",
+            "Exact candidate or workflow SHA": f"{HEAD_SHA}.",
+            "Retained evidence": "hosted logs remain available.",
+            "Final disposition": "close after issue review.",
+            "Close or deletion conditions": "close after issue review.",
+        }
+        required = (
+            "Purpose",
+            "Exact candidate or workflow SHA",
+            "Retained evidence",
+        )
+        for label in (*required, *governance.FINAL_DISPOSITION_FIELD_LABELS):
+            with self.subTest(label=label):
+                record = [
+                    f"{required_label}: {values[required_label]}"
+                    for required_label in required
+                ]
+                disposition_label = (
+                    label
+                    if label in governance.FINAL_DISPOSITION_FIELD_LABELS
+                    else "Final disposition"
+                )
+                record.append(f"{disposition_label}: {values[disposition_label]}")
+                duplicate_value = values[label]
+                record.append(f"{label}: {duplicate_value}")
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": "\n".join(record),
+                    }
+                )
+                location = (
+                    "disposition metadata"
+                    if label in governance.FINAL_DISPOSITION_FIELD_LABELS
+                    else "non-merge record"
+                )
+                self.assertIn(
+                    (
+                        f"lifecycle: {location} field '{label}' has 2 visible "
+                        "canonical occurrences; expected at most one"
+                    ),
+                    errors,
+                )
+
+        for duplicate_sha in (HEAD_SHA, "b" * 40):
+            with self.subTest(duplicate_sha=duplicate_sha):
+                record = "\n".join(
+                    (
+                        "Purpose: preserve validation evidence.",
+                        f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                        f"Exact candidate or workflow SHA: {duplicate_sha}.",
+                        "Retained evidence: hosted logs remain available.",
+                        "Final disposition: close after issue review.",
+                    )
+                )
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": record,
+                    }
+                )
+                conflict_detail = (
+                    " with conflicting values" if duplicate_sha != HEAD_SHA else ""
+                )
+                self.assertIn(
+                    (
+                        "lifecycle: non-merge record field "
+                        "'Exact candidate or workflow SHA' has 2 visible canonical "
+                        f"occurrences{conflict_detail}; expected at most one"
+                    ),
+                    errors,
+                )
+
+    def test_lifecycle_parser_collects_every_visible_canonical_occurrence(self) -> None:
+        content = "\n".join(
+            (
+                "Purpose: first visible value.",
+                "Purpose:",
+                "> Purpose: blockquoted example.",
+                "```text",
+                "Purpose: fenced example.",
+                "```",
+                '"Purpose: quoted example."',
+                "Purpose: third visible value.",
+            )
+        )
+        reviewable = governance._reviewable_markdown_structure(content)
+        fields = governance._parse_lifecycle_fields(
+            reviewable,
+            allowed_labels=governance.NON_MERGE_FIELD_LABELS,
+        )
+        self.assertEqual(
+            governance._field_values(fields, "Purpose"),
+            ["first visible value.", "", "third visible value."],
+        )
+
+    def test_lifecycle_rejects_duplicate_legacy_fields(self) -> None:
+        values = {
+            "Legacy registration": "#47.",
+            "Original branch identity": "validation/frozen-candidate.",
+            "Original primary issue": "#54.",
+            "Immutable candidate SHA": f"{HEAD_SHA}.",
+            "Retained evidence": "historical logs remain attached.",
+            "Intended disposition": "retain until migration closes.",
+            "Reason": "frozen identity remains.",
+        }
+        for label in governance.LEGACY_FIELD_LABELS:
+            with self.subTest(label=label):
+                exception = [
+                    f"{field_label}: {field_value}"
+                    for field_label, field_value in values.items()
+                ]
+                exception.append(f"{label}: {values[label]}")
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Primary issue": (
+                            "Primary issue #47 registers this frozen legacy candidate."
+                        ),
+                        "Lifecycle exception": "\n".join(exception),
+                    },
+                    head_ref="validation/frozen-candidate",
+                )
+                self.assertIn(
+                    (
+                        f"lifecycle: legacy exception field '{label}' has 2 visible "
+                        "canonical occurrences; expected at most one"
+                    ),
+                    errors,
+                )
+
+        for duplicate_sha in (HEAD_SHA, "b" * 40):
+            with self.subTest(duplicate_sha=duplicate_sha):
+                exception = [
+                    f"{field_label}: {field_value}"
+                    for field_label, field_value in values.items()
+                ]
+                exception.append(f"Immutable candidate SHA: {duplicate_sha}.")
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Primary issue": (
+                            "Primary issue #47 registers this frozen legacy candidate."
+                        ),
+                        "Lifecycle exception": "\n".join(exception),
+                    },
+                    head_ref="validation/frozen-candidate",
+                )
+                conflict_detail = (
+                    " with conflicting values" if duplicate_sha != HEAD_SHA else ""
+                )
+                self.assertIn(
+                    (
+                        "lifecycle: legacy exception field 'Immutable candidate SHA' "
+                        "has 2 visible canonical "
+                        f"occurrences{conflict_detail}; expected at most one"
+                    ),
+                    errors,
+                )
+
+    def test_lifecycle_rejects_multiple_disposition_alternatives(self) -> None:
+        both_alternatives = "\n".join(
+            (
+                _non_merge_record(),
+                "Close or deletion conditions: delete after issue review.",
+            )
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": both_alternatives,
+            }
+        )
+        self.assertIn(
+            (
+                "lifecycle: disposition metadata must declare at most one disposition "
+                "alternative: 'Final disposition' or "
+                "'Close or deletion conditions'"
+            ),
+            errors,
+        )
+
+        errors = _validate_lifecycle_sections(
+            {
+                "Rollback or final disposition": "\n".join(
+                    (
+                        "Final disposition: archive the branch after merge.",
+                        (
+                            "Close or deletion conditions: close the temporary "
+                            "tracking branch after merge."
+                        ),
+                    )
+                )
+            }
+        )
+        self.assertIn(
+            (
+                "lifecycle: disposition metadata must declare at most one "
+                "disposition alternative: 'Final disposition' or "
+                "'Close or deletion conditions'"
+            ),
+            errors,
+        )
+
+        for rollback_field, expected in (
+            (
+                "Final disposition: archive the branch after merge.",
+                (
+                    "lifecycle: disposition metadata field 'Final disposition' "
+                    "has 2 visible canonical occurrences with conflicting values; "
+                    "expected at most one"
+                ),
+            ),
+            (
+                (
+                    "Close or deletion conditions: close the temporary tracking "
+                    "branch after merge."
+                ),
+                (
+                    "lifecycle: disposition metadata must declare at most one "
+                    "disposition alternative: 'Final disposition' or "
+                    "'Close or deletion conditions'"
+                ),
+            ),
+        ):
+            with self.subTest(rollback_field=rollback_field):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": _non_merge_record(),
+                        "Rollback or final disposition": rollback_field,
+                    }
+                )
+                self.assertIn(expected, errors)
+
+    def test_lifecycle_duplicate_examples_remain_non_operative(self) -> None:
+        record = "\n\n".join(
+            (
+                _non_merge_record(),
+                "> Purpose: quoted example must not count.",
+                "```text\nPurpose: fenced example must not count.\n```",
+                '"Purpose: quoted prose must not count."',
+                "The checker documents Purpose: descriptive prose must not count.",
+            )
+        )
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": record,
+                }
+            ),
+            [],
+        )
+
     def test_lifecycle_field_labels_require_column_zero_physical_lines(self) -> None:
         values = {
             "Legacy registration": "#47.",

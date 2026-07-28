@@ -113,6 +113,13 @@ NON_MERGE_FIELD_LABELS = frozenset(
         "Close or deletion conditions",
     }
 )
+NON_MERGE_REQUIRED_FIELD_LABELS = frozenset(
+    {
+        "Purpose",
+        "Exact candidate or workflow SHA",
+        "Retained evidence",
+    }
+)
 LEGACY_FIELD_LABELS = frozenset(
     {
         "Legacy registration",
@@ -1167,11 +1174,10 @@ def _parse_lifecycle_fields(
                     else len(original)
                 )
                 field_value = original[label_match.end() : end].strip()
-                if field_value:
-                    fields.setdefault(
-                        label_match.group("label").lower(),
-                        [],
-                    ).append(field_value)
+                fields.setdefault(
+                    label_match.group("label").lower(),
+                    [],
+                ).append(field_value)
             continue
         match = LIFECYCLE_FIELD_PATTERN.fullmatch(visible)
         if match is None:
@@ -1183,8 +1189,7 @@ def _parse_lifecycle_fields(
         if not original.startswith(prefix):
             continue
         field_value = original[len(prefix) :].strip()
-        if field_value:
-            fields.setdefault(label.lower(), []).append(field_value)
+        fields.setdefault(label.lower(), []).append(field_value)
     return fields
 
 
@@ -1192,12 +1197,56 @@ def _field_values(fields: dict[str, list[str]], label: str) -> list[str]:
     return fields.get(label.lower(), [])
 
 
+def _single_lifecycle_field_value(
+    fields: dict[str, list[str]],
+    label: str,
+) -> str | None:
+    values = _field_values(fields, label)
+    if len(values) != 1 or not values[0].strip():
+        return None
+    return values[0]
+
+
+def _validate_lifecycle_field_cardinality(
+    fields: dict[str, list[str]],
+    allowed_labels: frozenset[str],
+    location: str,
+    errors: list[str],
+) -> None:
+    for label in sorted(allowed_labels, key=str.casefold):
+        values = _field_values(fields, label)
+        if len(values) <= 1:
+            continue
+        conflicting = len({value.strip() for value in values}) > 1
+        conflict_detail = " with conflicting values" if conflicting else ""
+        errors.append(
+            f"lifecycle: {location} field '{label}' has {len(values)} visible "
+            f"canonical occurrences{conflict_detail}; expected at most one"
+        )
+
+
+def _validate_disposition_alternatives(
+    fields: dict[str, list[str]],
+    location: str,
+    errors: list[str],
+) -> None:
+    count = sum(
+        len(_field_values(fields, label))
+        for label in FINAL_DISPOSITION_FIELD_LABELS
+    )
+    if count > 1:
+        errors.append(
+            f"lifecycle: {location} must declare at most one disposition alternative: "
+            "'Final disposition' or 'Close or deletion conditions'"
+        )
+
+
 def _has_exact_sha_field(fields: dict[str, list[str]], label: str) -> str | None:
-    for value in _field_values(fields, label):
-        match = EXACT_SHA_VALUE_PATTERN.search(value)
-        if match is not None:
-            return match.group(0)
-    return None
+    value = _single_lifecycle_field_value(fields, label)
+    if value is None:
+        return None
+    match = EXACT_SHA_VALUE_PATTERN.search(value)
+    return match.group(0) if match is not None else None
 
 
 def _operative_lifecycle_prose(value: str) -> str:
@@ -1619,6 +1668,34 @@ def _validate_lifecycle(
         non_merge,
         allowed_labels=NON_MERGE_FIELD_LABELS,
     )
+    _validate_lifecycle_field_cardinality(
+        non_merge_fields,
+        NON_MERGE_REQUIRED_FIELD_LABELS,
+        "non-merge record",
+        errors,
+    )
+    final_disposition_fields = _parse_lifecycle_fields(
+        final_disposition,
+        allowed_labels=FINAL_DISPOSITION_FIELD_LABELS,
+    )
+    disposition_fields = {
+        label.lower(): (
+            _field_values(non_merge_fields, label)
+            + _field_values(final_disposition_fields, label)
+        )
+        for label in FINAL_DISPOSITION_FIELD_LABELS
+    }
+    _validate_lifecycle_field_cardinality(
+        disposition_fields,
+        FINAL_DISPOSITION_FIELD_LABELS,
+        "disposition metadata",
+        errors,
+    )
+    _validate_disposition_alternatives(
+        disposition_fields,
+        "disposition metadata",
+        errors,
+    )
     if is_merge and (
         _field_values(non_merge_fields, "Purpose")
         or _field_values(non_merge_fields, "Exact candidate or workflow SHA")
@@ -1645,6 +1722,12 @@ def _validate_lifecycle(
         exception,
         allowed_labels=LEGACY_FIELD_LABELS,
     )
+    _validate_lifecycle_field_cardinality(
+        legacy_fields,
+        LEGACY_FIELD_LABELS,
+        "legacy exception",
+        errors,
+    )
     head_ref = context.get("head_ref")
     legacy_declared = bool(legacy_fields) or (
         primary_issue == "47"
@@ -1665,18 +1748,28 @@ def _validate_lifecycle(
             errors.append("lifecycle: legacy exception must declare its immutable candidate SHA")
         elif candidate != context["head_sha"]:
             errors.append("lifecycle: legacy immutable candidate SHA must equal the PR head SHA")
-        if not _field_values(legacy_fields, "Reason"):
+        if _single_lifecycle_field_value(legacy_fields, "Reason") is None:
             errors.append("lifecycle: legacy exception must state a reason")
-        if not _field_values(legacy_fields, "Original branch identity"):
-            errors.append("lifecycle: legacy exception must state the original branch identity")
-        if not any(
-            re.fullmatch(r"(?:#[1-9][0-9]*|unknown)\.?", value)
-            for value in _field_values(legacy_fields, "Original primary issue")
+        if (
+            _single_lifecycle_field_value(legacy_fields, "Original branch identity")
+            is None
         ):
+            errors.append("lifecycle: legacy exception must state the original branch identity")
+        original_primary_issue = _single_lifecycle_field_value(
+            legacy_fields,
+            "Original primary issue",
+        )
+        if original_primary_issue is None or re.fullmatch(
+            r"(?:#[1-9][0-9]*|unknown)\.?",
+            original_primary_issue,
+        ) is None:
             errors.append("lifecycle: legacy exception must state the original primary issue or unknown")
-        if not _field_values(legacy_fields, "Retained evidence"):
+        if _single_lifecycle_field_value(legacy_fields, "Retained evidence") is None:
             errors.append("lifecycle: legacy exception must state retained evidence")
-        if not _field_values(legacy_fields, "Intended disposition"):
+        if (
+            _single_lifecycle_field_value(legacy_fields, "Intended disposition")
+            is None
+        ):
             errors.append("lifecycle: legacy exception must state intended disposition")
         return
 
@@ -1696,17 +1789,21 @@ def _validate_lifecycle(
             "lifecycle: archival branch must state it is not intended to merge"
         )
     if is_non_merge:
-        if not _field_values(non_merge_fields, "Purpose"):
+        if _single_lifecycle_field_value(non_merge_fields, "Purpose") is None:
             errors.append("lifecycle: non-merge branch must state its purpose")
         candidate = _has_exact_sha_field(non_merge_fields, "Exact candidate or workflow SHA")
         if candidate is None:
             errors.append("lifecycle: non-merge branch must state its exact candidate or workflow SHA")
-        if not _field_values(non_merge_fields, "Retained evidence"):
-            errors.append("lifecycle: non-merge branch must state retained evidence")
-        if not (
-            _field_values(non_merge_fields, "Final disposition")
-            or _field_values(non_merge_fields, "Close or deletion conditions")
+        if (
+            _single_lifecycle_field_value(non_merge_fields, "Retained evidence")
+            is None
         ):
+            errors.append("lifecycle: non-merge branch must state retained evidence")
+        dispositions = (
+            _field_values(non_merge_fields, "Final disposition")
+            + _field_values(non_merge_fields, "Close or deletion conditions")
+        )
+        if len(dispositions) != 1 or not dispositions[0].strip():
             errors.append("lifecycle: non-merge branch must state final disposition or close/deletion conditions")
 
 
