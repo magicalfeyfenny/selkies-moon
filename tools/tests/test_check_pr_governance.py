@@ -325,6 +325,41 @@ class PullRequestGovernanceTests(unittest.TestCase):
         event, _contract, comments = _fixture(head_ref="validation/46-durable-evidence")
         self.assertEqual(_validate(event, comments), [])
 
+    def test_lifecycle_intention_and_closure_render_only_valid_links(self) -> None:
+        self.assertEqual(
+            governance._lifecycle_intentions(
+                "Context remains reviewable. [This branch is intended to "
+                "merge][missing]."
+            ),
+            (False, False),
+        )
+        self.assertEqual(
+            governance._lifecycle_intentions(
+                "[This branch is intended to merge][target].\n\n[target]: /url"
+            ),
+            (True, False),
+        )
+        self.assertEqual(
+            governance._lifecycle_intentions(
+                "Context remains reviewable. [This branch is not intended to "
+                "merge][missing]."
+            ),
+            (False, False),
+        )
+        self.assertEqual(
+            governance._lifecycle_intentions(
+                "[This branch is not intended to merge][target].\n\n"
+                "[target]: /url"
+            ),
+            (False, True),
+        )
+        self.assertFalse(governance._has_operative_closes("[Closes #46][missing]."))
+        self.assertTrue(
+            governance._has_operative_closes(
+                "[Closes #46][target].\n\n[target]: /url"
+            )
+        )
+
     def test_lifecycle_accepts_non_merge_validation_and_codex_branches(self) -> None:
         event, contract, _comments = _fixture(head_ref="validation/46-candidate-evidence")
         body = _replace_required_section_content(
@@ -797,14 +832,17 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 self.assertEqual(_validate(event, comments), [])
 
     def test_lifecycle_uses_reviewable_prose_for_closes_detection(self) -> None:
-        for form in ("visible", "fenced", "inline", "indented", "comment"):
+        for form in ("visible", "list", "fenced", "inline", "indented", "comment"):
             with self.subTest(form=form):
                 event, contract, _comments = _fixture(
                     head_ref="validation/46-closes-prose"
                 )
-                closes = "Closes #46" if form == "visible" else _hidden_lifecycle_prose(
-                    "Closes #46", form
-                )
+                if form == "visible":
+                    closes = "Closes #46"
+                elif form == "list":
+                    closes = "- Closes #46"
+                else:
+                    closes = _hidden_lifecycle_prose("Closes #46", form)
                 body = _replace_required_section_content(
                     str(event["pull_request"]["body"]),
                     "Scope",
@@ -822,7 +860,7 @@ class PullRequestGovernanceTests(unittest.TestCase):
                 )
                 _rebound, comments = _rebind_modified_body(event, contract, body)
                 errors = _validate(event, comments)
-                if form == "visible":
+                if form in {"visible", "list"}:
                     self.assertIn(
                         "lifecycle: non-merge branch must not use 'Closes #<issue>'", errors
                     )
@@ -1287,6 +1325,713 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     _validate_lifecycle_sections({"Scope": contradiction}),
                 )
 
+    def test_lifecycle_rejects_blocked_passive_and_infinitival_prohibitions(
+        self,
+    ) -> None:
+        expected = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        required = (
+            "This PR is blocked from merging.",
+            "This branch is blocked from being merged.",
+            "These changes are blocked from being merged.",
+            "This PR is not intended to be merged.",
+            "This PR is forbidden to merge.",
+            "This PR is forbidden to be merged.",
+            "This branch is prohibited to merge.",
+            "This branch is prohibited to be merged.",
+            f"Commit {HEAD_SHA} must not be merged.",
+            "This commit must not be merged.",
+            "This head commit is blocked from merging.",
+            "The current revision must never merge.",
+            "This patch is never intended to be merged.",
+            "The exact candidate commit must not be merged.",
+        )
+        nearby_variants = (
+            "These pull requests are blocked from merging.",
+            "This branch was blocked from being merged.",
+            "These changes have been prohibited to merge.",
+            "This PR had been forbidden to be merged.",
+            "This candidate remains blocked from merging.",
+            "This PR will be blocked from merging.",
+            "This PR will be forbidden to merge.",
+            "This PR will be forbidden to be merged.",
+            "This branch is being blocked from merging.",
+            "This candidate became blocked from merging.",
+            "This PR is still forbidden to merge.",
+            "This PR has not been intended to be merged.",
+            "This PR shall be forbidden to be merged.",
+            "This PR continues to be blocked from merging.",
+            "This PR and the historical branch are blocked from being merged.",
+            (
+                "This PR, the historical branch, and the prior PR are blocked "
+                "from merging."
+            ),
+            (
+                "This PR, unlike the historical branch, is blocked from "
+                "merging."
+            ),
+            (
+                "This PR together with the historical branch is blocked from "
+                "merging."
+            ),
+            (
+                "This PR, as well as the historical branch, is blocked from "
+                "merging."
+            ),
+            (
+                "This PR (unlike the previous candidate) is prohibited to "
+                "merge."
+            ),
+            (
+                "Neither this PR nor the historical branch is blocked from "
+                "merging."
+            ),
+            "This PR's forbidden to merge.",
+            "This PR’s forbidden to be merged.",
+            "This PR's blocked from merging.",
+            "This PR&#39;s blocked from merging.",
+            "This PR’s not intended to be merged.",
+            "This PR’s been blocked from merging.",
+            "These changes’ve been forbidden to be merged.",
+            "This PR’ll be prohibited to merge.",
+            "This PR hasn&#39;t been intended to be merged.",
+            "This branch hadn't been intended to be merged.",
+            "This PR won't be intended to be merged.",
+            "This PR mustn't be intended to be merged.",
+            "This PR must not be intended to be merged.",
+            "This PR is intended not to be merged.",
+            "THIS PR IS FORBIDDEN TO BE MERGED.",
+            "These changes aren't intended to be merged.",
+            "This branch wasn't intended to be merged.",
+        )
+        for contradiction in (*required, *nearby_variants):
+            with self.subTest(contradiction=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        never_intended_variants = (
+            "This PR is never intended to be merged.",
+            "This PR has never been intended to be merged.",
+            "This PR will never be intended to be merged.",
+            "This branch shall never be intended to be merged.",
+            "This PR is never intended for merging.",
+            "These changes are never intended for a merge.",
+            "This candidate had never been intended to merge.",
+            "This branch might never be intended for merge.",
+        )
+        for contradiction in never_intended_variants:
+            with self.subTest(never_intended=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        for phrase in never_intended_variants[:5]:
+            for control in (
+                f'The checker rejects the example "{phrase}"',
+                f"The checker rejects `{phrase}`",
+                f"```text\n{phrase}\n```",
+                f"> {phrase}",
+            ):
+                with self.subTest(
+                    never_intended_phrase=phrase,
+                    inert_control=control,
+                ):
+                    self.assertEqual(
+                        _validate_lifecycle_sections(
+                            {
+                                "Scope": (
+                                    "This section documents inert parser "
+                                    "controls.\n\n"
+                                    + control
+                                )
+                            }
+                        ),
+                        [],
+                    )
+
+        for control in (
+            "The historical branch is never intended to be merged.",
+            "Previously, this PR was never intended to be merged.",
+            (
+                "Until Required CI passes, this PR is never intended to be "
+                "merged."
+            ),
+        ):
+            with self.subTest(never_intended_inert_context=control):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": control}),
+                    [],
+                )
+
+        for phrase in required:
+            controls = (
+                f'The checker rejects the example "{phrase}"',
+                f"The checker rejects `{phrase}`",
+                f"```text\n{phrase}\n```",
+                f"> {phrase}",
+            )
+            for control in controls:
+                with self.subTest(phrase=phrase, control=control):
+                    self.assertEqual(
+                        _validate_lifecycle_sections(
+                            {
+                                "Scope": (
+                                    "This section documents inert parser controls.\n\n"
+                                    + control
+                                )
+                            }
+                        ),
+                        [],
+                    )
+
+        contracted_controls = (
+            "This PR's forbidden to merge.",
+            "This PR’s blocked from being merged.",
+            "This PR hasn't been intended to be merged.",
+            "This PR won't be intended to be merged.",
+        )
+        for phrase in contracted_controls:
+            for control in (
+                f'The checker rejects the example "{phrase}"',
+                f"The checker rejects `{phrase}`",
+            ):
+                with self.subTest(phrase=phrase, control=control):
+                    self.assertEqual(
+                        _validate_lifecycle_sections(
+                            {
+                                "Scope": (
+                                    "This section documents inert contraction "
+                                    "controls.\n\n"
+                                    + control
+                                )
+                            }
+                        ),
+                        [],
+                    )
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "This section documents a lazy blockquote control.\n\n"
+                        "> Example-only prohibition follows:\n"
+                        "This PR is blocked from being merged."
+                    )
+                }
+            ),
+            [],
+        )
+
+        for contradiction in (
+            "- This PR is blocked from merging.",
+            "* This PR is forbidden to be merged.",
+            "1. This branch is not intended to be merged.",
+            "- This PR must not merge.",
+            "1. This branch cannot be merged.",
+        ):
+            with self.subTest(list_contradiction=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        unrelated_controls = (
+            "The historical branch is blocked from merging.",
+            "The prior pull request is forbidden to be merged.",
+            "These unrelated changes are prohibited to merge.",
+            "The other candidate was blocked from being merged.",
+            "The historical commit is blocked from merging.",
+            "The previous revision must not be merged.",
+            "The unrelated patch is prohibited to merge.",
+            f"Commit {'b' * 40} must not be merged.",
+            "The historical branch, unlike this PR, is blocked from merging.",
+            (
+                "The prior pull request, unlike this branch, is forbidden to "
+                "be merged."
+            ),
+        )
+        for control in unrelated_controls:
+            with self.subTest(control=control):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": control}),
+                    [],
+                )
+
+        temporary_or_unrelated_controls = (
+            "This PR is blocked from merging until Required CI passes.",
+            "This branch is forbidden to merge unless required review passes.",
+            "This candidate is prohibited from merging before CI succeeds.",
+            "This PR is blocked from merging pending Required CI.",
+            "This PR is blocked from merging while Required CI is pending.",
+            "Until Required CI passes, this PR is blocked from merging.",
+            (
+                "While Required CI is pending, this branch is forbidden to "
+                "merge."
+            ),
+            "Pending Required CI, this PR is prohibited from being merged.",
+            "Previously, this PR was blocked from merging.",
+            (
+                "Previously approved for integration, this PR was blocked "
+                "from merging."
+            ),
+            (
+                "Formerly approved for integration, this PR had been forbidden "
+                "to merge."
+            ),
+            (
+                "Earlier in development, this branch was prohibited to be "
+                "merged."
+            ),
+            (
+                "Historically during review, this pull request was never "
+                "intended to be merged."
+            ),
+            (
+                "Previously, this PR was blocked from merging and remained "
+                "prohibited from merging."
+            ),
+            (
+                "Previously, this PR was forbidden to merge and had been "
+                "blocked from merging."
+            ),
+            "This PR is forbidden to merge the unrelated changes.",
+        )
+        for control in temporary_or_unrelated_controls:
+            with self.subTest(control=control):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": control}),
+                    [],
+                )
+
+        operative_follow_ons = (
+            (
+                "Pending Required CI, this PR is blocked from merging and this "
+                "branch is forbidden to be merged permanently."
+            ),
+            (
+                "Until CI passes, this PR is blocked from merging and this "
+                "branch is prohibited to merge permanently."
+            ),
+            (
+                "While Required CI is pending, this PR is blocked from merging "
+                "and this branch is forbidden to merge permanently."
+            ),
+            (
+                "Pending Required CI, this PR is blocked from merging, and "
+                "this branch is forbidden to be merged permanently."
+            ),
+            (
+                "Until CI passes, this PR is blocked from merging, and this "
+                "branch is prohibited to merge permanently."
+            ),
+            (
+                "While Required CI is pending, this PR is blocked from merging, "
+                "and this branch is forbidden to merge permanently."
+            ),
+            (
+                "Previously approved for integration, this PR is now blocked "
+                "from merging."
+            ),
+            (
+                "Previously intended to merge, this PR is now forbidden to be "
+                "merged."
+            ),
+            (
+                "Earlier validation allowed integration, this PR remains "
+                "prohibited to merge."
+            ),
+            (
+                "Historically ready, this pull request is now never intended "
+                "to be merged."
+            ),
+            (
+                "Previously, this PR was blocked from merging and remains "
+                "prohibited from merging."
+            ),
+            (
+                "Previously, this PR was forbidden to merge and is still "
+                "blocked from merging."
+            ),
+            (
+                "Previously, this PR was blocked from merging but remains "
+                "prohibited from merging."
+            ),
+            (
+                "The historical branch is blocked from merging, but this PR "
+                "is forbidden to be merged."
+            ),
+            (
+                'The checker rejects "This branch is blocked from merging", '
+                "whereas this PR is prohibited to merge."
+            ),
+            (
+                "The unrelated changes are forbidden to merge. This current "
+                "branch is not intended to be merged."
+            ),
+            (
+                "This PR is blocked from merging pending Required CI, but this "
+                "branch is forbidden to be merged."
+            ),
+            (
+                "Previously, this PR was blocked from merging, but this branch "
+                "is forbidden to be merged."
+            ),
+            (
+                "Until Required CI passes, this PR is blocked from merging; "
+                "however, this branch is prohibited to merge."
+            ),
+        )
+        for content in operative_follow_ons:
+            with self.subTest(content=content):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": content}),
+                )
+
+        for cr_only_boundary in (
+            (
+                "Pending Required CI, historical notes remain\r\r"
+                "This PR is blocked from merging."
+            ),
+            (
+                "Until validation passes, historical notes remain\r \r"
+                "This branch is forbidden to be merged."
+            ),
+            (
+                "While Required CI is pending, historical notes remain\r\t\r"
+                "These changes are prohibited to merge."
+            ),
+        ):
+            with self.subTest(cr_only_boundary=cr_only_boundary):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": cr_only_boundary}),
+                )
+
+        emphasized_contradictions = (
+            "This PR is **blocked** from merging.",
+            "This PR is __blocked__ from merging.",
+            "This PR is *never* intended to be merged.",
+            "This PR is _never_ intended to be merged.",
+            "This PR must **not** merge.",
+            "This PR must __not__ merge.",
+            "*> This PR is blocked from merging.*",
+            "**> This PR is blocked from merging.**",
+            "_> This PR must not merge._",
+            "__> This PR is never intended to be merged.__",
+            "This PR is\n    blocked from merging.",
+            "This PR must\n    not merge.",
+            "This PR is not intended\n    to be merged.",
+            "This PR is forbidden\n    to merge.",
+            "This PR is\n\tblocked from merging.",
+        )
+        for contradiction in emphasized_contradictions:
+            with self.subTest(emphasized_contradiction=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+            for control in (
+                f'The checker rejects the example "{contradiction}"',
+                f"The checker rejects `{contradiction}`",
+                f"> {contradiction}",
+            ):
+                with self.subTest(
+                    emphasized_contradiction=contradiction,
+                    emphasized_inert_control=control,
+                ):
+                    self.assertEqual(
+                        _validate_lifecycle_sections(
+                            {
+                                "Scope": (
+                                    "This section documents inert parser "
+                                    "controls.\n\n"
+                                    + control
+                                )
+                            }
+                        ),
+                        [],
+                    )
+
+        for indented_code_control in (
+            (
+                "True indented code follows after a blank.\n\n"
+                "    This PR is blocked from merging."
+            ),
+            (
+                "True tab-indented code follows after a blank.\n\n"
+                "\tThis PR must not merge."
+            ),
+        ):
+            with self.subTest(indented_code_control=indented_code_control):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {"Scope": indented_code_control}
+                    ),
+                    [],
+                )
+
+        linked_contradictions = (
+            "This [PR](https://example.test/pr) is blocked from merging.",
+            (
+                "This [branch](https://example.test/branch) is forbidden "
+                "to be merged."
+            ),
+            (
+                "These [changes](https://example.test/change) are prohibited "
+                "to merge."
+            ),
+            (
+                "The current [revision](https://example.test/rev) must never "
+                "merge."
+            ),
+            (
+                "This [PR][target] is blocked from merging.\n\n"
+                "[target]: https://example.test/pr"
+            ),
+            (
+                "This [PR][] is blocked from merging.\n\n"
+                "[PR]: https://example.test/pr"
+            ),
+            (
+                "This [PR] is blocked from merging.\n\n"
+                "[PR]: https://example.test/pr"
+            ),
+        )
+        for contradiction in linked_contradictions:
+            with self.subTest(linked_contradiction=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        for linked_control in (
+            "This ![PR](https://example.test/pr) is blocked from merging.",
+            "![This PR](/img) is blocked from merging.",
+            "![This branch](/img) is forbidden to be merged.",
+            "![These changes](/img) are prohibited to merge.",
+            "![The current revision](/img) must never merge.",
+            (
+                "![This PR][target] is blocked from merging.\n\n"
+                "[target]: /img"
+            ),
+            (
+                "![This PR][] is blocked from merging.\n\n"
+                "[This PR]: /img"
+            ),
+            (
+                "![This PR] is blocked from merging.\n\n"
+                "[This PR]: /img"
+            ),
+            "![This PR][missing] is blocked from merging.",
+            "![This PR](<broken) is blocked from merging.",
+            "[This PR is blocked from merging]: /img",
+            "[This branch is forbidden to be merged]: /img",
+            "[These changes are prohibited to merge]: /img",
+            "[The current revision must never merge]: /img",
+            "[This PR]: <is&#32;blocked&#32;from&#32;merging>",
+            (
+                "[This PR is blocked from merging]:\n"
+                "  /img \"multiline reference title\""
+            ),
+            "This [PR][missing] is blocked from merging.",
+            "This [PR](<broken) is blocked from merging.",
+            "[This PR][missing] is blocked from merging.",
+            "[This branch][missing] is forbidden to be merged.",
+            "[These changes](<broken) are prohibited to merge.",
+            "[The current revision](<broken) must never merge.",
+            r"\[This PR](/img) is blocked from merging.",
+            r"\[This branch](/img) is forbidden to be merged.",
+            "&#91;These changes&#93;(/img) are prohibited to merge.",
+            "&#x5b;The current revision&#x5d;(/img) must never merge.",
+            "The checker rejects `This [PR](https://example.test/pr) is blocked.`",
+            "> This [PR](https://example.test/pr) is blocked from merging.",
+        ):
+            with self.subTest(linked_control=linked_control):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "This section documents inert link controls.\n\n"
+                                + linked_control
+                            )
+                        }
+                    ),
+                    [],
+                )
+
+        self.assertIn(
+            expected,
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "Malformed definitions remain visible.\n\n"
+                        "[This PR is blocked from merging]: broken destination"
+                    )
+                }
+            ),
+        )
+
+        for block_boundary in (
+            "[Historical example only.\n\nThis PR is blocked from merging.]",
+            "[Historical example only.\r\n\r\nThis PR is blocked from merging.]",
+            "[Historical example only.\r\rThis PR is blocked from merging.]",
+            (
+                "[Historical example only.\n### Current status\n"
+                "The current revision must never merge.]"
+            ),
+            (
+                "[Historical example only.\n1. This PR is blocked from "
+                "merging.]"
+            ),
+            "[Historical example only.\n---\nThis PR is blocked from merging.]",
+        ):
+            with self.subTest(bracket_block_boundary=block_boundary):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": block_boundary}),
+                )
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "Same-paragraph bracket control remains inert.\n\n"
+                        "[Historical example only.\n"
+                        "This PR is blocked from merging.]"
+                    )
+                }
+            ),
+            [],
+        )
+
+        for struck_control in (
+            "This PR is ~~blocked~~ from merging.",
+            "This PR must ~~not~~ merge.",
+            "~~This PR is blocked from merging.~~",
+            "~~This PR is forbidden to be merged.~~",
+            "This PR ~~is forbidden to merge~~.",
+            "~~This PR is **blocked** from merging.~~",
+            "~~This PR is blocked\nfrom merging.~~",
+            "~~Historical example only.\n2. This PR is blocked from merging.~~",
+            "~~Historical example only.\n2) This PR is blocked from merging.~~",
+            "~~Historical example only.\n10. This PR is blocked from merging.~~",
+            "~~Historical example only.\n+\nThis PR is blocked from merging.~~",
+            "~~Historical example only.\n*\nThis PR is blocked from merging.~~",
+        ):
+            with self.subTest(struck_control=struck_control):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": struck_control}),
+                    [],
+                )
+
+        for line_ending in ("\n", "\r\n", "\r"):
+            for cross_block_strike in (
+                (
+                    "~~Historical example only."
+                    + line_ending * 2
+                    + "This PR is blocked from merging.~~"
+                ),
+                (
+                    "~~Historical example only."
+                    + line_ending
+                    + "### Separate heading"
+                    + line_ending
+                    + "This PR is forbidden to merge.~~"
+                ),
+                (
+                    "~~Historical example only."
+                    + line_ending
+                    + "- Separate list item."
+                    + line_ending
+                    + "This PR is blocked from merging.~~"
+                ),
+                (
+                    "~~Historical example only."
+                    + line_ending
+                    + "***"
+                    + line_ending
+                    + "This PR is forbidden to merge.~~"
+                ),
+                (
+                    "~~Historical example only."
+                    + line_ending
+                    + "---"
+                    + line_ending
+                    + "This PR is forbidden to merge.~~"
+                ),
+            ):
+                with self.subTest(
+                    cross_block_strike=(
+                        line_ending.encode().hex(),
+                        cross_block_strike,
+                    )
+                ):
+                    self.assertIn(
+                        expected,
+                        _validate_lifecycle_sections(
+                            {"Scope": cross_block_strike}
+                        ),
+                    )
+
+            lazy_blockquote_strike = (
+                "~~Historical example only."
+                + line_ending
+                + "> Separate quoted block."
+                + line_ending
+                + "This PR is prohibited to be merged.~~"
+            )
+            with self.subTest(
+                lazy_blockquote_strike=line_ending.encode().hex()
+            ):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {"Scope": lazy_blockquote_strike}
+                    ),
+                    [],
+                )
+
+        multiline_emphasis_contradictions = (
+            "This PR is **blocked\nfrom merging**.",
+            "This PR is *never\nintended to be merged*.",
+            "This PR is __blocked\nfrom being merged__.",
+            "This PR _must not\nmerge_.",
+        )
+        for contradiction in multiline_emphasis_contradictions:
+            with self.subTest(multiline_emphasis=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        multiline_emphasis_controls = (
+            (
+                'The checker rejects "This PR is **blocked\n'
+                'from merging**."'
+            ),
+            "```text\nThis PR is **blocked\nfrom merging**.\n```",
+            "> This PR is **blocked\n> from merging**.",
+        )
+        for control in multiline_emphasis_controls:
+            with self.subTest(multiline_emphasis_inert=control):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "This section documents inert multiline "
+                                "controls.\n\n"
+                                + control
+                            )
+                        }
+                    ),
+                    [],
+                )
+
     def test_lifecycle_fresh_review_discourse_boundaries_remain_operative(self) -> None:
         expected = (
             "lifecycle: merge-intended branch must not make a "
@@ -1620,6 +2365,1983 @@ class PullRequestGovernanceTests(unittest.TestCase):
         self.assertEqual(
             governance._field_values(fields, "Purpose"),
             ["first visible value.", "", "third visible value."],
+        )
+
+    def test_closed_list_fence_keeps_later_contract_structure_visible(self) -> None:
+        fenced_examples = (
+            (
+                "- ```text",
+                "  Purpose: illustrative only.",
+                "  ```",
+            ),
+            (
+                "- Container item.",
+                "  ```text",
+                "  Purpose: illustrative only.",
+                "  ```",
+            ),
+        )
+        for fenced_example in fenced_examples:
+            with self.subTest(fenced_example=fenced_example):
+                event, contract, _comments = _fixture()
+                body = _replace_required_section_content(
+                    str(event["pull_request"]["body"]),
+                    "Scope",
+                    "\n".join(
+                        (
+                            "Container fenced examples remain inert.",
+                            "",
+                            *fenced_example,
+                        )
+                    ),
+                )
+                _rebound, comments = _rebind_modified_body(event, contract, body)
+                self.assertEqual(_validate(event, comments), [])
+
+    def test_lifecycle_rejects_multiple_canonical_labels_on_one_line(self) -> None:
+        attacks = (
+            (
+                "duplicate purpose identical",
+                "Purpose: preserve evidence. Purpose: preserve evidence.",
+            ),
+            (
+                "duplicate purpose conflicting",
+                "Purpose: preserve evidence. Purpose: destroy evidence.",
+            ),
+            (
+                "duplicate sha identical",
+                (
+                    f"Exact candidate or workflow SHA: {HEAD_SHA}. "
+                    f"Exact candidate or workflow SHA: {HEAD_SHA}."
+                ),
+            ),
+            (
+                "duplicate sha conflicting",
+                (
+                    f"Exact candidate or workflow SHA: {HEAD_SHA}. "
+                    f"Exact candidate or workflow SHA: {'b' * 40}."
+                ),
+            ),
+            (
+                "different labels",
+                (
+                    "Purpose: preserve evidence. "
+                    "Retained evidence: hosted logs remain available."
+                ),
+            ),
+            (
+                "disallowed first label",
+                (
+                    "Legacy registration: #47. "
+                    "Purpose: conflicting purpose."
+                ),
+            ),
+            (
+                "disallowed first sha label",
+                (
+                    f"Immutable candidate SHA: {'b' * 40}. "
+                    f"Exact candidate or workflow SHA: {'b' * 40}."
+                ),
+            ),
+            (
+                "escaped visible colon",
+                "Purpose: preserve evidence. Purpose\\: conflicting purpose.",
+            ),
+            (
+                "entity visible colon",
+                "Purpose: preserve evidence. Purpose&#58; conflicting purpose.",
+            ),
+            (
+                "named entity visible colon",
+                "Purpose: preserve evidence. Purpose&colon; conflicting purpose.",
+            ),
+            (
+                "encoded label letter",
+                "Purpose: preserve evidence. Purpos&#101;: conflicting purpose.",
+            ),
+            (
+                "encoded first decimal colon",
+                "Reason&#58; inert. Purpose: conflicting purpose.",
+            ),
+            (
+                "encoded first hexadecimal colon",
+                "Reason&#x3a; inert. Purpose: conflicting purpose.",
+            ),
+            (
+                "encoded first named colon",
+                "Reason&colon; inert. Purpose: conflicting purpose.",
+            ),
+            (
+                "escaped first colon",
+                "Reason\\: inert. Purpose: conflicting purpose.",
+            ),
+            (
+                "emphasis inside visible label",
+                "Purpose: preserve evidence. Pur**pose:** conflicting purpose.",
+            ),
+            (
+                "comment inside visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "Pur<!-- hidden -->pose: conflicting purpose."
+                ),
+            ),
+            (
+                "single underscore visible label",
+                "Purpose: preserve evidence. _Purpose_: conflicting purpose.",
+            ),
+            (
+                "reference link visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][duplicate]: conflicting purpose.\n\n"
+                    "[duplicate]: https://example.invalid"
+                ),
+            ),
+            (
+                "shortcut reference visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose]: conflicting purpose.\n\n"
+                    "[Purpose]: https://example.invalid"
+                ),
+            ),
+            (
+                "multiline reference visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][duplicate]: conflicting purpose.\n\n"
+                    "[duplicate]:\n      https://example.invalid"
+                ),
+            ),
+            (
+                "multiline shortcut visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose]: conflicting purpose.\n\n"
+                    "[Purpose]:\n\thttps://example.invalid"
+                ),
+            ),
+            (
+                "entity shortcut visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpos&#101;]: conflicting purpose.\n\n"
+                    "[Purpos&#101;]: https://example.invalid"
+                ),
+            ),
+            (
+                "entity collapsed visible label",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpos&#101;][]: conflicting purpose.\n\n"
+                    "[Purpos&#101;]: https://example.invalid"
+                ),
+            ),
+        )
+        for name, attack in attacks:
+            with self.subTest(name=name):
+                record = "\n".join(
+                    (
+                        attack,
+                        f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                        "Retained evidence: hosted logs remain available.",
+                        "Final disposition: close after issue review.",
+                    )
+                )
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        cross_section_attacks = (
+            (
+                "shortcut",
+                "Purpose: preserve evidence. [Purpose]: conflicting purpose.",
+            ),
+            (
+                "collapsed case-folded",
+                "Purpose: preserve evidence. [Purpose][]: conflicting purpose.",
+            ),
+            (
+                "full multiline case-folded",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][DuP]: conflicting purpose."
+                ),
+            ),
+            (
+                "blockquote definition",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][blocked]: conflicting purpose."
+                ),
+            ),
+            (
+                "list definition",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][listed]: conflicting purpose."
+                ),
+            ),
+            (
+                "blockquote three-line definition",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][threequote]: conflicting purpose."
+                ),
+            ),
+            (
+                "list three-line definition",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][threelist]: conflicting purpose."
+                ),
+            ),
+            (
+                "mixed-container three-line definition",
+                (
+                    "Purpose: preserve evidence. "
+                    "[Purpose][mixed]: conflicting purpose."
+                ),
+            ),
+        )
+        definitions = (
+            "Reference definitions below are document-wide.\n\n"
+            "### Nested definitions\n"
+            "[purpose]: https://example.invalid/purpose\n"
+            "[dup]:\n      https://example.invalid/duplicate\n"
+            "> [blocked]: https://example.invalid/blocked\n"
+            "- [listed]: https://example.invalid/listed\n"
+            "> [\n> threequote\n> ]: https://example.invalid/threequote\n"
+            "- [\n  threelist\n  ]: https://example.invalid/threelist\n"
+            "> - [\n>   mixed\n>   ]: https://example.invalid/mixed"
+        )
+        for name, attack in cross_section_attacks:
+            with self.subTest(cross_section=name):
+                record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    attack,
+                )
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": definitions,
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        multiline_label_record = _non_merge_record().replace(
+            f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+            (
+                f"Exact candidate or workflow SHA: {HEAD_SHA}. "
+                "[Exact candidate or workflow SHA]: conflicting value."
+            ),
+        )
+        multiline_label_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "A multiline document-wide definition follows.\n\n"
+                    "[Exact candidate\n"
+                    "or workflow\n"
+                    "SHA]: https://example.invalid/sha"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": multiline_label_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in multiline_label_errors
+            ),
+            multiline_label_errors,
+        )
+
+        for code_definition in (
+            ">\t\t[deep]: https://example.invalid",
+            "-\t\t[deep]: https://example.invalid",
+            "> \t[deep]: https://example.invalid",
+        ):
+            with self.subTest(code_definition=code_definition):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve literal unresolved reference "
+                        "[Purpose][deep]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Indented container code remains inert.\n\n"
+                                + code_definition
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        tab_padding_record = _non_merge_record().replace(
+            "Purpose: preserve validation evidence.",
+            "Purpose: preserve evidence. [Purpose]: conflicting purpose.",
+        )
+        tab_padding_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "Reference definitions below are document-wide.\n\n"
+                    "-\t  ```text\n"
+                    "    [Purpose]: https://example.invalid"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": tab_padding_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in tab_padding_errors
+            ),
+            tab_padding_errors,
+        )
+
+        for malformed_definition in (
+            "[Purpose]: not a destination",
+            "[Purpose]: <> unexpected tail",
+            "[Purpose]: https://example.invalid unexpected tail",
+            '[Purpose]: https://example.invalid "unterminated title',
+            "[Purpose]: foo\\ bar",
+            "[Purpose]: foo\\\tbar",
+            "[Purpose]: foo\x7fbar",
+            '[Purpose]: /url "title"\vtrailing',
+            '[Purpose]: /url "title"\ftrailing',
+            '[Purpose]: /url "title"\u0085trailing',
+            '[Purpose]: /url "title"\u2028trailing',
+            '[Purpose]: /url "title"\u2029trailing',
+        ):
+            with self.subTest(malformed_definition=malformed_definition):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve unresolved reference "
+                        "[Purpose]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Malformed definitions remain inert.\n\n"
+                                + malformed_definition
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        trailing_text_record = _non_merge_record().replace(
+            "Purpose: preserve validation evidence.",
+            (
+                "Purpose: preserve unresolved reference "
+                "[Purpose][deep]: illustrative only."
+            ),
+        )
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "An invalid same-line tail cannot borrow a destination.\n\n"
+                        "[deep]: invalid trailing text\n"
+                        "https://example.invalid"
+                    ),
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": trailing_text_record,
+                }
+            ),
+            [],
+        )
+
+        escaped_destination_record = _non_merge_record().replace(
+            "Purpose: preserve validation evidence.",
+            "Purpose: preserve evidence. [Purpose]: conflicting purpose.",
+        )
+        escaped_destination_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "Escaped punctuation is valid in a destination.\n\n"
+                    "[Purpose]: foo\\(bar\\)"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": escaped_destination_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in escaped_destination_errors
+            ),
+            escaped_destination_errors,
+        )
+
+        angle_tab_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "Angle destinations may contain tabs.\n\n"
+                    "[Purpose]: <./foo\tbar>"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": escaped_destination_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in angle_tab_errors
+            ),
+            angle_tab_errors,
+        )
+
+        non_ascii_destination_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "Only ASCII controls are excluded from bare destinations.\n\n"
+                    "[Purpose]: foo\u0080bar"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": escaped_destination_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in non_ascii_destination_errors
+            ),
+            non_ascii_destination_errors,
+        )
+
+        for non_alias_label in (
+            "Purpose\u00a0",
+            "Purpose\u2003",
+            "Purpose\u0085",
+            "Purpose\u2028",
+            "Purpose\u2029",
+        ):
+            with self.subTest(non_alias_label=non_alias_label):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve unresolved reference "
+                        "[Purpose]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Unicode separators remain label characters.\n\n"
+                                f"[{non_alias_label}]: /url"
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for multiline_non_alias_definition in (
+            "[Purpose\n\u00a0\n]: /url",
+            "[Purpose\n\u2003\n]: /url",
+        ):
+            with self.subTest(
+                multiline_non_alias_definition=multiline_non_alias_definition
+            ):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve unresolved reference "
+                        "[Purpose]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Unicode label characters remain distinct.\n\n"
+                                + multiline_non_alias_definition
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for ascii_alias_definition in (
+            "[ Purpose ]: /url",
+            "[\tPurpose\t]: /url",
+            "[Purpose\r]: /url",
+            "[Purpose\n]: /url",
+            "[Purpose\r\n]: /url",
+        ):
+            with self.subTest(
+                ascii_alias_definition=ascii_alias_definition
+            ):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "CommonMark label whitespace collapses.\n\n"
+                            + ascii_alias_definition
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_destination_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        oversized_label = " " * 500 + "Purpose" + " " * 500
+        unresolved_record = _non_merge_record().replace(
+            "Purpose: preserve validation evidence.",
+            (
+                "Purpose: preserve unresolved reference "
+                "[Purpose]: illustrative only."
+            ),
+        )
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "Oversized reference labels remain invalid.\n\n"
+                        f"[{oversized_label}]: /url"
+                    ),
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": unresolved_record,
+                }
+            ),
+            [],
+        )
+
+        maximum_label = " " * 496 + "Purpose" + " " * 496
+        maximum_label_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "A 999-character reference label remains valid.\n\n"
+                    f"[{maximum_label}]: /url"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": escaped_destination_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in maximum_label_errors
+            ),
+            maximum_label_errors,
+        )
+
+        for line_ending in ("\n", "\r\n", "\r"):
+            with self.subTest(
+                multiline_label_boundary=line_ending.encode().hex()
+            ):
+                oversized_multiline_label = (
+                    "[Purpose" + line_ending + " " * 992 + "]: /url"
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Oversized multiline labels remain invalid."
+                                + line_ending * 2
+                                + oversized_multiline_label
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+                maximum_multiline_label = (
+                    "[Purpose" + line_ending + " " * 991 + "]: /url"
+                )
+                maximum_multiline_errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "A 999-character multiline label remains valid."
+                            + line_ending * 2
+                            + maximum_multiline_label
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_destination_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in maximum_multiline_errors
+                    ),
+                    maximum_multiline_errors,
+                )
+
+        for line_ending in ("\n", "\r\n", "\r"):
+            for whitespace in (" ", "\t"):
+                with self.subTest(
+                    whitespace_only_multiline_label=(
+                        line_ending.encode().hex(),
+                        whitespace.encode().hex(),
+                    )
+                ):
+                    self.assertEqual(
+                        _validate_lifecycle_sections(
+                            {
+                                "Scope": (
+                                    "Whitespace-only labels remain invalid."
+                                    + line_ending * 2
+                                    + "["
+                                    + line_ending
+                                    + whitespace
+                                    + "]: /url"
+                                    + line_ending
+                                    + "[Purpose]: /url"
+                                ),
+                                "Merge intention": (
+                                    "This validation branch is not intended "
+                                    "to merge and retains test evidence."
+                                ),
+                                "Non-merge record": unresolved_record,
+                            }
+                        ),
+                        [],
+                    )
+
+        valid_bracket_definitions = (
+            r"[bad\[label]: /url",
+            r"[bad\\\[label]: /url",
+            r"[bad\]label]: /url",
+            r"[bad\\\]label]: /url",
+        )
+        for valid_bracket_definition in valid_bracket_definitions:
+            with self.subTest(
+                valid_bracket_definition=valid_bracket_definition
+            ):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "Escaped brackets remain valid in labels.\n\n"
+                            + valid_bracket_definition
+                            + "\n[Purpose]: /url"
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_destination_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        for escaped_reference_label in (r"x\[y", r"x\]y"):
+            with self.subTest(
+                escaped_full_reference_label=escaped_reference_label
+            ):
+                escaped_reference_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve evidence. "
+                        f"[Purpose][{escaped_reference_label}]: "
+                        "conflicting purpose."
+                    ),
+                )
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "Escaped labels resolve in full references.\n\n"
+                            f"[{escaped_reference_label}]: /url"
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_reference_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        entity_reference_record = _non_merge_record().replace(
+            "Purpose: preserve validation evidence.",
+            (
+                "Purpose: preserve evidence. "
+                "[Purpose][r&#91;ef]: conflicting purpose."
+            ),
+        )
+        entity_reference_errors = _validate_lifecycle_sections(
+            {
+                "Scope": (
+                    "Entity brackets normalize in valid reference labels.\n\n"
+                    "[r&#91;ef]: /url"
+                ),
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": entity_reference_record,
+            }
+        )
+        self.assertTrue(
+            any(
+                "expected exactly one canonical field per physical line"
+                in error
+                for error in entity_reference_errors
+            ),
+            entity_reference_errors,
+        )
+
+        malformed_reference_record = _non_merge_record().replace(
+            "Purpose: preserve validation evidence.",
+            (
+                "Purpose: preserve evidence. "
+                "[Purpose][r[ef]: illustrative only."
+            ),
+        )
+        malformed_reference_record = (
+            "This record preserves all required evidence.\n"
+            + malformed_reference_record
+        )
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Scope": (
+                        "Malformed raw brackets remain literal.\n\n"
+                        "[r&#91;ef]: /url"
+                    ),
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": malformed_reference_record,
+                }
+            ),
+            [],
+        )
+
+        invalid_bracket_definitions = (
+            "[bad[label]: /url",
+            r"[bad\\[label]: /url",
+            r"[bad\\]label]: /url",
+        )
+        for invalid_bracket_definition in invalid_bracket_definitions:
+            with self.subTest(
+                invalid_bracket_definition=invalid_bracket_definition
+            ):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Unescaped brackets keep the paragraph open."
+                                "\n\n"
+                                + invalid_bracket_definition
+                                + "\n[Purpose]: /url"
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for line_ending in ("\n", "\r\n", "\r"):
+            for valid_multiline_definition in (
+                r"[bad\]" + line_ending + "label]: /url",
+                r"[bad\[" + line_ending + "label]: /url",
+            ):
+                with self.subTest(
+                    valid_multiline_bracket_definition=(
+                        line_ending.encode().hex(),
+                        valid_multiline_definition,
+                    )
+                ):
+                    errors = _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Escaped multiline brackets remain valid."
+                                + line_ending * 2
+                                + valid_multiline_definition
+                                + line_ending
+                                + "[Purpose]: /url"
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": escaped_destination_record,
+                        }
+                    )
+                    self.assertTrue(
+                        any(
+                            "expected exactly one canonical field per physical line"
+                            in error
+                            for error in errors
+                        ),
+                        errors,
+                    )
+
+            invalid_multiline_definition = (
+                "[bad" + line_ending + "[label]: /url"
+            )
+            with self.subTest(
+                invalid_multiline_bracket_definition=(
+                    line_ending.encode().hex(),
+                    invalid_multiline_definition,
+                )
+            ):
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Unescaped multiline brackets keep paragraphs "
+                                "open."
+                                + line_ending * 2
+                                + invalid_multiline_definition
+                                + line_ending
+                                + "[Purpose]: /url"
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for interrupting_definition in (
+            (
+                "Ordinary paragraph remains visible.\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "A blockquote control follows.\n\n"
+                "> Ordinary blockquote paragraph remains visible.\n"
+                "> [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "0. [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "2. [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "003. [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "14. [Purpose]: https://example.invalid"
+            ),
+            (
+                "A blockquote control follows.\n\n"
+                "> Ordinary blockquote paragraph remains visible.\n"
+                "> 2. [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "    indented continuation text\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "A blockquote control follows.\n\n"
+                "> Ordinary blockquote paragraph remains visible.\n"
+                ">     indented continuation text\n"
+                "> [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "*\t\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "+   \n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph remains visible.\n"
+                "2.   \n"
+                "[Purpose]: https://example.invalid"
+            ),
+        ):
+            with self.subTest(
+                interrupting_definition=interrupting_definition
+            ):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve unresolved reference "
+                        "[Purpose]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": interrupting_definition,
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for block_boundary_definition in (
+            (
+                "Ordinary paragraph ends before a blank line.\n\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "### Reference definitions\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "Reference definitions\n"
+                "=====================\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "Reference definitions\n"
+                "---------------------\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "Reference definitions\n"
+                "-\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "Reference definitions\n"
+                "--\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "- Ordinary first list item.\n"
+                "- [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph may be interrupted by one.\n"
+                "1. [Purpose]: https://example.invalid"
+            ),
+            (
+                "Ordinary paragraph may be interrupted by one.\n"
+                "1) [Purpose]: https://example.invalid"
+            ),
+            (
+                "An indented code block follows a blank.\n\n"
+                "    literal code\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "An empty bullet item follows.\n\n"
+                "-\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "An empty plus item follows.\n\n"
+                "+\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "An empty star item follows.\n\n"
+                "*\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "An empty ordered item follows.\n\n"
+                "1.\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "An empty parenthesized item follows.\n\n"
+                "1)\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "A padded empty bullet item follows.\n\n"
+                "*\t\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "A padded empty ordered item follows.\n\n"
+                "2.   \n"
+                "[Purpose]: https://example.invalid"
+            ),
+        ):
+            with self.subTest(
+                block_boundary_definition=block_boundary_definition
+            ):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": block_boundary_definition,
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_destination_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        for standalone_non_boundary in (
+            "--\n[Purpose]: https://example.invalid",
+            "=\n[Purpose]: https://example.invalid",
+        ):
+            with self.subTest(
+                standalone_non_boundary=standalone_non_boundary
+            ):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve unresolved reference "
+                        "[Purpose]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Standalone paragraph text follows.\n\n"
+                                + standalone_non_boundary
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for multiline_title_definition in (
+            (
+                '[Purpose]: https://example.invalid "multi\n'
+                'line title"'
+            ),
+            (
+                "[Purpose]:\n"
+                '  https://example.invalid "multi\n'
+                '  line title"'
+            ),
+            '[Purpose]: /url "multi\rline title"',
+            '[Purpose]: /url "multi\r\nline title"',
+        ):
+            with self.subTest(
+                multiline_title_definition=multiline_title_definition
+            ):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "Multiline titles keep definitions active.\n\n"
+                            + multiline_title_definition
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_destination_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        for tab_title_definition in (
+            '[Purpose]: /url "tab\ttitle"',
+            "[Purpose]: /url 'tab\ttitle'",
+            "[Purpose]: /url (tab\ttitle)",
+            '[Purpose]: /url "a\u0001b"',
+            "[Purpose]: /url 'a\u0008b'",
+            "[Purpose]: /url (a\u001fb)",
+            '[Purpose]: /url "a\x7fb"',
+            '[Purpose]: /url "a\u0080b"',
+        ):
+            with self.subTest(tab_title_definition=tab_title_definition):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "Reference titles may contain tabs.\n\n"
+                            + tab_title_definition
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge "
+                            "and retains test evidence."
+                        ),
+                        "Non-merge record": escaped_destination_record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        for interrupted_title_definition in (
+            (
+                '[Purpose]: https://example.invalid "multi\n\n'
+                'line title"'
+            ),
+            (
+                '[Purpose]: https://example.invalid "multi\n'
+                'line title" trailing prose'
+            ),
+            '[Purpose]: /url "title"\u00a0',
+            "[Purpose]: /url 'title'\u2003",
+            "[Purpose]: /url (title)\u00a0",
+        ):
+            with self.subTest(
+                interrupted_title_definition=interrupted_title_definition
+            ):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve unresolved reference "
+                        "[Purpose]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "Invalid multiline titles remain inert.\n\n"
+                                + interrupted_title_definition
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        for container_fence in (
+            (
+                "> ```text\n"
+                "> unclosed blockquote fence\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "- ```text\n"
+                "  unclosed list fence\n\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "> - ```text\n"
+                ">   unclosed nested fence\n\n"
+                "[Purpose]: https://example.invalid"
+            ),
+            (
+                "- ```text\n"
+                "  unclosed bullet fence\n"
+                " [Purpose]: https://example.invalid"
+            ),
+            (
+                "1. ```text\n"
+                "   unclosed ordered fence\n"
+                "  [Purpose]: https://example.invalid"
+            ),
+            (
+                "- ```text\n"
+                "  unclosed first item fence\n"
+                "- [Purpose]: https://example.invalid"
+            ),
+            (
+                "1. ```text\n"
+                "   unclosed first ordered item fence\n"
+                "2. [Purpose]: https://example.invalid"
+            ),
+            (
+                "> - ```text\n"
+                ">   unclosed nested item fence\n"
+                "> - [Purpose]: https://example.invalid"
+            ),
+        ):
+            with self.subTest(container_fence=container_fence):
+                record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve evidence. "
+                        "[Purpose]: conflicting purpose."
+                    ),
+                )
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Scope": (
+                            "Container fences end with their containers.\n\n"
+                            + container_fence
+                        ),
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": record,
+                    }
+                )
+                self.assertTrue(
+                    any(
+                        "expected exactly one canonical field per physical line"
+                        in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
+        for fenced_control in (
+            (
+                "- ```text\n"
+                "  literal code\n"
+                "  - [deep]: https://example.invalid"
+            ),
+            (
+                "- ```text\n"
+                "  literal code\n\n"
+                "  [deep]: https://example.invalid"
+            ),
+            (
+                "1. ```text\n"
+                "   literal ordered code\n"
+                "   - [deep]: https://example.invalid"
+            ),
+            (
+                "1. ```text\n"
+                "   literal ordered code\n\n"
+                "   [deep]: https://example.invalid"
+            ),
+            (
+                "- - ```text\n"
+                "    literal nested list code\n\n"
+                "    [deep]: https://example.invalid"
+            ),
+            (
+                "> - ```text\n"
+                ">   literal blockquote list code\n"
+                ">\n"
+                ">   [deep]: https://example.invalid"
+            ),
+            (
+                "> - - ```text\n"
+                ">     literal deeply nested code\n"
+                ">\n"
+                ">     [deep]: https://example.invalid"
+            ),
+            (
+                "> - ```text\n"
+                ">   literal nested code\n"
+                ">   - [deep]: https://example.invalid"
+            ),
+        ):
+            with self.subTest(fenced_control=fenced_control):
+                unresolved_record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    (
+                        "Purpose: preserve literal unresolved reference "
+                        "[Purpose][deep]: illustrative only."
+                    ),
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Scope": (
+                                "List-scoped fenced code remains inert.\n\n"
+                                + fenced_control
+                            ),
+                            "Merge intention": (
+                                "This validation branch is not intended to "
+                                "merge and retains test evidence."
+                            ),
+                            "Non-merge record": unresolved_record,
+                        }
+                    ),
+                    [],
+                )
+
+        safe_values = (
+            'Purpose: preserve the quoted label "Purpose: illustrative only."',
+            "Purpose: preserve the coded label `Purpose: illustrative only.`",
+            (
+                "Purpose: preserve the escaped entity label "
+                "Purpose\\&colon; illustrative only."
+            ),
+            (
+                "Purpose: preserve the unterminated entity label "
+                "Purpose&#58 illustrative only."
+            ),
+            (
+                "Purpose: preserve &quot;Purpose: illustrative only.&quot;"
+            ),
+            (
+                "Purpose: preserve literal escaped emphasis "
+                "\\_Purpose\\_: illustrative only."
+            ),
+            (
+                "Purpose: preserve unresolved reference "
+                "[Purpose][missing]: illustrative only."
+            ),
+        )
+        for purpose in safe_values:
+            with self.subTest(purpose=purpose):
+                record = _non_merge_record().replace(
+                    "Purpose: preserve validation evidence.",
+                    purpose,
+                )
+                self.assertEqual(
+                    _validate_lifecycle_sections(
+                        {
+                            "Merge intention": (
+                                "This validation branch is not intended to merge "
+                                "and retains test evidence."
+                            ),
+                            "Non-merge record": record,
+                        }
+                    ),
+                    [],
+                )
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": _non_merge_record(),
+                }
+            ),
+            [],
+        )
+
+        invisible_record = "\n".join(
+            (
+                "Purpose: <!-- hidden -->",
+                f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                "Retained evidence: <!-- hidden -->",
+                "Final disposition: <!-- hidden -->",
+            )
+        )
+        invisible_errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": invisible_record,
+            }
+        )
+        self.assertIn(
+            "lifecycle: non-merge branch must state its purpose",
+            invisible_errors,
+        )
+        self.assertIn(
+            "lifecycle: non-merge branch must state retained evidence",
+            invisible_errors,
+        )
+        self.assertIn(
+            (
+                "lifecycle: non-merge branch must state final disposition or "
+                "close/deletion conditions"
+            ),
+            invisible_errors,
+        )
+
+        for invisible in (
+            "&ZeroWidthSpace;",
+            "&#8203;",
+            "&#x200B;",
+            "&#xfeff;",
+            "&#8288;",
+            "&#xfe0f;",
+            "&#x034f;",
+            "&#x180b;",
+            "&#xE0100;",
+            "\u200b",
+            "\ufe0f",
+            "\u034f",
+            "\u180b",
+            "\U000E0100",
+        ):
+            with self.subTest(invisible=invisible):
+                zero_width_record = "\n".join(
+                    (
+                        f"Purpose: {invisible}",
+                        f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                        f"Retained evidence: {invisible}",
+                        f"Final disposition: {invisible}",
+                    )
+                )
+                zero_width_errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": zero_width_record,
+                    }
+                )
+                self.assertIn(
+                    "lifecycle: non-merge branch must state its purpose",
+                    zero_width_errors,
+                )
+                self.assertIn(
+                    "lifecycle: non-merge branch must state retained evidence",
+                    zero_width_errors,
+                )
+                self.assertIn(
+                    (
+                        "lifecycle: non-merge branch must state final "
+                        "disposition or close/deletion conditions"
+                    ),
+                    zero_width_errors,
+                )
+
+    def test_lifecycle_metadata_comes_only_from_direct_section_body(self) -> None:
+        missing_non_merge = (
+            "lifecycle: non-merge branch must state its purpose",
+            "lifecycle: non-merge branch must state its exact candidate or workflow SHA",
+            "lifecycle: non-merge branch must state retained evidence",
+            (
+                "lifecycle: non-merge branch must state final disposition or "
+                "close/deletion conditions"
+            ),
+        )
+        nested_only = f"### Example only, not metadata\n{_non_merge_record()}"
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and retains "
+                    "test evidence."
+                ),
+                "Non-merge record": nested_only,
+            }
+        )
+        for expected in missing_non_merge:
+            self.assertIn(expected, errors)
+
+        for unicode_separator in ("\u00a0", "\u2003"):
+            with self.subTest(unicode_separator=unicode_separator):
+                record = (
+                    "Purpose: actual retained evidence.\n\n"
+                    "> Quoted example begins.\n"
+                    f"{unicode_separator}\n"
+                    "Purpose: example only."
+                )
+                operative = governance._operative_lifecycle_prose(
+                    record,
+                    mask_list_items=True,
+                )
+                fields = governance._parse_lifecycle_fields(
+                    operative,
+                    allowed_labels=governance.NON_MERGE_FIELD_LABELS,
+                )
+                self.assertEqual(
+                    governance._field_values(fields, "Purpose"),
+                    ["actual retained evidence."],
+                )
+
+        cr_nested_only = (
+            "Direct section prose contains no canonical metadata.\r"
+            "### Nested examples\r"
+            + _non_merge_record().replace("\n", "\r")
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and "
+                    "retains test evidence."
+                ),
+                "Non-merge record": cr_nested_only,
+            }
+        )
+        for expected in missing_non_merge:
+            self.assertIn(expected, errors)
+
+        lazy_blockquote_record = (
+            "> Example-only metadata follows:\n"
+            + _non_merge_record().replace("\n\n", "\n")
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and retains "
+                    "test evidence."
+                ),
+                "Non-merge record": lazy_blockquote_record,
+            }
+        )
+        for expected in missing_non_merge:
+            self.assertIn(expected, errors)
+
+        for marker in ("-", "+", "*", "1.", "1)"):
+            with self.subTest(marker=marker):
+                lazy_list_record = (
+                    f"{marker} Example-only metadata follows:\n"
+                    + _non_merge_record().replace("\n\n", "\n")
+                )
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": lazy_list_record,
+                    }
+                )
+                for expected in missing_non_merge:
+                    self.assertIn(expected, errors)
+
+        partial_direct = "\n".join(
+            (
+                "Purpose: preserve validation evidence.",
+                "### Remaining record",
+                f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                "Retained evidence: hosted logs remain available.",
+                "Final disposition: close after issue review.",
+            )
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and retains "
+                    "test evidence."
+                ),
+                "Non-merge record": partial_direct,
+            }
+        )
+        self.assertNotIn(missing_non_merge[0], errors)
+        for expected in missing_non_merge[1:]:
+            self.assertIn(expected, errors)
+
+        valid_then_nested = "\n\n".join(
+            (
+                (
+                    "This prose explains the direct record before its canonical "
+                    "metadata."
+                ),
+                _non_merge_record(),
+                (
+                    "### Example only\n"
+                    "Purpose: conflicting nested purpose.\n"
+                    f"Exact candidate or workflow SHA: {'b' * 40}.\n"
+                    "Retained evidence: nested example only.\n"
+                    "Final disposition: delete the example."
+                ),
+            )
+        )
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": valid_then_nested,
+                }
+            ),
+            [],
+        )
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": (
+                        _non_merge_record().replace("\n\n", "\n")
+                        + "\n***\nNested heading\n---\n"
+                        + "Purpose: nested example remains inert."
+                    ),
+                }
+            ),
+            [],
+        )
+
+        for depth, heading in (
+            (3, "Differently named details"),
+            (4, "Evidence notes"),
+            (5, "Policy controls"),
+            (6, "Final example"),
+        ):
+            with self.subTest(depth=depth):
+                content = f"{'#' * depth} {heading}\n{_non_merge_record()}"
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": content,
+                    }
+                )
+                for expected in missing_non_merge:
+                    self.assertIn(expected, errors)
+
+        for heading in (
+            "# Higher-level boundary",
+            "Example only\n------------",
+            "Example only\n============",
+            "`Example only, not metadata`\n---",
+        ):
+            with self.subTest(heading=heading):
+                errors = _validate_lifecycle_sections(
+                    {
+                        "Merge intention": (
+                            "This validation branch is not intended to merge and "
+                            "retains test evidence."
+                        ),
+                        "Non-merge record": f"{heading}\n{_non_merge_record()}",
+                    }
+                )
+                for expected in missing_non_merge:
+                    self.assertIn(expected, errors)
+
+        multiline_setext_record = "\n".join(
+            (
+                "Purpose: preserve validation evidence.",
+                f"Exact candidate or workflow SHA: {HEAD_SHA}.",
+                "Retained evidence: hosted logs remain available.",
+                "Final disposition: close after issue review.",
+                "Nested heading tail",
+                "---",
+            )
+        )
+        errors = _validate_lifecycle_sections(
+            {
+                "Merge intention": (
+                    "This validation branch is not intended to merge and retains "
+                    "test evidence."
+                ),
+                "Non-merge record": multiline_setext_record,
+            }
+        )
+        for expected in missing_non_merge:
+            self.assertIn(expected, errors)
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Merge intention": (
+                        "This validation branch is not intended to merge and "
+                        "retains test evidence."
+                    ),
+                    "Non-merge record": (
+                        _non_merge_record()
+                        + "\n\n`Example only, not metadata`\n---\n"
+                        + "Purpose: nested example remains inert."
+                    ),
+                }
+            ),
+            [],
+        )
+
+        legacy_record = "\n".join(
+            (
+                "Legacy registration: #47.",
+                "Original branch identity: validation/frozen-candidate.",
+                "Original primary issue: #54.",
+                f"Immutable candidate SHA: {HEAD_SHA}.",
+                "Retained evidence: historical logs remain attached.",
+                "Intended disposition: retain until migration closes.",
+                "Reason: frozen identity remains.",
+            )
+        )
+        for invisible in (
+            "&ZeroWidthSpace;",
+            "&#8203;",
+            "&#x200B;",
+            "&#xfeff;",
+            "&#8288;",
+            "&#xfe0f;",
+            "&#x034f;",
+            "&#x180b;",
+            "&#xE0100;",
+            "\u200b",
+            "\ufe0f",
+            "\u034f",
+            "\u180b",
+            "\U000E0100",
+        ):
+            with self.subTest(legacy_invisible=invisible):
+                invisible_legacy_record = (
+                    legacy_record.replace(
+                        "Retained evidence: historical logs remain attached.",
+                        f"Retained evidence: {invisible}",
+                    )
+                    .replace(
+                        "Intended disposition: retain until migration closes.",
+                        f"Intended disposition: {invisible}",
+                    )
+                    .replace(
+                        "Reason: frozen identity remains.",
+                        f"Reason: {invisible}",
+                    )
+                )
+                invisible_legacy_errors = _validate_lifecycle_sections(
+                    {
+                        "Primary issue": (
+                            "Primary issue #47 registers this frozen legacy "
+                            "candidate."
+                        ),
+                        "Lifecycle exception": invisible_legacy_record,
+                    },
+                    head_ref="validation/frozen-candidate",
+                )
+                self.assertIn(
+                    "lifecycle: legacy exception must state a reason",
+                    invisible_legacy_errors,
+                )
+                self.assertIn(
+                    "lifecycle: legacy exception must state retained evidence",
+                    invisible_legacy_errors,
+                )
+                self.assertIn(
+                    (
+                        "lifecycle: legacy exception must state intended "
+                        "disposition"
+                    ),
+                    invisible_legacy_errors,
+                )
+        nested_legacy_errors = _validate_lifecycle_sections(
+            {
+                "Primary issue": (
+                    "Primary issue #47 registers this frozen legacy candidate."
+                ),
+                "Lifecycle exception": (
+                    "### Historical details\n" + legacy_record
+                ),
+            },
+            head_ref="validation/frozen-candidate",
+        )
+        self.assertIn(
+            "lifecycle: legacy exception must declare 'Legacy registration: #47'",
+            nested_legacy_errors,
+        )
+
+        lazy_legacy_errors = _validate_lifecycle_sections(
+            {
+                "Primary issue": (
+                    "Primary issue #47 registers this frozen legacy candidate."
+                ),
+                "Lifecycle exception": (
+                    "> Example-only legacy metadata follows:\n" + legacy_record
+                ),
+            },
+            head_ref="validation/frozen-candidate",
+        )
+        self.assertIn(
+            "lifecycle: legacy exception must declare 'Legacy registration: #47'",
+            lazy_legacy_errors,
+        )
+
+        for marker in ("-", "+", "*", "1.", "1)"):
+            with self.subTest(legacy_marker=marker):
+                lazy_legacy_errors = _validate_lifecycle_sections(
+                    {
+                        "Primary issue": (
+                            "Primary issue #47 registers this frozen legacy "
+                            "candidate."
+                        ),
+                        "Lifecycle exception": (
+                            f"{marker} Example-only legacy metadata follows:\n"
+                            + legacy_record
+                        ),
+                    },
+                    head_ref="validation/frozen-candidate",
+                )
+                self.assertIn(
+                    (
+                        "lifecycle: legacy exception must declare "
+                        "'Legacy registration: #47'"
+                    ),
+                    lazy_legacy_errors,
+                )
+
+        multiline_legacy_errors = _validate_lifecycle_sections(
+            {
+                "Primary issue": (
+                    "Primary issue #47 registers this frozen legacy candidate."
+                ),
+                "Lifecycle exception": (
+                    legacy_record
+                    + "\nNested heading tail\n---"
+                ),
+            },
+            head_ref="validation/frozen-candidate",
+        )
+        self.assertIn(
+            "lifecycle: legacy exception must declare 'Legacy registration: #47'",
+            multiline_legacy_errors,
+        )
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Primary issue": (
+                        "Primary issue #47 registers this frozen legacy candidate."
+                    ),
+                    "Lifecycle exception": (
+                        legacy_record
+                        + "\n\n#### Example only\n"
+                        + legacy_record.replace(
+                            "Reason: frozen identity remains.",
+                            "Reason: nested duplicate remains inert.",
+                        )
+                    ),
+                },
+                head_ref="validation/frozen-candidate",
+            ),
+            [],
+        )
+
+        self.assertEqual(
+            _validate_lifecycle_sections(
+                {
+                    "Primary issue": (
+                        "Primary issue #47 registers this frozen legacy candidate."
+                    ),
+                    "Lifecycle exception": (
+                        legacy_record
+                        + "\n___\nNested heading\n---\n"
+                        + "Reason: nested duplicate remains inert."
+                    ),
+                },
+                head_ref="validation/frozen-candidate",
+            ),
+            [],
         )
 
     def test_lifecycle_rejects_duplicate_legacy_fields(self) -> None:

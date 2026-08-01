@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import json
 import os
 import re
+import string
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Sequence
 
@@ -104,6 +107,9 @@ LIFECYCLE_FIELD_LABEL_PATTERN = re.compile(
 LIFECYCLE_FIELD_PATTERN = re.compile(
     LIFECYCLE_FIELD_LABEL_PATTERN.pattern + r"[ \t]*(?P<value>.*?)[ \t]*"
 )
+COMMONMARK_BACKSLASH_ESCAPE_PATTERN = re.compile(
+    r"""\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])"""
+)
 NON_MERGE_FIELD_LABELS = frozenset(
     {
         "Purpose",
@@ -155,6 +161,15 @@ LIFECYCLE_NEGATED_MERGE_ACTION_PATTERN = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+LIFECYCLE_PROHIBITION_AUXILIARY_FRAGMENT = (
+    r"(?:is|are|was|were|'s|'re|'s\s+been|'ve\s+been|"
+    r"'ll\s+be|'d\s+be|will\s+be|would\s+be|shall\s+be|"
+    r"should\s+be|must\s+be|may\s+be|might\s+be|can\s+be|could\s+be|"
+    r"is\s+being|are\s+being|was\s+being|were\s+being|"
+    r"has\s+been|have\s+been|had\s+been|will\s+have\s+been|"
+    r"remains?|remained|becomes?|became|"
+    r"continues?\s+to\s+be|continued\s+to\s+be)"
+)
 LIFECYCLE_NON_MERGE_STATE_PATTERN = re.compile(
     r"\b(?:"
     r"(?:must|shall|should|will|would|can|could|may)\s+(?:not|never)\s+"
@@ -167,10 +182,31 @@ LIFECYCLE_NON_MERGE_STATE_PATTERN = re.compile(
     r"(?:isn't|aren't|wasn't|weren't)\s+"
     r"(?:(?:being|to\s+be)\s+)?merged|"
     r"(?:is|are|was|were)\s+not\s+intended\s+"
-    r"(?:to\s+merge|for\s+(?:a\s+)?merge|for\s+merging)|"
+    r"(?:to\s+(?:merge|be\s+merged)|for\s+(?:a\s+)?merge|for\s+merging)|"
     r"(?:isn't|aren't|wasn't|weren't)\s+intended\s+"
-    r"(?:to\s+merge|for\s+(?:a\s+)?merge|for\s+merging)|"
-    r"(?:is|are|was|were)\s+intended\s+(?:not|never)\s+to\s+merge|"
+    r"(?:to\s+(?:merge|be\s+merged)|for\s+(?:a\s+)?merge|for\s+merging)|"
+    r"(?:'s|'re)\s+not\s+intended\s+to\s+(?:merge|be\s+merged)|"
+    r"(?:has|have|had)\s+not\s+been\s+intended\s+"
+    r"to\s+(?:merge|be\s+merged)|"
+    r"(?:hasn't|haven't|hadn't)\s+been\s+intended\s+"
+    r"to\s+(?:merge|be\s+merged)|"
+    r"(?:will|would|shall)\s+not\s+be\s+intended\s+"
+    r"to\s+(?:merge|be\s+merged)|"
+    r"(?:won't|wouldn't|shouldn't|mustn't|can't|couldn't|shan't)\s+"
+    r"be\s+intended\s+"
+    r"to\s+(?:merge|be\s+merged)|"
+    r"(?:must|shall|should|can|could|may|might)\s+not\s+be\s+intended\s+"
+    r"to\s+(?:merge|be\s+merged)|"
+    r"(?:is|are|was|were|'s|'re)\s+intended\s+(?:not|never)\s+"
+    r"to\s+(?:merge|be\s+merged)|"
+    r"(?:is|are|was|were|'s|'re)\s+"
+    r"(?:(?:now|currently|presently)\s+)?never\s+intended\s+"
+    r"(?:to\s+(?:merge|be\s+merged)|for\s+(?:a\s+)?merge|for\s+merging)|"
+    r"(?:has|have|had)\s+never\s+been\s+intended\s+"
+    r"(?:to\s+(?:merge|be\s+merged)|for\s+(?:a\s+)?merge|for\s+merging)|"
+    r"(?:will|would|shall|should|must|can|could|may|might)\s+never\s+"
+    r"be\s+intended\s+"
+    r"(?:to\s+(?:merge|be\s+merged)|for\s+(?:a\s+)?merge|for\s+merging)|"
     r"(?:(?:must|shall|should|will|would|can|could|may)\s+)?"
     r"(?:remain|remains|remained|become|becomes|became|stay|stays|stayed)\s+"
     r"unmerged|"
@@ -179,15 +215,27 @@ LIFECYCLE_NON_MERGE_STATE_PATTERN = re.compile(
     r"(?:is|are|was|were)\s+"
     r"(?:designated|classified|declared|marked)\s+(?:as\s+)?"
     r"(?:non[\s-]?merge|unmerged|unmergeable|non[\s-]?mergeable)|"
-    r"(?:is|are|was|were)\s+(?:forbidden|prohibited|barred|disallowed|prevented)"
-    r"\s+from\s+being\s+merged"
+    rf"{LIFECYCLE_PROHIBITION_AUXILIARY_FRAGMENT}\s+"
+    r"(?:(?:still|now|currently|presently)\s+)?"
+    r"(?:forbidden|prohibited|barred|disallowed|prevented|blocked)"
+    r"\s+(?:from\s+being|to\s+be)\s+merged"
     r")\b",
     re.IGNORECASE,
 )
 LIFECYCLE_PROHIBITED_MERGE_ACTION_PATTERN = re.compile(
-    r"\b(?:is|are|was|were)\s+"
-    r"(?:forbidden|prohibited|barred|disallowed|prevented)\s+from\s+merging\b",
+    rf"\b{LIFECYCLE_PROHIBITION_AUXILIARY_FRAGMENT}\s+"
+    r"(?:(?:still|now|currently|presently)\s+)?"
+    r"(?:forbidden|prohibited|barred|disallowed|prevented|blocked)\s+"
+    r"(?:from\s+merging|to\s+merge)\b",
     re.IGNORECASE,
+)
+LIFECYCLE_ATX_HEADING_BOUNDARY_PATTERN = re.compile(
+    r"^ {0,3}#{1,6}(?=[ \t]|$).*$",
+    re.MULTILINE,
+)
+LIFECYCLE_SETEXT_UNDERLINE_PATTERN = re.compile(
+    r"^ {0,3}(?:=+|-+)[ \t]*$",
+    re.MULTILINE,
 )
 LIFECYCLE_REPLACEMENT_COMPARISON_PATTERN = re.compile(
     r"\b(?:instead\s+of|rather\s+than|without)\s+"
@@ -219,7 +267,7 @@ POST_MERGE_QUALIFIER_PATTERN = re.compile(
     r")\b",
     re.IGNORECASE,
 )
-LIFECYCLE_HARD_BOUNDARY_PATTERN = re.compile(r"[.!?;\n]")
+LIFECYCLE_HARD_BOUNDARY_PATTERN = re.compile(r"[.!?;\r\n]")
 LIFECYCLE_COORDINATION_BOUNDARY_PATTERN = re.compile(
     r"(?:,\s*)?\b(?:while|whereas|so|therefore|thus|consequently|because|"
     r"although|though|but|however|yet|then|nevertheless|nonetheless)\b|"
@@ -248,7 +296,8 @@ LIFECYCLE_QUOTATION_PATTERN = re.compile(
 OTHER_CANDIDATE_REFERENCE_PATTERN = re.compile(
     r"\b(?:(?:this|that|the|a|an)\s+)?"
     r"(?:historical|legacy|previous|prior|other|unrelated)\s+"
-    r"(?:candidate(?:s)?|branch(?:es)?|pull[\s-]+request(?:s)?|prs?|changes?)\b|"
+    r"(?:candidate(?:s)?|branch(?:es)?|pull[\s-]+request(?:s)?|prs?|changes?|"
+    r"commits?|revisions?|patch(?:es)?)\b|"
     r"\b(?:pull[\s-]+request|pr)\s*#\s*[1-9][0-9]*\b",
     re.IGNORECASE,
 )
@@ -288,6 +337,9 @@ PLAIN_PROSE_TOKEN_PATTERN = re.compile(
 )
 PLAIN_PROSE_TOKEN_TRIM = ".,;:!?()\"'_*~=-+"
 PLAIN_PROSE_LIST_PATTERN = re.compile(r"(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)")
+LIFECYCLE_LIST_ITEM_PATTERN = re.compile(
+    r" {0,3}(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)"
+)
 INLINE_HTML_TAG_PATTERN = re.compile(
     r"</?[A-Za-z][A-Za-z0-9-]*"
     r"(?:[ \t\r\n]+[A-Za-z_:][A-Za-z0-9_.:-]*"
@@ -626,34 +678,107 @@ def _leading_indentation_columns(line: str) -> int:
     return columns
 
 
+def _is_markdown_blank_line(value: str) -> bool:
+    return not value.strip(" \t")
+
+
+def _commonmark_lines(
+    value: str,
+    *,
+    keepends: bool = False,
+) -> list[str]:
+    lines: list[str] = []
+    position = 0
+    for ending in re.finditer(r"\r\n|\r|\n", value):
+        lines.append(
+            value[position : ending.end()]
+            if keepends
+            else value[position : ending.start()]
+        )
+        position = ending.end()
+    if position < len(value):
+        lines.append(value[position:])
+    return lines
+
+
 def _mask_markdown_code(text: str) -> str:
     """Mask Markdown code while preserving byte offsets and HTML comments."""
     characters = list(text)
-    fence: tuple[str, int] | None = None
+    fence: tuple[tuple[str, int], tuple[str, ...]] | None = None
+    active_containers: tuple[str, ...] = ()
+    paragraph_containers: tuple[str, ...] | None = None
     in_html_comment = False
     offset = 0
 
-    for raw_line in text.splitlines(keepends=True):
+    for raw_line in _commonmark_lines(text, keepends=True):
         line = raw_line.rstrip("\r\n")
-        structural_line = line
+        structural_line, containers = _strip_markdown_container_prefix(line)
+        if active_containers:
+            active_content = _content_inside_markdown_containers(
+                line,
+                active_containers,
+            )
+            if active_content is not None:
+                structural_line = active_content
+                containers = active_containers
+            elif _is_markdown_blank_line(line):
+                structural_line = ""
+            else:
+                active_containers = ()
         content_end = offset + len(line)
 
         if fence is not None:
-            _mask_non_newlines(characters, offset, offset + len(raw_line))
-            if _fence_closing(structural_line, fence):
-                fence = None
-            offset += len(raw_line)
-            continue
+            fence_spec, fence_containers = fence
+            fenced_content = _content_inside_markdown_containers(
+                line,
+                fence_containers,
+            )
+            if (
+                fenced_content is None
+                and _blank_line_continues_list_containers(
+                    structural_line,
+                    containers,
+                    fence_containers,
+                )
+            ):
+                _mask_non_newlines(characters, offset, offset + len(raw_line))
+                active_containers = fence_containers
+                offset += len(raw_line)
+                continue
+            if fenced_content is not None:
+                _mask_non_newlines(characters, offset, offset + len(raw_line))
+                if _fence_closing(fenced_content, fence_spec):
+                    fence = None
+                active_containers = fence_containers
+                paragraph_containers = None
+                offset += len(raw_line)
+                continue
+            fence = None
 
         if not in_html_comment:
             opening = _fence_opening(structural_line)
             if opening is not None:
-                fence = opening
+                fence = opening, containers
                 _mask_non_newlines(characters, offset, offset + len(raw_line))
+                if any(
+                    container.startswith("list:")
+                    for container in containers
+                ):
+                    active_containers = containers
+                paragraph_containers = None
                 offset += len(raw_line)
                 continue
-            if _leading_indentation_columns(structural_line) >= 4:
+            if (
+                _leading_indentation_columns(structural_line) >= 4
+                and paragraph_containers != containers
+            ):
                 _mask_non_newlines(characters, offset, offset + len(raw_line))
+                if any(
+                    container.startswith("list:")
+                    for container in containers
+                ):
+                    active_containers = containers
+                paragraph_containers = None
                 offset += len(raw_line)
                 continue
 
@@ -679,6 +804,23 @@ def _mask_markdown_code(text: str) -> str:
                 index = run_end
                 continue
             index += 1
+        if _is_markdown_blank_line(structural_line):
+            paragraph_containers = None
+        elif (
+            re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", structural_line)
+            or _is_thematic_break_line(structural_line)
+            or re.fullmatch(
+                r"[ \t]{0,3}(?:=+|-+)[ \t]*",
+                structural_line,
+            )
+        ):
+            paragraph_containers = None
+        else:
+            paragraph_containers = containers
+        if any(container.startswith("list:") for container in containers):
+            active_containers = containers
+        elif not _is_markdown_blank_line(line):
+            active_containers = ()
         offset += len(raw_line)
 
     # Resolve inline code in linear time. Outside code, HTML comments suppress
@@ -1040,7 +1182,7 @@ def _plain_prose_words(value: str) -> list[str]:
     bracket_depth = 0
     words: list[str] = []
 
-    for raw_line in comments_masked.splitlines():
+    for raw_line in _commonmark_lines(comments_masked):
         line = raw_line.rstrip("\r")
         if fence is not None:
             if _fence_closing(line, fence):
@@ -1143,54 +1285,785 @@ def _main_source_allowed(head_branch: str) -> bool:
     )
 
 
+def _remove_html_comments_outside_code(value: str) -> str:
+    spans = _html_comment_spans_outside_code(value)
+    if not spans:
+        return value
+    rendered: list[str] = []
+    position = 0
+    for start, end in spans:
+        rendered.append(value[position:start])
+        position = end
+    rendered.append(value[position:])
+    return "".join(rendered)
+
+
+def _normalize_markdown_reference_label(value: str) -> str:
+    rendered = _render_commonmark_character_references(value).casefold()
+    return re.sub(r"[ \t\r\n]+", " ", rendered).strip(" ")
+
+
+def _commonmark_reference_destination_status(value: str) -> str:
+    value = value.replace("\r\n", "\n").replace("\r", "\n")
+    content = value.lstrip(" \t")
+    if not content:
+        return "invalid"
+
+    position = 0
+    if content.startswith("<"):
+        position = 1
+        while position < len(content):
+            character = content[position]
+            if (
+                character == "\\"
+                and position + 1 < len(content)
+                and content[position + 1] in string.punctuation
+            ):
+                position += 2
+                continue
+            if character == ">":
+                position += 1
+                break
+            if character in "<\r\n":
+                return "invalid"
+            position += 1
+        else:
+            return "invalid"
+    else:
+        depth = 0
+        while position < len(content) and content[position] not in " \t\r\n":
+            character = content[position]
+            if (
+                character == "\\"
+                and position + 1 < len(content)
+                and content[position + 1] in string.punctuation
+            ):
+                position += 2
+                continue
+            if (
+                character == "<"
+                or ord(character) < 0x20
+                or ord(character) == 0x7F
+            ):
+                return "invalid"
+            if character == "(":
+                depth += 1
+                if depth > 32:
+                    return "invalid"
+            elif character == ")":
+                if depth == 0:
+                    return "invalid"
+                depth -= 1
+            position += 1
+        if position == 0 or depth:
+            return "invalid"
+
+    remainder = content[position:].strip(" \t")
+    if not remainder:
+        return "valid"
+    closing = {'"': '"', "'": "'", "(": ")"}.get(remainder[0])
+    if closing is None:
+        return "invalid"
+    if re.search(r"\n[ \t]*\n", remainder):
+        return "invalid"
+    position = 1
+    while position < len(remainder):
+        character = remainder[position]
+        if (
+            character == "\\"
+            and position + 1 < len(remainder)
+            and remainder[position + 1] in string.punctuation
+        ):
+            position += 2
+            continue
+        if character == closing:
+            return (
+                "valid"
+                if not remainder[position + 1 :].strip(" \t")
+                else "invalid"
+            )
+        if remainder[0] == "(" and character == "(":
+            return "invalid"
+        position += 1
+    return "incomplete-title"
+
+
+def _valid_commonmark_reference_destination(value: str) -> bool:
+    return _commonmark_reference_destination_status(value) == "valid"
+
+
+def _markdown_list_marker(
+    value: str,
+) -> tuple[str, int | None, int, bool] | None:
+    content = value
+    while True:
+        blockquote = re.match(r"^[ \t]{0,3}>[ \t]?", content)
+        if blockquote is None:
+            break
+        content = content[blockquote.end() :]
+    match = re.match(
+        r"(?P<indent> {0,3})(?P<marker>[-+*]|"
+        r"(?P<number>[0-9]{1,9})[.)])(?P<padding>[ \t]+|$)",
+        content,
+    )
+    if match is None or _is_thematic_break_line(content):
+        return None
+    number = match.group("number")
+    return (
+        (
+            "ordered"
+            if number is not None
+            else "hyphen"
+            if match.group("marker") == "-"
+            else "bullet"
+        ),
+        int(number) if number is not None else None,
+        len(match.group("indent")),
+        _is_markdown_blank_line(content[match.end() :]),
+    )
+
+
+def _strip_markdown_container_prefix(
+    value: str,
+) -> tuple[str, tuple[str, ...]]:
+    content = value
+    containers: list[str] = []
+    while True:
+        blockquote = re.match(r"^[ \t]{0,3}>[ \t]?", content)
+        if blockquote is not None:
+            content = content[blockquote.end() :]
+            containers.append("blockquote")
+            continue
+        list_item = re.match(
+            r" {0,3}(?:[-+*]|[0-9]{1,9}[.)])(?P<padding>[ \t]+)",
+            content,
+        )
+        if list_item is not None and not _is_thematic_break_line(content):
+            marker_end = list_item.start("padding")
+            padding = list_item.group("padding")
+            marker_columns = 0
+            for character in content[:marker_end]:
+                if character == "\t":
+                    marker_columns += 4 - (marker_columns % 4)
+                else:
+                    marker_columns += 1
+            padding_columns = 0
+            for character in padding:
+                width = (
+                    4 - ((marker_columns + padding_columns) % 4)
+                    if character == "\t"
+                    else 1
+                )
+                padding_columns += width
+            indentation = padding_columns if padding_columns <= 4 else 1
+            content = (
+                " " * (padding_columns - indentation)
+                + content[list_item.end("padding") :]
+            )
+            columns = marker_columns + indentation
+            containers.append(f"list:{columns}")
+            continue
+        return content, tuple(containers)
+
+
+def _reference_container_continues(
+    opening: tuple[str, ...],
+    continuation: tuple[str, ...],
+    content: str,
+) -> bool:
+    if continuation == opening:
+        return True
+    missing = opening[len(continuation) :]
+    required_indentation = sum(
+        int(container.partition(":")[2])
+        for container in missing
+        if container.startswith("list:")
+    )
+    return (
+        opening[: len(continuation)] == continuation
+        and bool(missing)
+        and all(container.startswith("list:") for container in missing)
+        and _leading_indentation_columns(content) >= required_indentation
+    )
+
+
+def _blank_line_continues_list_containers(
+    content: str,
+    continuation: tuple[str, ...],
+    opening: tuple[str, ...],
+) -> bool:
+    missing = opening[len(continuation) :]
+    return (
+        _is_markdown_blank_line(content)
+        and opening[: len(continuation)] == continuation
+        and bool(missing)
+        and all(container.startswith("list:") for container in missing)
+    )
+
+
+def _content_inside_markdown_containers(
+    value: str,
+    containers: tuple[str, ...],
+) -> str | None:
+    content = value
+    for container in containers:
+        if container == "blockquote":
+            blockquote = re.match(r"^[ \t]{0,3}>[ \t]?", content)
+            if blockquote is None:
+                return None
+            content = content[blockquote.end() :]
+            continue
+        if not container.startswith("list:"):
+            return None
+        required = int(container.partition(":")[2])
+        columns = 0
+        position = 0
+        while position < len(content) and content[position] in " \t":
+            if content[position] == "\t":
+                columns += 4 - (columns % 4)
+            else:
+                columns += 1
+            position += 1
+            if columns >= required:
+                break
+        if columns < required:
+            return None
+        content = content[position:]
+    return content
+
+
+def _markdown_link_label_fragment(
+    value: str,
+    *,
+    starts_label: bool,
+) -> tuple[str, str, str | None]:
+    if starts_label:
+        opening = re.match(r"^[ \t]{0,3}\[", value)
+        if opening is None:
+            return "invalid", "", None
+        start = opening.end()
+    else:
+        start = 0
+
+    position = start
+    while position < len(value):
+        character = value[position]
+        if (
+            character == "\\"
+            and position + 1 < len(value)
+            and value[position + 1] in string.punctuation
+        ):
+            position += 2
+            continue
+        if character == "[":
+            return "invalid", "", None
+        if character == "]":
+            if position + 1 < len(value) and value[position + 1] == ":":
+                return (
+                    "closed",
+                    value[start:position],
+                    value[position + 2 :],
+                )
+            return "invalid", "", None
+        position += 1
+    return "open", value[start:], None
+
+
+def _markdown_reference_labels(
+    value: str,
+    *,
+    definition_spans: list[tuple[int, int]] | None = None,
+) -> frozenset[str]:
+    comments_masked = _mask_html_comments_outside_code(value)
+    lines: list[tuple[str | None, tuple[str, ...]]] = []
+    fence: tuple[tuple[str, int], tuple[str, ...]] | None = None
+    active_containers: tuple[str, ...] = ()
+    for raw_line in _commonmark_lines(comments_masked):
+        content, containers = _strip_markdown_container_prefix(raw_line)
+        if active_containers:
+            active_content = _content_inside_markdown_containers(
+                raw_line,
+                active_containers,
+            )
+            if active_content is not None:
+                content = active_content
+                containers = active_containers
+            elif _is_markdown_blank_line(raw_line):
+                content = ""
+            else:
+                active_containers = ()
+        if fence is not None:
+            fence_spec, fence_containers = fence
+            fenced_content = _content_inside_markdown_containers(
+                raw_line,
+                fence_containers,
+            )
+            if (
+                fenced_content is None
+                and _blank_line_continues_list_containers(
+                    content,
+                    containers,
+                    fence_containers,
+                )
+            ):
+                lines.append((None, containers))
+                active_containers = fence_containers
+                continue
+            if fenced_content is None:
+                fence = None
+            else:
+                if _fence_closing(fenced_content, fence_spec):
+                    fence = None
+                lines.append((None, containers))
+                active_containers = fence_containers
+                continue
+        opening = _fence_opening(content)
+        if opening is not None:
+            fence = opening, containers
+            lines.append((None, containers))
+            if any(
+                container.startswith("list:")
+                for container in containers
+            ):
+                active_containers = containers
+            continue
+        lines.append((content, containers))
+        if any(container.startswith("list:") for container in containers):
+            active_containers = containers
+        elif not _is_markdown_blank_line(raw_line):
+            active_containers = ()
+
+    labels: set[str] = set()
+    paragraph_containers: tuple[str, ...] | None = None
+    definition_continuation_end = -1
+    raw_lines_with_ends = _commonmark_lines(comments_masked, keepends=True)
+    raw_lines = _commonmark_lines(comments_masked)
+    line_offsets: list[int] = []
+    line_offset = 0
+    for raw_line in raw_lines_with_ends:
+        line_offsets.append(line_offset)
+        line_offset += len(raw_line)
+    for index, (content, containers) in enumerate(lines):
+        if index <= definition_continuation_end:
+            continue
+        if content is None:
+            paragraph_containers = None
+            continue
+        if _is_markdown_blank_line(content):
+            empty_list_marker = _markdown_list_marker(raw_lines[index])
+            if (
+                empty_list_marker is not None
+                and empty_list_marker[3]
+                and paragraph_containers is not None
+            ):
+                marker_kind = empty_list_marker[0]
+                marker_indentation = empty_list_marker[2]
+                prior_list_indentation = sum(
+                    int(container.partition(":")[2])
+                    for container in paragraph_containers
+                    if container.startswith("list:")
+                )
+                if (
+                    marker_kind == "hyphen"
+                    or (
+                        prior_list_indentation > 0
+                        and marker_indentation < prior_list_indentation
+                    )
+                ):
+                    paragraph_containers = None
+            else:
+                paragraph_containers = None
+            continue
+        if _leading_indentation_columns(content) >= 4:
+            continue
+        label_status, label_fragment, fragment_tail = (
+            _markdown_link_label_fragment(
+                content,
+                starts_label=True,
+            )
+        )
+        label: str | None = None
+        tail: str | None = None
+        destination_index = index + 1
+        if label_status == "closed":
+            label = label_fragment
+            tail = fragment_tail
+            if len(label) > 999:
+                label = None
+                tail = None
+        elif label_status == "open":
+            label_parts = [label_fragment]
+            raw_label_length = len(label_fragment)
+            for continuation_index in range(index + 1, len(lines)):
+                continuation, continuation_containers = lines[
+                    continuation_index
+                ]
+                if (
+                    continuation is None
+                    or _is_markdown_blank_line(continuation)
+                    or not _reference_container_continues(
+                        containers,
+                        continuation_containers,
+                        continuation,
+                    )
+                ):
+                    break
+                (
+                    continuation_status,
+                    continuation_fragment,
+                    continuation_tail,
+                ) = _markdown_link_label_fragment(
+                    continuation,
+                    starts_label=False,
+                )
+                if continuation_status == "invalid":
+                    break
+                raw_label_length += 1 + len(continuation_fragment)
+                if raw_label_length > 999:
+                    break
+                label_parts.append(continuation_fragment)
+                if continuation_status == "closed":
+                    label = "\n".join(label_parts)
+                    tail = continuation_tail
+                    destination_index = continuation_index + 1
+                    break
+        if label is not None and not re.search(r"[^ \t\r\n]", label):
+            label = None
+            tail = None
+        if label is None or tail is None:
+            atx_heading = bool(
+                re.match(r"^[ \t]{0,3}#{1,6}(?:[ \t]+|$)", content)
+            )
+            setext_heading = bool(
+                re.fullmatch(r"[ \t]{0,3}(?:=+|-+)[ \t]*", content)
+                and paragraph_containers == containers
+            )
+            empty_list_marker = _markdown_list_marker(raw_lines[index])
+            if atx_heading or setext_heading or _is_thematic_break_line(content):
+                paragraph_containers = None
+            elif (
+                empty_list_marker is not None
+                and empty_list_marker[3]
+            ):
+                marker_indentation = empty_list_marker[2]
+                prior_list_indentation = sum(
+                    int(container.partition(":")[2])
+                    for container in (paragraph_containers or ())
+                    if container.startswith("list:")
+                )
+                if (
+                    paragraph_containers is None
+                    or (
+                        prior_list_indentation > 0
+                        and marker_indentation < prior_list_indentation
+                    )
+                ):
+                    paragraph_containers = None
+            else:
+                paragraph_containers = containers
+            continue
+        _, explicit_containers = _strip_markdown_container_prefix(
+            raw_lines[index]
+        )
+        list_marker = _markdown_list_marker(raw_lines[index])
+        starts_new_list_item = False
+        if list_marker is not None:
+            (
+                marker_kind,
+                start_number,
+                marker_indentation,
+                _empty_marker,
+            ) = list_marker
+            prior_list_indentation = sum(
+                int(container.partition(":")[2])
+                for container in (paragraph_containers or ())
+                if container.startswith("list:")
+            )
+            starts_new_list_item = (
+                marker_kind in {"bullet", "hyphen"}
+                or start_number == 1
+                or (
+                    prior_list_indentation > 0
+                    and marker_indentation < prior_list_indentation
+                )
+            )
+        starts_new_container = (
+            list_marker is None
+            and bool(explicit_containers)
+            and explicit_containers != paragraph_containers
+        )
+        if paragraph_containers is not None and not (
+            starts_new_list_item or starts_new_container
+        ):
+            paragraph_containers = containers
+            continue
+        destination = tail
+        continuation_index = destination_index
+        if _is_markdown_blank_line(destination) and continuation_index < len(lines):
+            destination, destination_containers = lines[destination_index]
+            if (
+                destination is None
+                or _is_markdown_blank_line(destination)
+                or not _reference_container_continues(
+                    containers,
+                    destination_containers,
+                    destination,
+                )
+            ):
+                continue
+            continuation_index += 1
+        status = _commonmark_reference_destination_status(destination)
+        while (
+            status == "incomplete-title"
+            and continuation_index < len(lines)
+        ):
+            continuation, continuation_containers = lines[continuation_index]
+            if (
+                continuation is None
+                or _is_markdown_blank_line(continuation)
+                or not _reference_container_continues(
+                    containers,
+                    continuation_containers,
+                    continuation,
+                )
+            ):
+                break
+            destination += "\n" + continuation
+            continuation_index += 1
+            status = _commonmark_reference_destination_status(destination)
+        has_destination = status == "valid"
+        if has_destination:
+            labels.add(_normalize_markdown_reference_label(label))
+            definition_continuation_end = continuation_index - 1
+            if definition_spans is not None:
+                definition_spans.append(
+                    (
+                        line_offsets[index],
+                        (
+                            line_offsets[continuation_index]
+                            if continuation_index < len(line_offsets)
+                            else len(value)
+                        ),
+                    )
+                )
+            paragraph_containers = None
+        else:
+            paragraph_containers = containers
+    return frozenset(labels)
+
+
+def _is_default_ignorable_code_point(character: str) -> bool:
+    code_point = ord(character)
+    return (
+        code_point in {0x00AD, 0x034F, 0x061C, 0x3164, 0xFEFF, 0xFFA0}
+        or 0x115F <= code_point <= 0x1160
+        or 0x17B4 <= code_point <= 0x17B5
+        or 0x180B <= code_point <= 0x180F
+        or 0x200B <= code_point <= 0x200F
+        or 0x202A <= code_point <= 0x202E
+        or 0x2060 <= code_point <= 0x206F
+        or 0xFE00 <= code_point <= 0xFE0F
+        or 0xFFF0 <= code_point <= 0xFFF8
+        or 0x1BCA0 <= code_point <= 0x1BCA3
+        or 0x1D173 <= code_point <= 0x1D17A
+        or 0xE0000 <= code_point <= 0xE0FFF
+    )
+
+
+def _render_lifecycle_label_line(
+    original: str,
+    operative: str,
+    reference_labels: frozenset[str],
+) -> str:
+    if not operative.strip():
+        return operative
+    escaped_markup: list[str] = []
+
+    def protect_markup_escape(match: re.Match[str]) -> str:
+        escaped_markup.append(match.group(1))
+        return f"\ue000{len(escaped_markup) - 1}\ue001"
+
+    def protect_bracket_entity(match: re.Match[str]) -> str:
+        character = html.unescape(match.group(0))
+        if character not in "[]":
+            return match.group(0)
+        escaped_markup.append(character)
+        return f"\ue000{len(escaped_markup) - 1}\ue001"
+
+    def restore_markup_escapes(value: str) -> str:
+        for index, character in enumerate(escaped_markup):
+            value = value.replace(f"\ue000{index}\ue001", character)
+        return value
+
+    protected = re.sub(
+        r"\\([*_\[\]~`])",
+        protect_markup_escape,
+        original,
+    )
+    protected = MARKDOWN_ENTITY_PATTERN.sub(
+        protect_bracket_entity,
+        protected,
+    )
+    rendered = _operative_lifecycle_prose(
+        _remove_html_comments_outside_code(protected)
+    )
+    inline_link = re.compile(r"\[([^\]\n]+)\]\([^)\n]*\)")
+    reference_link = re.compile(r"\[([^\]\n]+)\]\[([^\[\]\n]*)\]")
+    shortcut_link = re.compile(r"\[([^\[\]\n]+)\]")
+    previous = None
+    while previous != rendered:
+        previous = rendered
+        rendered = inline_link.sub(r"\1", rendered)
+        rendered = reference_link.sub(
+            lambda match: (
+                match.group(1)
+                if _normalize_markdown_reference_label(
+                    restore_markup_escapes(
+                        match.group(2) or match.group(1)
+                    )
+                )
+                in reference_labels
+                else match.group(0)
+            ),
+            rendered,
+        )
+        rendered = shortcut_link.sub(
+            lambda match: (
+                match.group(1)
+                if _normalize_markdown_reference_label(
+                    restore_markup_escapes(match.group(1))
+                )
+                in reference_labels
+                else match.group(0)
+            ),
+            rendered,
+        )
+        for emphasis in (
+            re.compile(r"\*\*(?=\S)(.+?\S)\*\*"),
+            re.compile(r"__(?=\S)(.+?\S)__"),
+            re.compile(r"~~(?=\S)(.+?\S)~~"),
+            re.compile(r"\*(?=\S)(.+?\S)\*"),
+            re.compile(r"_(?=\S)(.+?\S)_"),
+        ):
+            rendered = emphasis.sub(r"\1", rendered)
+    return restore_markup_escapes(rendered)
+
+
 def _parse_lifecycle_fields(
     value: str,
     allowed_labels: frozenset[str] | None = None,
+    *,
+    reference_labels: frozenset[str] | None = None,
+    location: str | None = None,
+    errors: list[str] | None = None,
 ) -> dict[str, list[str]]:
     """Return canonical column-zero lifecycle fields from reviewable prose.
 
     Quoted and blockquoted examples are masked before structural recognition.
-    Acceptance paths provide an allowed-label set and require exactly one field
-    on each physical line. Without an allowed-label set, this helper retains
-    bounded same-line tokenization for diagnostics, but still requires the first
-    exact canonical label at column zero. Explanatory prefixes, parentheticals,
-    and later label-like substrings therefore cannot lend metadata to a record.
+    Every canonical metadata line must contain exactly one visible canonical
+    lifecycle label. Explanatory prefixes, parentheticals, and later label-like
+    substrings therefore cannot lend metadata to a record or hide behind the
+    first recognized value.
     """
     fields: dict[str, list[str]] = {}
-    operative = _operative_lifecycle_prose(value)
-    original_lines = value.splitlines()
-    operative_lines = operative.splitlines()
-    for original, visible in zip(original_lines, operative_lines):
-        if allowed_labels is None:
-            matches = list(LIFECYCLE_FIELD_LABEL_PATTERN.finditer(visible))
-            if not matches or matches[0].start() != 0:
-                continue
-            if not original.startswith(f"{matches[0].group('label')}:"):
-                continue
-            for index, label_match in enumerate(matches):
-                end = (
-                    matches[index + 1].start()
-                    if index + 1 < len(matches)
-                    else len(original)
+    if reference_labels is None:
+        reference_labels = _markdown_reference_labels(value)
+    operative = _operative_lifecycle_prose(
+        _reviewable_markdown_structure(value),
+        mask_list_items=True,
+    )
+    original_lines = _commonmark_lines(value)
+    operative_lines = _commonmark_lines(operative)
+    for line_number, (original, visible) in enumerate(
+        zip(original_lines, operative_lines),
+        start=1,
+    ):
+        rendered_visible = _render_lifecycle_label_line(
+            original,
+            visible,
+            reference_labels,
+        )
+        matches = list(LIFECYCLE_FIELD_LABEL_PATTERN.finditer(rendered_visible))
+        if not matches or matches[0].start() != 0:
+            continue
+        label = matches[0].group("label")
+        if len(matches) != 1:
+            if errors is not None:
+                label_names = ", ".join(
+                    f"'{match.group('label')}'" for match in matches
                 )
-                field_value = original[label_match.end() : end].strip()
-                fields.setdefault(
-                    label_match.group("label").lower(),
-                    [],
-                ).append(field_value)
-            continue
-        match = LIFECYCLE_FIELD_PATTERN.fullmatch(visible)
-        if match is None:
-            continue
-        label = match.group("label")
-        if allowed_labels is not None and label not in allowed_labels:
+                errors.append(
+                    f"lifecycle: {location or 'metadata'} line {line_number} has "
+                    f"{len(matches)} visible canonical labels ({label_names}); "
+                    "expected exactly one canonical field per physical line"
+                )
             continue
         prefix = f"{label}:"
         if not original.startswith(prefix):
             continue
-        field_value = original[len(prefix) :].strip()
+        if allowed_labels is not None and label not in allowed_labels:
+            continue
+        match = LIFECYCLE_FIELD_PATTERN.fullmatch(visible)
+        if match is None:
+            continue
+        field_value = rendered_visible[len(prefix) :].strip()
+        if not any(
+            not character.isspace()
+            and unicodedata.category(character)
+            not in {"Cc", "Cf", "Cs", "Co", "Cn"}
+            and not _is_default_ignorable_code_point(character)
+            for character in field_value
+        ):
+            field_value = ""
         fields.setdefault(label.lower(), []).append(field_value)
     return fields
+
+
+def _direct_lifecycle_section_body(value: str) -> str:
+    """Return metadata-bearing prose before the first nested Markdown heading."""
+    reviewable = _reviewable_markdown_structure(value)
+    boundaries: list[int] = []
+    reviewable_offset = 0
+    for reviewable_line in _commonmark_lines(reviewable, keepends=True):
+        content = reviewable_line.rstrip("\r\n")
+        if re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", content):
+            boundaries.append(reviewable_offset)
+        reviewable_offset += len(reviewable_line)
+    comments_masked = _mask_html_comments_outside_code(value)
+    original_lines = _commonmark_lines(comments_masked, keepends=True)
+    reviewable_lines = _commonmark_lines(reviewable, keepends=True)
+    line_offsets: list[int] = []
+    offset = 0
+    for line in original_lines:
+        line_offsets.append(offset)
+        offset += len(line)
+    for line_index, reviewable_line in enumerate(reviewable_lines):
+        line = reviewable_line.rstrip("\r\n")
+        if (
+            line_index == 0
+            or LIFECYCLE_SETEXT_UNDERLINE_PATTERN.fullmatch(line) is None
+        ):
+            continue
+        block_start = line_index - 1
+        while block_start >= 0:
+            candidate = original_lines[block_start].rstrip("\r\n")
+            if (
+                _is_markdown_blank_line(candidate)
+                or _leading_indentation_columns(candidate) >= 4
+                or re.match(r"^[ \t]{0,3}>", candidate)
+                or _fence_opening(candidate) is not None
+                or re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", candidate)
+                or _is_thematic_break_line(candidate)
+                or PLAIN_PROSE_LIST_PATTERN.match(candidate)
+            ):
+                break
+            block_start -= 1
+        heading_start = block_start + 1
+        if heading_start < line_index:
+            boundaries.append(line_offsets[heading_start])
+    if not boundaries:
+        return value
+    return value[: min(boundaries)]
 
 
 def _field_values(fields: dict[str, list[str]], label: str) -> list[str]:
@@ -1249,27 +2122,415 @@ def _has_exact_sha_field(fields: dict[str, list[str]], label: str) -> str | None
     return match.group(0) if match is not None else None
 
 
-def _operative_lifecycle_prose(value: str) -> str:
-    """Mask quoted/code-style examples while preserving operative prose offsets."""
+def _render_commonmark_character_references(value: str) -> str:
+    escaped: list[str] = []
+
+    def protect_escape(match: re.Match[str]) -> str:
+        escaped.append(match.group(1))
+        return f"\uf000{len(escaped) - 1}\uf001"
+
+    protected = COMMONMARK_BACKSLASH_ESCAPE_PATTERN.sub(protect_escape, value)
+    rendered = MARKDOWN_ENTITY_PATTERN.sub(
+        lambda match: html.unescape(match.group(0)),
+        protected,
+    )
+    for index, character in enumerate(escaped):
+        rendered = rendered.replace(f"\uf000{index}\uf001", character)
+    return rendered
+
+
+def _is_thematic_break_line(value: str) -> bool:
+    return bool(
+        re.fullmatch(
+            r" {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|"
+            r"(?:_[ \t]*){3,})",
+            value,
+        )
+    )
+
+
+def _render_commonmark_emphasis(value: str) -> str:
+    escaped: list[str] = []
+
+    def protect_escape(match: re.Match[str]) -> str:
+        escaped.append(match.group(1))
+        return f"\uf100{len(escaped) - 1}\uf101"
+
+    rendered = re.sub(r"\\([*_])", protect_escape, value)
+    previous = None
+    while previous != rendered:
+        previous = rendered
+        for emphasis in (
+            re.compile(
+                r"\*\*(?=\S)((?:(?!\r?\n[ \t]*\r?\n).)+?\S)\*\*",
+                re.DOTALL,
+            ),
+            re.compile(
+                r"__(?=\S)((?:(?!\r?\n[ \t]*\r?\n).)+?\S)__",
+                re.DOTALL,
+            ),
+            re.compile(
+                r"\*(?=\S)((?:(?!\r?\n[ \t]*\r?\n).)+?\S)\*",
+                re.DOTALL,
+            ),
+            re.compile(
+                r"_(?=\S)((?:(?!\r?\n[ \t]*\r?\n).)+?\S)_",
+                re.DOTALL,
+            ),
+        ):
+            rendered = emphasis.sub(r"\1", rendered)
+    for index, character in enumerate(escaped):
+        rendered = rendered.replace(f"\uf100{index}\uf101", character)
+    return rendered
+
+
+def _render_commonmark_links(
+    value: str,
+    reference_labels: frozenset[str],
+) -> str:
+    """Render visible link labels without lending prose from invalid links."""
+
+    def is_unescaped(position: int) -> bool:
+        backslashes = 0
+        cursor = position - 1
+        while cursor >= 0 and value[cursor] == "\\":
+            backslashes += 1
+            cursor -= 1
+        return backslashes % 2 == 0
+
+    def label_end(opening: int) -> int | None:
+        depth = 1
+        position = opening + 1
+        while position < len(value):
+            character = value[position]
+            if (
+                character == "\\"
+                and position + 1 < len(value)
+                and value[position + 1] in string.punctuation
+            ):
+                position += 2
+                continue
+            if character == "[":
+                depth += 1
+            elif character == "]":
+                depth -= 1
+                if depth == 0:
+                    return position
+            elif character in "\r\n" and re.match(
+                r"\r?\n[ \t]*\r?\n",
+                value[position:],
+            ):
+                return None
+            position += 1
+        return None
+
+    def inline_destination_end(opening: int) -> int | None:
+        position = opening + 1
+        while position < len(value):
+            if (
+                value[position] == "\\"
+                and position + 1 < len(value)
+                and value[position + 1] in string.punctuation
+            ):
+                position += 2
+                continue
+            if value[position] == ")":
+                destination = value[opening + 1 : position]
+                if (
+                    not destination.strip(" \t\r\n")
+                    or _valid_commonmark_reference_destination(destination)
+                ):
+                    return position + 1
+            if re.match(r"\r?\n[ \t]*\r?\n", value[position:]):
+                return None
+            position += 1
+        return None
+
+    rendered: list[str] = []
+    position = 0
+    while position < len(value):
+        opening = value.find("[", position)
+        if opening < 0:
+            rendered.append(value[position:])
+            break
+        prefix = value[position:opening]
+        if not is_unescaped(opening):
+            rendered.append(prefix)
+            rendered.append("[")
+            position = opening + 1
+            continue
+        is_image = (
+            opening > 0
+            and value[opening - 1] == "!"
+            and is_unescaped(opening - 1)
+        )
+        closing = label_end(opening)
+        if is_image and closing is not None:
+            image_end = closing + 1
+            label = value[opening + 1 : closing]
+            suffix = closing + 1
+            if suffix < len(value) and value[suffix] == "(":
+                inline_end = inline_destination_end(suffix)
+                if inline_end is not None:
+                    image_end = inline_end
+            elif suffix < len(value) and value[suffix] == "[":
+                reference_end = label_end(suffix)
+                if reference_end is not None:
+                    reference = value[suffix + 1 : reference_end] or label
+                    if (
+                        len(reference) <= 999
+                        and _normalize_markdown_reference_label(reference)
+                        in reference_labels
+                    ):
+                        image_end = reference_end + 1
+            elif (
+                len(label) <= 999
+                and _normalize_markdown_reference_label(label)
+                in reference_labels
+            ):
+                image_end = closing + 1
+            rendered.append(prefix[:-1])
+            rendered.append(
+                "".join(
+                    character if character in "\r\n" else " "
+                    for character in value[opening - 1 : image_end]
+                )
+            )
+            position = image_end
+            continue
+        rendered.append(prefix)
+        if is_image:
+            rendered.append("[")
+            position = opening + 1
+            continue
+        if closing is None or (
+            closing + 1 < len(value) and value[closing + 1] == ":"
+        ):
+            rendered.append("[")
+            position = opening + 1
+            continue
+
+        label = value[opening + 1 : closing]
+        link_end: int | None = None
+        suffix = closing + 1
+        if suffix < len(value) and value[suffix] == "(":
+            link_end = inline_destination_end(suffix)
+        elif suffix < len(value) and value[suffix] == "[":
+            reference_end = label_end(suffix)
+            if reference_end is not None:
+                reference = value[suffix + 1 : reference_end] or label
+                if (
+                    len(reference) <= 999
+                    and _normalize_markdown_reference_label(reference)
+                    in reference_labels
+                ):
+                    link_end = reference_end + 1
+        elif (
+            len(label) <= 999
+            and _normalize_markdown_reference_label(label) in reference_labels
+        ):
+            link_end = closing + 1
+
+        if link_end is None:
+            rendered.append("[")
+            position = opening + 1
+            continue
+        rendered.append(label)
+        position = link_end
+    return "".join(rendered)
+
+
+def _mask_non_link_bracket_text(value: str) -> str:
+    """Mask bracketed literals left after valid links have been rendered."""
+    tokens: list[tuple[int, int, str]] = []
+    position = 0
+    while position < len(value):
+        if value[position] in "[]":
+            tokens.append((position, position + 1, value[position]))
+            position += 1
+            continue
+        entity = MARKDOWN_ENTITY_PATTERN.match(value, position)
+        if entity is not None:
+            rendered = html.unescape(entity.group(0))
+            backslashes = 0
+            cursor = position - 1
+            while cursor >= 0 and value[cursor] == "\\":
+                backslashes += 1
+                cursor -= 1
+            if rendered in "[]" and backslashes % 2 == 0:
+                tokens.append((position, entity.end(), rendered))
+            position = entity.end()
+            continue
+        position += 1
+
     characters = list(value)
+    openings: list[tuple[int, int, int]] = []
+    for start, end, bracket in tokens:
+        while openings and start >= openings[-1][2]:
+            openings.pop()
+        if bracket == "[":
+            openings.append(
+                (start, end, _markdown_inline_block_end(value, start))
+            )
+            continue
+        if not openings:
+            continue
+        opening_start, _opening_end, _block_end = openings.pop()
+        if end < len(value) and value[end] == ":":
+            continue
+        _mask_non_newlines(characters, opening_start, end)
+    return "".join(characters)
+
+
+def _markdown_inline_block_end(value: str, position: int) -> int:
     offset = 0
-    for raw_line in value.splitlines(keepends=True):
-        line = raw_line.rstrip("\r\n")
-        if re.match(r"^[ \t]{0,3}>", line):
-            _mask_non_newlines(characters, offset, offset + len(raw_line))
+    containing_line_seen = False
+    for raw_line in _commonmark_lines(value, keepends=True):
+        line_start = offset
         offset += len(raw_line)
-    quoted = "".join(characters)
-    for match in LIFECYCLE_QUOTATION_PATTERN.finditer(quoted):
-        for index in range(match.start(), match.end()):
-            if characters[index] not in "\r\n.!?;":
-                characters[index] = " "
-    return (
-        "".join(characters)
+        if not containing_line_seen:
+            if position < offset or offset == len(value):
+                containing_line_seen = True
+            continue
+        line = raw_line.rstrip("\r\n")
+        list_marker = _markdown_list_marker(line)
+        list_interrupts = bool(
+            list_marker is not None
+            and not list_marker[3]
+            and (
+                list_marker[0] != "ordered"
+                or list_marker[1] == 1
+            )
+        )
+        if (
+            _is_markdown_blank_line(line)
+            or re.match(r"^[ \t]{0,3}>[ \t]?", line)
+            or list_interrupts
+            or _fence_opening(line) is not None
+            or re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", line)
+            or _is_thematic_break_line(line)
+            or re.fullmatch(r"[ \t]{0,3}(?:=+|-+)[ \t]*", line)
+            or _leading_indentation_columns(line) >= 4
+        ):
+            return line_start
+    return len(value)
+
+
+def _mask_gfm_strikethrough(value: str) -> str:
+    characters = list(value)
+
+    def unescaped(position: int) -> bool:
+        backslashes = 0
+        cursor = position - 1
+        while cursor >= 0 and value[cursor] == "\\":
+            backslashes += 1
+            cursor -= 1
+        return backslashes % 2 == 0
+
+    position = 0
+    while position + 1 < len(value):
+        if not (
+            value[position : position + 2] == "~~"
+            and unescaped(position)
+            and position + 2 < len(value)
+            and not value[position + 2].isspace()
+        ):
+            position += 1
+            continue
+        block_end = _markdown_inline_block_end(value, position)
+        closing = position + 2
+        while closing + 1 < block_end:
+            if (
+                value[closing : closing + 2] == "~~"
+                and unescaped(closing)
+                and not value[closing - 1].isspace()
+            ):
+                _mask_non_newlines(characters, position, closing + 2)
+                position = closing + 2
+                break
+            closing += 1
+        else:
+            position += 2
+    return "".join(characters)
+
+
+def _operative_lifecycle_prose(
+    value: str,
+    *,
+    mask_list_items: bool = False,
+    mask_non_link_brackets: bool = False,
+) -> str:
+    """Mask quoted/code-style examples while preserving operative prose offsets."""
+    reference_definition_spans: list[tuple[int, int]] = []
+    reference_labels = _markdown_reference_labels(
+        value,
+        definition_spans=reference_definition_spans,
+    )
+    value = _reviewable_markdown_structure(value)
+    characters = list(value)
+    for start, end in reference_definition_spans:
+        _mask_non_newlines(characters, start, end)
+    offset = 0
+    lazy_container_paragraph = False
+    for raw_line in _commonmark_lines(value, keepends=True):
+        line = raw_line.rstrip("\r\n")
+        blockquote = re.match(r"^[ \t]{0,3}>[ \t]?", line)
+        list_item = LIFECYCLE_LIST_ITEM_PATTERN.match(line)
+        mask_list_item = (
+            mask_list_items
+            and list_item is not None
+            and not _is_thematic_break_line(line)
+        )
+        if blockquote is not None or mask_list_item:
+            _mask_non_newlines(characters, offset, offset + len(raw_line))
+            marker_end = (
+                blockquote.end() if blockquote is not None else list_item.end()
+            )
+            content = line[marker_end:]
+            lazy_container_paragraph = (
+                not _is_markdown_blank_line(content)
+            ) and not (
+                _fence_opening(content) is not None
+                or re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", content)
+                or PLAIN_PROSE_LIST_PATTERN.match(content)
+            )
+        elif lazy_container_paragraph and not _is_markdown_blank_line(line):
+            interrupts_paragraph = bool(
+                _fence_opening(line) is not None
+                or re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", line)
+                or _is_thematic_break_line(line)
+                or LIFECYCLE_LIST_ITEM_PATTERN.match(line)
+                or _leading_indentation_columns(line) >= 4
+            )
+            if not interrupts_paragraph:
+                _mask_non_newlines(characters, offset, offset + len(raw_line))
+            else:
+                lazy_container_paragraph = False
+        else:
+            lazy_container_paragraph = False
+        offset += len(raw_line)
+    quoted = _render_commonmark_emphasis(
+        _mask_gfm_strikethrough("".join(characters))
+    )
+    quoted = _render_commonmark_links(
+        quoted,
+        reference_labels,
+    )
+    if mask_non_link_brackets:
+        quoted = _mask_non_link_bracket_text(quoted)
+    quoted = (
+        _render_commonmark_character_references(quoted)
         .replace("\u2019", "'")
         .replace("\u2018", "'")
         .replace("\u2010", "-")
         .replace("\u2011", "-")
     )
+    characters = list(quoted)
+    for match in LIFECYCLE_QUOTATION_PATTERN.finditer(quoted):
+        for index in range(match.start(), match.end()):
+            if characters[index] not in "\r\n.!?;":
+                characters[index] = " "
+    return "".join(characters)
 
 
 def _current_candidate_reference_pattern(
@@ -1277,18 +2538,23 @@ def _current_candidate_reference_pattern(
 ) -> re.Pattern[str]:
     pr_number = context.get("pr_number")
     head_ref = context.get("head_ref")
+    head_sha = context.get("head_sha")
     alternatives = [
         (
             r"\b(?:this|these|current|the\s+current)\s+"
-            r"(?:(?:source|temporary|tracking|candidate|validation|feature)\s+){0,3}"
-            r"(?:candidate(?:s)?|branch(?:es)?|changes?|"
+            r"(?:(?:source|temporary|tracking|candidate|validation|feature|"
+            r"head|exact)\s+){0,3}"
+            r"(?:candidate(?:s)?|branch(?:es)?|changes?|commits?|revisions?|"
+            r"patch(?:es)?|"
             r"pull[\s-]+request(?:s)?|prs?)\b"
         ),
         (
             r"\bthe\s+"
             r"(?!(?:historical|legacy|previous|prior|other|unrelated)\b)"
-            r"(?:(?:source|temporary|tracking|candidate|validation|feature)\s+){0,3}"
-            r"(?:candidate(?:s)?|branch(?:es)?|changes?|"
+            r"(?:(?:source|temporary|tracking|candidate|validation|feature|"
+            r"head|exact)\s+){0,3}"
+            r"(?:candidate(?:s)?|branch(?:es)?|changes?|commits?|revisions?|"
+            r"patch(?:es)?|"
             r"pull[\s-]+request(?:s)?|prs?)\b"
         ),
     ]
@@ -1300,17 +2566,26 @@ def _current_candidate_reference_pattern(
         alternatives.append(
             rf"(?<![A-Za-z0-9_.-]){re.escape(head_ref)}(?![A-Za-z0-9_.-])"
         )
+    if isinstance(head_sha, str) and re.fullmatch(
+        r"[0-9A-Fa-f]{40}", head_sha
+    ):
+        alternatives.append(
+            rf"(?<![0-9A-Fa-f]){re.escape(head_sha)}(?![0-9A-Fa-f])"
+        )
     return re.compile("(?:" + "|".join(alternatives) + ")", re.IGNORECASE)
 
 
 def _paragraph_start(value: str, position: int) -> int:
-    blank_line = max(
-        value.rfind("\n\n", 0, position),
-        value.rfind("\r\n\r\n", 0, position),
-    )
-    heading = value.rfind("\n## ", 0, position)
-    blank_start = blank_line + 2 if blank_line >= 0 else 0
-    heading_start = heading + 1 if heading >= 0 else 0
+    blank_start = 0
+    heading_start = 0
+    offset = 0
+    for raw_line in _commonmark_lines(value[:position], keepends=True):
+        line = raw_line.rstrip("\r\n")
+        if _is_markdown_blank_line(line):
+            blank_start = offset + len(raw_line)
+        elif re.match(r"^ {0,3}#{1,6}(?=[ \t]|$)", line):
+            heading_start = offset
+        offset += len(raw_line)
     return max(0, position - 360, blank_start, heading_start)
 
 
@@ -1345,7 +2620,10 @@ def _is_descriptive_occurrence(value: str, position: int) -> bool:
 
 def _lifecycle_intentions(value: str) -> tuple[bool, bool]:
     """Return operative merge and non-merge intention declarations."""
-    operative = _operative_lifecycle_prose(value)
+    operative = _operative_lifecycle_prose(
+        value,
+        mask_non_link_brackets=True,
+    )
     merge = any(
         not _is_descriptive_occurrence(operative, match.start())
         for match in MERGE_INTENTION_PATTERN.finditer(operative)
@@ -1359,7 +2637,10 @@ def _lifecycle_intentions(value: str) -> tuple[bool, bool]:
 
 def _has_operative_closes(value: str) -> bool:
     """Return whether visible operative prose contains a closure keyword."""
-    operative = _operative_lifecycle_prose(value)
+    operative = _operative_lifecycle_prose(
+        value,
+        mask_non_link_brackets=True,
+    )
     return any(
         not _is_descriptive_occurrence(operative, match.start())
         for match in CLOSES_ISSUE_PATTERN.finditer(operative)
@@ -1385,6 +2666,50 @@ def _reference_identity_before(
     reference_start, reference_end, identity = max(
         references, key=lambda item: (item[1], item[0], item[2] == "current")
     )
+    if identity == "current":
+        earlier = max(
+            (
+                item
+                for item in references
+                if item[1] <= reference_start
+            ),
+            key=lambda item: (item[1], item[0]),
+            default=None,
+        )
+        if (
+            earlier is not None
+            and re.fullmatch(
+                r"\s*(?:,?\s*unlike|\(\s*unlike)\s*",
+                value[earlier[1] : reference_start],
+                re.IGNORECASE,
+            )
+            is not None
+        ):
+            return earlier[2], earlier[0], reference_end
+    if identity == "other":
+        coordinated = sorted(
+            (
+                item
+                for item in references
+                if item[1] <= reference_end
+            ),
+            key=lambda item: (item[0], item[1]),
+        )
+        chain_start = reference_start
+        for earlier_start, earlier_end, earlier_identity in reversed(
+            coordinated[:-1]
+        ):
+            if re.fullmatch(
+                r"\s*(?:,|,?\s*(?:and|or|nor)|"
+                r",?\s*(?:together\s+with|as\s+well\s+as)|"
+                r",?\s*unlike|\(\s*unlike)\s*",
+                value[earlier_end:chain_start],
+                re.IGNORECASE,
+            ) is None:
+                break
+            if earlier_identity == "current":
+                return "current", earlier_start, reference_end
+            chain_start = earlier_start
     return identity, reference_start, reference_end
 
 
@@ -1404,7 +2729,18 @@ def _current_subject_before(
         if identity == "current":
             return True
     identity, _start, end = _reference_identity_before(value, position, current_pattern)
-    return identity == "current" and end >= clause_start
+    if identity != "current":
+        return False
+    if end >= clause_start:
+        return True
+    return bool(
+        re.fullmatch(
+            r"[^.!?;\n]{0,240}\b(?:and|but|yet)\s*",
+            value[end:position],
+            re.IGNORECASE,
+        )
+        and not value[clause_start:position].strip()
+    )
 
 
 def _current_object_after(
@@ -1534,6 +2870,97 @@ def _has_replacement_comparison(
     return False
 
 
+def _has_temporary_merge_restriction_tail(value: str) -> bool:
+    return bool(
+        re.match(
+            r"\s+(?:until|unless|before|pending)\b",
+            value,
+            re.IGNORECASE,
+        )
+        or re.match(
+            r"\s+while\b[^.!?;\n]{0,200}\b(?:is|remains)\s+pending\b",
+            value,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _has_fronted_temporary_merge_restriction(
+    value: str,
+    position: int,
+) -> bool:
+    start = _paragraph_start(value, position)
+    prefix = value[start:position]
+    reset = list(
+        re.finditer(
+            r"(?:,\s*(?:and|or|nor)\b|"
+            r"\b(?:and|or|nor)\b(?=\s+(?:this|the|current|these|it|they)\b)|"
+            r"\b(?:but|however|yet|whereas|therefore|thus|consequently|then|"
+            r"nevertheless|nonetheless)\b)",
+            prefix,
+            re.IGNORECASE,
+        )
+    )
+    if reset:
+        prefix = prefix[reset[-1].end() :]
+    return bool(
+        re.match(
+            r"\s*(?:until|unless|before)\b[^.!?;\n]{0,240},"
+            r"[^.!?;\n]{0,160}$",
+            prefix,
+            re.IGNORECASE,
+        )
+        or re.match(
+            r"\s*while\b[^.!?;\n]{0,200}\b(?:is|remains)\s+pending\b"
+            r"[^.!?;\n]{0,80},[^.!?;\n]{0,160}$",
+            prefix,
+            re.IGNORECASE,
+        )
+        or re.match(
+            r"\s*pending\b[^.!?;\n]{0,240},[^.!?;\n]{0,160}$",
+            prefix,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _is_historical_lifecycle_occurrence(value: str, position: int) -> bool:
+    start, _end = _local_clause_bounds(value, position)
+    prefix = value[start:position]
+    historical = re.match(
+        r"\s*(?:previously|formerly|historically|earlier)\b",
+        prefix,
+        re.IGNORECASE,
+    )
+    if historical is None:
+        return False
+    occurrence = value[position:]
+    if re.match(
+        r"(?:is|are|remains?|continues?\s+to\s+be|will\s+be|shall\s+be)\b",
+        occurrence,
+        re.IGNORECASE,
+    ):
+        return False
+    remainder = prefix[historical.end() :]
+    if re.search(
+        r"\b(?:now|currently|presently|today)\b",
+        remainder,
+        re.IGNORECASE,
+    ):
+        return False
+    comma = remainder.find(",")
+    if comma >= 0 and remainder[:comma].strip():
+        return bool(
+            re.match(
+                r"(?:was|were|had\s+been|hadn't\s+been|remained|became|"
+                r"continued\s+to\s+be)\b",
+                occurrence,
+                re.IGNORECASE,
+            )
+        )
+    return True
+
+
 def _has_candidate_non_merge_contradiction(
     value: str,
     context: dict[str, object],
@@ -1541,15 +2968,25 @@ def _has_candidate_non_merge_contradiction(
     allow_implicit_replacement: bool = False,
 ) -> bool:
     """Detect operative non-merge claims about the exact current PR candidate."""
-    operative = _operative_lifecycle_prose(value)
+    operative = _operative_lifecycle_prose(
+        value,
+        mask_non_link_brackets=True,
+    )
     current_pattern = _current_candidate_reference_pattern(context)
 
     for action in LIFECYCLE_NEGATED_MERGE_ACTION_PATTERN.finditer(operative):
-        if _is_descriptive_occurrence(operative, action.start()):
+        if (
+            _is_descriptive_occurrence(operative, action.start())
+            or _is_historical_lifecycle_occurrence(operative, action.start())
+            or _has_fronted_temporary_merge_restriction(
+                operative,
+                action.start(),
+            )
+        ):
             continue
         _clause_start, clause_end = _local_clause_bounds(operative, action.start())
         tail = operative[action.end() : clause_end]
-        if re.match(r"\s+(?:until|unless|before)\b", tail, re.IGNORECASE):
+        if _has_temporary_merge_restriction_tail(operative[action.end() :]):
             continue
         current_subject = _current_subject_before(
             operative, action.start(), current_pattern
@@ -1562,21 +2999,54 @@ def _has_candidate_non_merge_contradiction(
             return True
 
     for state in LIFECYCLE_NON_MERGE_STATE_PATTERN.finditer(operative):
-        if _is_descriptive_occurrence(operative, state.start()):
+        if (
+            _is_descriptive_occurrence(operative, state.start())
+            or _is_historical_lifecycle_occurrence(operative, state.start())
+            or _has_fronted_temporary_merge_restriction(
+                operative,
+                state.start(),
+            )
+        ):
             continue
         _clause_start, clause_end = _local_clause_bounds(operative, state.start())
         tail = operative[state.end() : clause_end]
-        if re.match(r"\s+(?:until|unless|before)\b", tail, re.IGNORECASE):
+        if _has_temporary_merge_restriction_tail(operative[state.end() :]):
             continue
         if _current_subject_before(operative, state.start(), current_pattern):
             return True
 
     for prohibition in LIFECYCLE_PROHIBITED_MERGE_ACTION_PATTERN.finditer(operative):
-        if _is_descriptive_occurrence(operative, prohibition.start()):
+        if (
+            _is_descriptive_occurrence(operative, prohibition.start())
+            or _is_historical_lifecycle_occurrence(
+                operative,
+                prohibition.start(),
+            )
+            or _has_fronted_temporary_merge_restriction(
+                operative,
+                prohibition.start(),
+            )
+        ):
             continue
-        if _current_subject_before(
+        _clause_start, clause_end = _local_clause_bounds(
+            operative,
+            prohibition.start(),
+        )
+        tail = operative[prohibition.end() : clause_end]
+        if _has_temporary_merge_restriction_tail(
+            operative[prohibition.end() :]
+        ):
+            continue
+        current_subject = _current_subject_before(
             operative, prohibition.start(), current_pattern
-        ) or _current_object_after(operative, prohibition.end(), current_pattern):
+        )
+        if current_subject and LIFECYCLE_OTHER_MERGE_OBJECT_PATTERN.match(tail):
+            current_subject = False
+        if current_subject or _current_object_after(
+            operative,
+            prohibition.end(),
+            current_pattern,
+        ):
             return True
 
     gerund_pattern = re.compile(
@@ -1610,11 +3080,13 @@ def _has_candidate_non_merge_contradiction(
 def _has_non_merge_final_disposition(
     value: str,
     context: dict[str, object],
+    reference_labels: frozenset[str],
 ) -> bool:
     """Detect a non-merge outcome with one-to-one post-merge action scoping."""
     fields = _parse_lifecycle_fields(
-        value,
+        _direct_lifecycle_section_body(value),
         allowed_labels=FINAL_DISPOSITION_FIELD_LABELS,
+        reference_labels=reference_labels,
     )
     dispositions = (
         _field_values(fields, "Final disposition")
@@ -1631,12 +3103,14 @@ def _has_non_merge_final_disposition(
 
 
 def _validate_lifecycle(
-    reviewable_prose: str,
+    body: str,
+    structure: str,
     context: dict[str, object],
     errors: list[str],
 ) -> None:
     """Validate local branch/issue metadata without relying on live GitHub state."""
-    primary = _section_content(reviewable_prose, reviewable_prose, "Primary issue") or ""
+    reference_labels = _markdown_reference_labels(body)
+    primary = _section_content(structure, structure, "Primary issue") or ""
     primary_issues = PRIMARY_ISSUE_PATTERN.findall(primary)
     if not primary_issues:
         errors.append("lifecycle: name one primary issue as #<number> in '## Primary issue'")
@@ -1647,7 +3121,7 @@ def _validate_lifecycle(
     primary_issue = primary_issues[0]
 
     merge_intention = (
-        _section_content(reviewable_prose, reviewable_prose, "Merge intention") or ""
+        _section_content(body, structure, "Merge intention") or ""
     )
     is_merge, is_non_merge = _lifecycle_intentions(merge_intention)
     if is_non_merge == is_merge:
@@ -1656,17 +3130,22 @@ def _validate_lifecycle(
         )
 
     non_merge = (
-        _section_content(reviewable_prose, reviewable_prose, "Non-merge record") or ""
+        _section_content(body, structure, "Non-merge record") or ""
     )
     final_disposition = (
         _section_content(
-            reviewable_prose, reviewable_prose, "Rollback or final disposition"
+            body, structure, "Rollback or final disposition"
         )
         or ""
     )
+    direct_non_merge = _direct_lifecycle_section_body(non_merge)
+    direct_final_disposition = _direct_lifecycle_section_body(final_disposition)
     non_merge_fields = _parse_lifecycle_fields(
-        non_merge,
+        direct_non_merge,
         allowed_labels=NON_MERGE_FIELD_LABELS,
+        reference_labels=reference_labels,
+        location="non-merge record",
+        errors=errors,
     )
     _validate_lifecycle_field_cardinality(
         non_merge_fields,
@@ -1675,8 +3154,11 @@ def _validate_lifecycle(
         errors,
     )
     final_disposition_fields = _parse_lifecycle_fields(
-        final_disposition,
+        direct_final_disposition,
         allowed_labels=FINAL_DISPOSITION_FIELD_LABELS,
+        reference_labels=reference_labels,
+        location="rollback or final disposition",
+        errors=errors,
     )
     disposition_fields = {
         label.lower(): (
@@ -1704,23 +3186,31 @@ def _validate_lifecycle(
         or _field_values(non_merge_fields, "Close or deletion conditions")
     ):
         errors.append("lifecycle: merge-intended branch must not declare a non-merge record")
-    if is_merge and _has_non_merge_final_disposition(final_disposition, context):
+    if is_merge and _has_non_merge_final_disposition(
+        direct_final_disposition,
+        context,
+        reference_labels,
+    ):
         errors.append(
             "lifecycle: merge-intended branch must not declare a non-merge final disposition"
         )
-    if is_merge and _has_candidate_non_merge_contradiction(reviewable_prose, context):
+    if is_merge and _has_candidate_non_merge_contradiction(body, context):
         errors.append(
             "lifecycle: merge-intended branch must not make a candidate-specific non-merge contradiction"
         )
-    if is_non_merge and _has_operative_closes(reviewable_prose):
+    if is_non_merge and _has_operative_closes(body):
         errors.append("lifecycle: non-merge branch must not use 'Closes #<issue>'")
 
     exception = (
-        _section_content(reviewable_prose, reviewable_prose, "Lifecycle exception") or ""
+        _section_content(body, structure, "Lifecycle exception") or ""
     )
+    direct_exception = _direct_lifecycle_section_body(exception)
     legacy_fields = _parse_lifecycle_fields(
-        exception,
+        direct_exception,
         allowed_labels=LEGACY_FIELD_LABELS,
+        reference_labels=reference_labels,
+        location="legacy exception",
+        errors=errors,
     )
     _validate_lifecycle_field_cardinality(
         legacy_fields,
@@ -2146,7 +3636,7 @@ def validate_pull_request(
         elif not visible.strip() or not _has_substantive_visible_text(visible):
             errors.append(f"body: section '## {section}' has no reviewable content")
 
-    _validate_lifecycle(structure, context, errors)
+    _validate_lifecycle(body, structure, context, errors)
 
     paths = list(changed_paths)
     valid_paths: list[str] = []
