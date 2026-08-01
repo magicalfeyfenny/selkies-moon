@@ -50,12 +50,19 @@ release, deployment, or publication authority.
 
 ### Non-merge, validation, and legacy branches
 
-Validation-only, CI/tooling, documentation, archival, and intentionally
+`validation/` is an approved issue-numbered branch prefix, not a non-merge
+disposition. A validation branch that adds durable reviewed tests,
+characterization, documentation, or other repository changes may be intended
+to merge and follows the same exact-base, contract, review, CI, readiness, and
+merge-authority requirements as every other merge-intended branch.
+
+Validation-only, CI/tooling, documentation, archival, and other explicitly
 non-mergeable branches use the same issue and PR lifecycle. Their contract
-records purpose, exact candidate or workflow SHA, whether the branch is
-intended to merge, retained logs/artifacts/validation evidence, and the
-conditions for closing or deleting it. Do not add a process-only commit to an
-immutable candidate merely to satisfy this policy.
+records purpose, exact candidate or workflow SHA, retained
+logs/artifacts/validation evidence, and the final disposition or conditions
+for closing or deleting the branch. Do not infer that disposition from the
+`validation/` prefix or add a process-only commit to an immutable candidate
+merely to satisfy this policy.
 
 Issue #47 owns legacy registration. Its traceability-first exception records
 the original branch identity, primary issue where known, exact immutable

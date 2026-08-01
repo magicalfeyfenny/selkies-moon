@@ -52,7 +52,7 @@ but do not satisfy the evidence gate by themselves.
 
 ## Merge intention
 
-<!-- State exactly whether this branch is intended to merge or not intended to merge. Validation-only and archival branches must say not intended to merge. -->
+<!-- State exactly whether this branch is intended to merge or not intended to merge. A validation branch may be merge-intended; validation-only and other explicitly non-merge branches must say not intended to merge. -->
 
 ## External-action authority
 
@@ -64,7 +64,7 @@ but do not satisfy the evidence gate by themselves.
 
 ## Non-merge record
 
-<!-- For a non-merge branch, state Purpose, Exact candidate or workflow SHA, Retained evidence, and Final disposition or close/deletion conditions. Otherwise state that this merge-intended branch has no non-merge record. -->
+<!-- For any branch declared non-merge, state Purpose, Exact candidate or workflow SHA, Retained evidence, and Final disposition or close/deletion conditions. Otherwise state that this merge-intended branch has no non-merge record. -->
 
 ## Lifecycle exception
 
