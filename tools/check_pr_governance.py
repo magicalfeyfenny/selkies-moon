@@ -217,7 +217,7 @@ LIFECYCLE_NON_MERGE_STATE_PATTERN = re.compile(
     r"(?:non[\s-]?merge|unmerged|unmergeable|non[\s-]?mergeable)|"
     rf"{LIFECYCLE_PROHIBITION_AUXILIARY_FRAGMENT}\s+"
     r"(?:(?:still|now|currently|presently)\s+)?"
-    r"(?:forbidden|prohibited|barred|disallowed|prevented|blocked)"
+    r"(?:forbidden|prohibited|barred|disallowed|prevented|blocked|not\s+allowed)"
     r"\s+(?:from\s+being|to\s+be)\s+merged"
     r")\b",
     re.IGNORECASE,
@@ -225,7 +225,7 @@ LIFECYCLE_NON_MERGE_STATE_PATTERN = re.compile(
 LIFECYCLE_PROHIBITED_MERGE_ACTION_PATTERN = re.compile(
     rf"\b{LIFECYCLE_PROHIBITION_AUXILIARY_FRAGMENT}\s+"
     r"(?:(?:still|now|currently|presently)\s+)?"
-    r"(?:forbidden|prohibited|barred|disallowed|prevented|blocked)\s+"
+    r"(?:forbidden|prohibited|barred|disallowed|prevented|blocked|not\s+allowed)\s+"
     r"(?:from\s+merging|to\s+merge)\b",
     re.IGNORECASE,
 )

@@ -1325,6 +1325,61 @@ class PullRequestGovernanceTests(unittest.TestCase):
                     _validate_lifecycle_sections({"Scope": contradiction}),
                 )
 
+    def test_lifecycle_rejects_permission_form_merge_prohibitions(self) -> None:
+        expected = (
+            "lifecycle: merge-intended branch must not make a "
+            "candidate-specific non-merge contradiction"
+        )
+        contradictions = (
+            "This PR is not allowed to merge.",
+            "This PR is not allowed to be merged.",
+            "This branch is not allowed to merge.",
+            "These changes are not allowed to be merged.",
+        )
+        for contradiction in contradictions:
+            with self.subTest(contradiction=contradiction):
+                self.assertIn(
+                    expected,
+                    _validate_lifecycle_sections({"Scope": contradiction}),
+                )
+
+        inert_controls = (
+            'The checker rejects the example "This PR is not allowed to merge."',
+            (
+                "This section documents an inert inline code example.\n\n"
+                "The checker rejects `This PR is not allowed to be merged.`"
+            ),
+            (
+                "This section documents an inert fenced code example.\n\n"
+                "```text\nThis branch is not allowed to merge.\n```"
+            ),
+            (
+                "This section documents an inert blockquote example.\n\n"
+                "> These changes are not allowed to be merged."
+            ),
+            (
+                "The checker rejects statements saying these changes are not "
+                "allowed to be merged."
+            ),
+            "Previously, this PR was not allowed to merge.",
+            "Previously, these changes were not allowed to be merged.",
+            "The historical branch is not allowed to merge.",
+            "The unrelated changes are not allowed to be merged.",
+            "This PR is not allowed to merge the unrelated changes.",
+            "This PR is not allowed to merge until Required CI passes.",
+            (
+                "These changes are not allowed to be merged while Required CI "
+                "is pending."
+            ),
+            "Pending Required CI, this branch is not allowed to merge.",
+        )
+        for control in inert_controls:
+            with self.subTest(inert_control=control):
+                self.assertEqual(
+                    _validate_lifecycle_sections({"Scope": control}),
+                    [],
+                )
+
     def test_lifecycle_rejects_blocked_passive_and_infinitival_prohibitions(
         self,
     ) -> None:
